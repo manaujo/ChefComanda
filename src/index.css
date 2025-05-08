@@ -1,0 +1,105 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --primary-color: #0F4C81;
+  --secondary-color: #FF7E00;
+  --success-color: #10B981;
+  --warning-color: #F59E0B;
+  --error-color: #EF4444;
+  --neutral-50: #F9FAFB;
+  --neutral-100: #F3F4F6;
+  --neutral-200: #E5E7EB;
+  --neutral-300: #D1D5DB;
+  --neutral-400: #9CA3AF;
+  --neutral-500: #6B7280;
+  --neutral-600: #4B5563;
+  --neutral-700: #374151;
+  --neutral-800: #1F2937;
+  --neutral-900: #111827;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: var(--neutral-100);
+  color: var(--neutral-800);
+}
+
+.mesa-livre {
+  @apply bg-green-100 border-green-500;
+}
+
+.mesa-ocupada {
+  @apply bg-blue-100 border-blue-500;
+}
+
+.mesa-aguardando {
+  @apply bg-orange-100 border-orange-500;
+}
+
+.pedido-pendente {
+  @apply bg-yellow-100 text-yellow-800 border-l-4 border-yellow-500;
+}
+
+.pedido-preparando {
+  @apply bg-blue-100 text-blue-800 border-l-4 border-blue-500;
+}
+
+.pedido-pronto {
+  @apply bg-green-100 text-green-800 border-l-4 border-green-500;
+}
+
+.pedido-entregue {
+  @apply bg-gray-100 text-gray-800 border-l-4 border-gray-500;
+}
+
+.pedido-cancelado {
+  @apply bg-red-100 text-red-800 border-l-4 border-red-500;
+}
+
+/* Animações */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.animate-pulse-slow {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Transições */
+.transition-all {
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 300ms;
+}
+
+/* Scrollbar personalizado */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--neutral-100);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--neutral-400);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--neutral-500);
+}
