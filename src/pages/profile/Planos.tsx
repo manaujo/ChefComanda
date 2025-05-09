@@ -50,7 +50,7 @@ const planosMensais = [
       'Teste grátis de 7 dias'
     ],
     destaque: true,
-    botao: 'Comece agora'
+    botao: 'Assine Agora'
   },
 ];
 
