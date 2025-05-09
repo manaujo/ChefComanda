@@ -15,7 +15,7 @@ const planosMensais = [
       'Teste grátis de 7 dias'
     ],
     destaque: false,
-    botao: 'Assine agora'
+    botao: 'Assinar Plano mensal'
   },
   {
     nome: 'Básico',
