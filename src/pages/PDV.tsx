@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Search, ShoppingCart, Trash2, Plus, Minus, CreditCard, Receipt, ArrowLeft, X } from 'lucide-react';
+import { Search, ShoppingCart, Trash2, Plus, Minus, CreditCard, Receipt, ArrowLeft, X, User, Clock } from 'lucide-react';
 import { useRestaurante } from '../contexts/RestauranteContext';
+import { useAuth } from '../contexts/AuthContext';
 import { formatarDinheiro } from '../utils/formatters';
 import Button from '../components/ui/Button';
 import { useNavigate } from 'react-router-dom';
@@ -24,12 +25,14 @@ interface ComandaPendente {
 interface CaixaState {
   isOpen: boolean;
   valorInicial: number;
+  operador: string;
   dataAbertura?: Date;
   saldoAtual: number;
 }
 
 const PDV: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { produtos, categorias, mesas, itensComanda } = useRestaurante();
   const [busca, setBusca] = useState('');
   const [categoriaSelecionada, setCategoriaSelecionada] = useState('todas');
@@ -41,6 +44,7 @@ const PDV: React.FC = () => {
   const [caixa, setCaixa] = useState<CaixaState>({
     isOpen: false,
     valorInicial: 0,
+    operador: user?.email || '',
     saldoAtual: 0
   });
   const [showCaixaModal, setShowCaixaModal] = useState(false);
@@ -86,52 +90,85 @@ const PDV: React.FC = () => {
   const total = subtotal + taxaServico;
 
   const adicionarItem = (produto: Produto) => {
-    if (comandaSelecionada) return;
+    const novoItem = {
+      id: Date.now(), // Usar timestamp como ID temporário
+      nome: produto.nome,
+      quantidade: 1,
+      preco: produto.preco
+    };
+
+    if (comandaSelecionada) {
+      // Adicionar à comanda selecionada
+      const comandaAtualizada = {
+        ...comandaSelecionada,
+        itens: [...comandaSelecionada.itens, novoItem],
+        total: comandaSelecionada.total + produto.preco
+      };
+      setComandaSelecionada(comandaAtualizada);
+      setComandasPendentes(prev => 
+        prev.map(c => c.id === comandaSelecionada.id ? comandaAtualizada : c)
+      );
+    } else {
+      // Adicionar ao pedido atual
+      setPedidoAtual(prev => [...prev, novoItem]);
+    }
     
-    setPedidoAtual(items => {
-      const itemExistente = items.find(item => item.id === produto.id);
-      if (itemExistente) {
-        return items.map(item =>
-          item.id === produto.id
-            ? { ...item, quantidade: item.quantidade + 1 }
-            : item
-        );
-      }
-      return [...items, {
-        id: produto.id,
-        nome: produto.nome,
-        quantidade: 1,
-        preco: produto.preco
-      }];
-    });
     setShowAddItemModal(false);
   };
 
   const removerItem = (itemId: number) => {
-    if (comandaSelecionada) return;
-    setPedidoAtual(items => items.filter(item => item.id !== itemId));
+    if (comandaSelecionada) {
+      const item = comandaSelecionada.itens.find(i => i.id === itemId);
+      if (!item) return;
+
+      const comandaAtualizada = {
+        ...comandaSelecionada,
+        itens: comandaSelecionada.itens.filter(i => i.id !== itemId),
+        total: comandaSelecionada.total - (item.preco * item.quantidade)
+      };
+      setComandaSelecionada(comandaAtualizada);
+      setComandasPendentes(prev => 
+        prev.map(c => c.id === comandaSelecionada.id ? comandaAtualizada : c)
+      );
+    } else {
+      setPedidoAtual(prev => prev.filter(item => item.id !== itemId));
+    }
   };
 
   const atualizarQuantidade = (itemId: number, delta: number) => {
-    if (comandaSelecionada) return;
-    
-    setPedidoAtual(items =>
-      items.map(item => {
-        if (item.id === itemId) {
-          const novaQuantidade = item.quantidade + delta;
-          return novaQuantidade > 0
-            ? { ...item, quantidade: novaQuantidade }
-            : item;
-        }
-        return item;
-      }).filter(item => item.quantidade > 0)
-    );
+    if (comandaSelecionada) {
+      const comandaAtualizada = {
+        ...comandaSelecionada,
+        itens: comandaSelecionada.itens.map(item => {
+          if (item.id === itemId) {
+            const novaQuantidade = Math.max(1, item.quantidade + delta);
+            return { ...item, quantidade: novaQuantidade };
+          }
+          return item;
+        })
+      };
+      setComandaSelecionada(comandaAtualizada);
+      setComandasPendentes(prev => 
+        prev.map(c => c.id === comandaSelecionada.id ? comandaAtualizada : c)
+      );
+    } else {
+      setPedidoAtual(prev =>
+        prev.map(item => {
+          if (item.id === itemId) {
+            const novaQuantidade = Math.max(1, item.quantidade + delta);
+            return { ...item, quantidade: novaQuantidade };
+          }
+          return item;
+        })
+      );
+    }
   };
 
   const abrirCaixa = (valor: number) => {
     setCaixa({
       isOpen: true,
       valorInicial: valor,
+      operador: user?.email || '',
       dataAbertura: new Date(),
       saldoAtual: valor
     });
@@ -142,6 +179,7 @@ const PDV: React.FC = () => {
     setCaixa({
       isOpen: false,
       valorInicial: 0,
+      operador: '',
       saldoAtual: 0
     });
   };
@@ -152,19 +190,23 @@ const PDV: React.FC = () => {
   };
 
   const finalizarPedido = () => {
-    // Implementar lógica de finalização
     if (comandaSelecionada) {
       setComandasPendentes(prev => 
         prev.filter(c => c.id !== comandaSelecionada.id)
       );
     }
     
+    // Atualizar saldo do caixa
+    setCaixa(prev => ({
+      ...prev,
+      saldoAtual: prev.saldoAtual + total
+    }));
+    
     limparPedido();
   };
 
   const selecionarComanda = (comanda: ComandaPendente) => {
     setComandaSelecionada(comanda);
-    setPedidoAtual(comanda.itens);
   };
 
   return (
@@ -180,7 +222,7 @@ const PDV: React.FC = () => {
               >
                 <ArrowLeft size={24} />
               </button>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">PDV</h1>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Ponto de Venda</h1>
             </div>
             <div className="flex items-center space-x-4">
               {!caixa.isOpen ? (
@@ -193,7 +235,16 @@ const PDV: React.FC = () => {
               ) : (
                 <div className="flex items-center space-x-4">
                   <div className="text-sm">
-                    <p className="text-gray-500">Saldo em Caixa</p>
+                    <div className="flex items-center text-gray-500 mb-1">
+                      <User size={14} className="mr-1" />
+                      <span>{caixa.operador}</span>
+                    </div>
+                    <div className="flex items-center text-gray-500 mb-1">
+                      <Clock size={14} className="mr-1" />
+                      <span>
+                        {caixa.dataAbertura?.toLocaleTimeString('pt-BR')}
+                      </span>
+                    </div>
                     <p className="font-medium">{formatarDinheiro(caixa.saldoAtual)}</p>
                   </div>
                   <Button
@@ -246,16 +297,6 @@ const PDV: React.FC = () => {
                 </div>
               </div>
             )}
-
-            {/* Botão Adicionar Item */}
-            <Button
-              variant="primary"
-              fullWidth
-              onClick={() => setShowAddItemModal(true)}
-              disabled={!caixa.isOpen || !!comandaSelecionada}
-            >
-              Adicionar Item
-            </Button>
           </div>
 
           {/* Pedido Atual */}
@@ -286,7 +327,7 @@ const PDV: React.FC = () => {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {pedidoAtual.map(item => (
+                    {(comandaSelecionada ? comandaSelecionada.itens : pedidoAtual).map(item => (
                       <div
                         key={item.id}
                         className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"
@@ -299,36 +340,30 @@ const PDV: React.FC = () => {
                         </div>
                         
                         <div className="flex items-center space-x-3">
-                          {!comandaSelecionada && (
-                            <>
-                              <button
-                                onClick={() => atualizarQuantidade(item.id, -1)}
-                                className="p-1 text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400"
-                              >
-                                <Minus size={16} />
-                              </button>
-                              <span className="font-medium text-gray-900 dark:text-white">
-                                {item.quantidade}
-                              </span>
-                              <button
-                                onClick={() => atualizarQuantidade(item.id, 1)}
-                                className="p-1 text-gray-500 dark:text-gray-400 hover:text-green-500 dark:hover:text-green-400"
-                              >
-                                <Plus size={16} />
-                              </button>
-                            </>
-                          )}
+                          <button
+                            onClick={() => atualizarQuantidade(item.id, -1)}
+                            className="p-1 text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400"
+                          >
+                            <Minus size={16} />
+                          </button>
+                          <span className="font-medium text-gray-900 dark:text-white">
+                            {item.quantidade}
+                          </span>
+                          <button
+                            onClick={() => atualizarQuantidade(item.id, 1)}
+                            className="p-1 text-gray-500 dark:text-gray-400 hover:text-green-500 dark:hover:text-green-400"
+                          >
+                            <Plus size={16} />
+                          </button>
                           <span className="font-medium text-gray-900 dark:text-white">
                             {formatarDinheiro(item.preco * item.quantidade)}
                           </span>
-                          {!comandaSelecionada && (
-                            <button
-                              onClick={() => removerItem(item.id)}
-                              className="p-1 text-red-500 hover:text-red-700"
-                            >
-                              <Trash2 size={16} />
-                            </button>
-                          )}
+                          <button
+                            onClick={() => removerItem(item.id)}
+                            className="p-1 text-red-500 hover:text-red-700"
+                          >
+                            <Trash2 size={16} />
+                          </button>
                         </div>
                       </div>
                     ))}
@@ -338,6 +373,15 @@ const PDV: React.FC = () => {
 
               <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
                 <div className="space-y-4">
+                  <Button
+                    variant="primary"
+                    fullWidth
+                    onClick={() => setShowAddItemModal(true)}
+                    disabled={!caixa.isOpen}
+                  >
+                    Adicionar Item
+                  </Button>
+
                   <div className="flex justify-between text-gray-500 dark:text-gray-400">
                     <span>Subtotal</span>
                     <span>{formatarDinheiro(subtotal)}</span>
@@ -387,26 +431,26 @@ const PDV: React.FC = () => {
                       <span className="text-sm">PIX</span>
                     </button>
                   </div>
-                </div>
 
-                <div className="mt-6 space-y-3">
-                  <Button
-                    variant="primary"
-                    fullWidth
-                    disabled={pedidoAtual.length === 0 || !caixa.isOpen}
-                    onClick={finalizarPedido}
-                  >
-                    Finalizar {comandaSelecionada ? 'Pagamento' : 'Pedido'}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    fullWidth
-                    disabled={pedidoAtual.length === 0}
-                    onClick={limparPedido}
-                    icon={<Trash2 size={18} />}
-                  >
-                    {comandaSelecionada ? 'Cancelar' : 'Limpar'}
-                  </Button>
+                  <div className="space-y-3">
+                    <Button
+                      variant="primary"
+                      fullWidth
+                      disabled={pedidoAtual.length === 0 || !caixa.isOpen}
+                      onClick={finalizarPedido}
+                    >
+                      Finalizar {comandaSelecionada ? 'Pagamento' : 'Pedido'}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      fullWidth
+                      disabled={pedidoAtual.length === 0}
+                      onClick={limparPedido}
+                      icon={<Trash2 size={18} />}
+                    >
+                      {comandaSelecionada ? 'Cancelar' : 'Limpar'}
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -509,6 +553,18 @@ const PDV: React.FC = () => {
               </div>
 
               <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Operador
+                  </label>
+                  <input
+                    type="text"
+                    value={user?.email || ''}
+                    disabled
+                    className="mt-1 block w-full rounded-md border-gray-300 bg-gray-100 cursor-not-allowed"
+                  />
+                </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700">
                     Valor Inicial em Caixa
