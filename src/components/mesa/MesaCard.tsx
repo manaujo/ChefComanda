@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { Clock, Users, CreditCard, MoreVertical, ClipboardEdit } from 'lucide-react';
+import { Clock, Users, CreditCard, MoreVertical, ClipboardEdit, Printer, Plus, Trash2 } from 'lucide-react';
 import { formatarTempo, formatarDinheiro } from '../../utils/formatters';
 import { useRestaurante } from '../../contexts/RestauranteContext';
 import Button from '../ui/Button';
 import ComandaModal from '../comanda/ComandaModal';
+import AdicionarItemModal from '../comanda/AdicionarItemModal';
 
 interface MesaCardProps {
   mesa: Mesa;
@@ -11,8 +12,9 @@ interface MesaCardProps {
 
 const MesaCard: React.FC<MesaCardProps> = ({ mesa }) => {
   const [comandaModalAberta, setComandaModalAberta] = useState(false);
+  const [adicionarItemModalAberto, setAdicionarItemModalAberto] = useState(false);
   const [menuAberto, setMenuAberto] = useState(false);
-  const { ocuparMesa, liberarMesa, solicitarPagamento } = useRestaurante();
+  const { ocuparMesa, liberarMesa, solicitarPagamento, imprimirComanda } = useRestaurante();
 
   const statusClasses = {
     livre: 'border-l-4 border-green-500 bg-green-50',
@@ -39,6 +41,12 @@ const MesaCard: React.FC<MesaCardProps> = ({ mesa }) => {
         break;
       case 'comanda':
         setComandaModalAberta(true);
+        break;
+      case 'adicionar':
+        setAdicionarItemModalAberto(true);
+        break;
+      case 'imprimir':
+        imprimirComanda(mesa.id);
         break;
       case 'pagamento':
         solicitarPagamento(mesa.id);
@@ -94,6 +102,18 @@ const MesaCard: React.FC<MesaCardProps> = ({ mesa }) => {
                           Ver Comanda
                         </button>
                         <button 
+                          onClick={() => handleAcao('adicionar')}
+                          className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        >
+                          Adicionar Item
+                        </button>
+                        <button 
+                          onClick={() => handleAcao('imprimir')}
+                          className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        >
+                          Imprimir Comanda
+                        </button>
+                        <button 
                           onClick={() => handleAcao('pagamento')}
                           className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                         >
@@ -139,7 +159,7 @@ const MesaCard: React.FC<MesaCardProps> = ({ mesa }) => {
             </div>
           )}
           
-          <div className="mt-4">
+          <div className="mt-4 flex flex-wrap gap-2">
             {mesa.status === 'livre' && (
               <Button 
                 variant="success" 
@@ -152,22 +172,48 @@ const MesaCard: React.FC<MesaCardProps> = ({ mesa }) => {
             )}
             
             {mesa.status === 'ocupada' && (
-              <Button 
-                variant="primary" 
-                size="sm" 
-                fullWidth 
-                icon={<ClipboardEdit size={16} />}
-                onClick={() => handleAcao('comanda')}
-              >
-                Ver Comanda
-              </Button>
+              <>
+                <Button 
+                  variant="primary" 
+                  size="sm"
+                  icon={<ClipboardEdit size={16} />}
+                  onClick={() => handleAcao('comanda')}
+                >
+                  Ver Comanda
+                </Button>
+                <Button 
+                  variant="secondary" 
+                  size="sm"
+                  icon={<Plus size={16} />}
+                  onClick={() => handleAcao('adicionar')}
+                >
+                  Adicionar Item
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  icon={<Printer size={16} />}
+                  onClick={() => handleAcao('imprimir')}
+                >
+                  Imprimir
+                </Button>
+                <Button 
+                  variant="warning" 
+                  size="sm"
+                  icon={<CreditCard size={16} />}
+                  onClick={() => handleAcao('pagamento')}
+                >
+                  Pagamento
+                </Button>
+              </>
             )}
             
             {mesa.status === 'aguardando' && (
               <Button 
                 variant="warning" 
                 size="sm" 
-                fullWidth 
+                fullWidth
+                icon={<Trash2 size={16} />}
                 onClick={() => handleAcao('liberar')}
               >
                 Finalizar
@@ -177,11 +223,17 @@ const MesaCard: React.FC<MesaCardProps> = ({ mesa }) => {
         </div>
       </div>
 
-      {/* Modal de Comanda */}
+      {/* Modais */}
       <ComandaModal 
         isOpen={comandaModalAberta} 
         onClose={() => setComandaModalAberta(false)} 
         mesaId={mesa.id} 
+      />
+      
+      <AdicionarItemModal
+        isOpen={adicionarItemModalAberto}
+        onClose={() => setAdicionarItemModalAberto(false)}
+        mesaId={mesa.id}
       />
     </>
   );
