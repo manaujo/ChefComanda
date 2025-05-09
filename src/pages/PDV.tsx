@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, ShoppingCart, Trash2, Plus, Minus, CreditCard, Receipt, ArrowLeft, X, User, Clock, ArrowUpCircle } from 'lucide-react';
+import { Search, ShoppingCart, Trash2, Plus, Minus, CreditCard, Receipt, ArrowLeft, X, User, Clock, ArrowUpCircle, Music } from 'lucide-react';
 import { useRestaurante } from '../contexts/RestauranteContext';
 import { useAuth } from '../contexts/AuthContext';
 import { formatarDinheiro, formatarTempo } from '../utils/formatters';
@@ -42,6 +42,9 @@ const PDV: React.FC = () => {
   const [comandaSelecionada, setComandaSelecionada] = useState<ComandaPendente | null>(null);
   const [formaPagamento, setFormaPagamento] = useState<'dinheiro' | 'cartao' | 'pix'>('dinheiro');
   const [showAddItemModal, setShowAddItemModal] = useState(false);
+  const [incluirTaxaServico, setIncluirTaxaServico] = useState(true);
+  const [incluirCouvert, setIncluirCouvert] = useState(false);
+  const [valorCouvert, setValorCouvert] = useState<string>('15.00');
   const [caixa, setCaixa] = useState<CaixaState>({
     isOpen: false,
     valorInicial: 0,
@@ -52,8 +55,9 @@ const PDV: React.FC = () => {
   const [loading, setLoading] = useState(false);
   
   useEffect(() => {
-    const mesasAguardando = mesas.filter(m => m.status === 'aguardando');
-    const comandas: ComandaPendente[] = mesasAguardando.map(mesa => {
+    // Carregar todas as mesas com comandas em aberto
+    const mesasComComandas = mesas.filter(m => m.status === 'ocupada' || m.status === 'aguardando');
+    const comandas: ComandaPendente[] = mesasComComandas.map(mesa => {
       const itens = itensComanda
         .filter(item => item.mesaId === mesa.id)
         .map(item => ({
@@ -82,11 +86,19 @@ const PDV: React.FC = () => {
     return matchBusca && matchCategoria && produto.disponivel;
   });
 
-  const subtotal = comandaSelecionada 
-    ? comandaSelecionada.total 
-    : pedidoAtual.reduce((total, item) => total + (item.preco * item.quantidade), 0);
-  const taxaServico = subtotal * 0.1;
-  const total = subtotal + taxaServico;
+  const calcularTotais = () => {
+    const subtotal = comandaSelecionada 
+      ? comandaSelecionada.total 
+      : pedidoAtual.reduce((total, item) => total + (item.preco * item.quantidade), 0);
+    
+    const taxaServico = incluirTaxaServico ? subtotal * 0.1 : 0;
+    const couvert = incluirCouvert ? parseFloat(valorCouvert) || 0 : 0;
+    const total = subtotal + taxaServico + couvert;
+
+    return { subtotal, taxaServico, couvert, total };
+  };
+
+  const { subtotal, taxaServico, couvert, total } = calcularTotais();
 
   const adicionarItem = (produto: Produto) => {
     setLoading(true);
@@ -206,6 +218,9 @@ const PDV: React.FC = () => {
   const limparPedido = () => {
     setPedidoAtual([]);
     setComandaSelecionada(null);
+    setIncluirTaxaServico(true);
+    setIncluirCouvert(false);
+    setValorCouvert('15.00');
     toast.success('Pedido limpo');
   };
 
@@ -281,47 +296,79 @@ const PDV: React.FC = () => {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Comandas Pendentes */}
+          {/* Comandas em Aberto */}
           <div>
             <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
               <h2 className="text-lg font-medium text-gray-900 mb-4">
-                Comandas Aguardando Pagamento
+                Comandas em Aberto
               </h2>
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {comandasPendentes.map(comanda => (
-                  <button
-                    key={comanda.id}
-                    onClick={() => setComandaSelecionada(comanda)}
-                    className={`p-4 rounded-lg border transition-all ${
-                      comandaSelecionada?.id === comanda.id
-                        ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200'
-                        : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
-                    }`}
-                  >
-                    <div className="flex justify-between items-start mb-2">
-                      <div>
-                        <h3 className="font-medium text-lg">Mesa {comanda.mesa}</h3>
-                        <p className="text-sm text-gray-500 flex items-center">
-                          <Clock size={14} className="mr-1" />
-                          {formatarTempo(comanda.horario)}
-                        </p>
+                {comandasPendentes.map(comanda => {
+                  const tempoAberto = new Date(comanda.horario);
+                  const horasAberto = Math.floor((new Date().getTime() - tempoAberto.getTime()) / (1000 * 60 * 60));
+                  
+                  return (
+                    <button
+                      key={comanda.id}
+                      onClick={() => setComandaSelecionada(comanda)}
+                      className={`p-4 rounded-lg border transition-all ${
+                        comandaSelecionada?.id === comanda.id
+                          ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200'
+                          : horasAberto >= 2
+                          ? 'border-orange-300 shadow-orange-100'
+                          : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <h3 className="font-medium text-lg">Mesa {comanda.mesa}</h3>
+                          <p className="text-sm text-gray-500 flex items-center">
+                            <Clock size={14} className="mr-1" />
+                            {formatarTempo(comanda.horario)}
+                          </p>
+                        </div>
+                        <span className="text-lg font-semibold text-blue-600">
+                          {formatarDinheiro(comanda.total)}
+                        </span>
                       </div>
-                      <span className="text-lg font-semibold text-blue-600">
-                        {formatarDinheiro(comanda.total)}
-                      </span>
-                    </div>
-                    <div className="text-sm text-gray-500">
-                      {comanda.itens.length} itens
-                    </div>
-                  </button>
-                ))}
+                      <div className="flex justify-between items-center mt-3">
+                        <span className="text-sm text-gray-500">
+                          {comanda.itens.length} itens
+                        </span>
+                        <div className="flex space-x-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setShowAddItemModal(true);
+                              setComandaSelecionada(comanda);
+                            }}
+                          >
+                            Adicionar
+                          </Button>
+                          <Button
+                            variant="primary"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setComandaSelecionada(comanda);
+                            }}
+                          >
+                            Fechar
+                          </Button>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
               
               {comandasPendentes.length === 0 && (
                 <div className="text-center py-8 text-gray-500">
                   <ShoppingCart size={48} className="mx-auto mb-3 text-gray-400" />
-                  <p>Nenhuma comanda aguardando pagamento</p>
+                  <p>Nenhuma comanda em aberto</p>
                 </div>
               )}
             </div>
@@ -353,7 +400,7 @@ const PDV: React.FC = () => {
               </div>
             </div>
 
-            <div className="divide-y divide-gray-200 max-h-[calc(100vh-400px)] overflow-y-auto p-6">
+            <div className="divide-y divide-gray-200 max-h-[calc(100vh-600px)] overflow-y-auto p-6">
               {(comandaSelecionada?.itens || pedidoAtual).length === 0 ? (
                 <div className="text-center py-8">
                   <ShoppingCart size={48} className="mx-auto text-gray-400" />
@@ -410,17 +457,81 @@ const PDV: React.FC = () => {
 
             <div className="p-6 bg-gray-50 border-t border-gray-200">
               <div className="space-y-4">
-                <div className="flex justify-between text-gray-500">
-                  <span>Subtotal</span>
-                  <span>{formatarDinheiro(subtotal)}</span>
+                {/* Taxas e Adicionais */}
+                <div className="space-y-3 border-b border-gray-200 pb-4">
+                  <div className="flex items-center justify-between">
+                    <label className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        checked={incluirTaxaServico}
+                        onChange={(e) => setIncluirTaxaServico(e.target.checked)}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="text-sm text-gray-700">Incluir taxa de serviço (10%)</span>
+                    </label>
+                    {incluirTaxaServico && (
+                      <span className="text-sm font-medium text-gray-700">
+                        {formatarDinheiro(taxaServico)}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          checked={incluirCouvert}
+                          onChange={(e) => setIncluirCouvert(e.target.checked)}
+                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        <span className="text-sm text-gray-700">Adicionar Couvert Artístico</span>
+                      </label>
+                      {incluirCouvert && (
+                        <div className="flex items-center space-x-2">
+                          <span className="text-sm text-gray-500">R$</span>
+                          <input
+                            type="number"
+                            value={valorCouvert}
+                            onChange={(e) => setValorCouvert(e.target.value)}
+                            className="w-20 rounded-md border-gray-300 text-right text-sm"
+                            step="0.01"
+                            min="0"
+                          />
+                        </div>
+                      )}
+                    </div>
+                    {incluirCouvert && (
+                      <p className="text-xs text-gray-500 italic">
+                        O couvert artístico é uma taxa opcional cobrada por apresentações ao vivo. 
+                        O valor deve ser previamente informado ao cliente.
+                      </p>
+                    )}
+                  </div>
                 </div>
-                <div className="flex justify-between text-gray-500">
-                  <span>Taxa de serviço (10%)</span>
-                  <span>{formatarDinheiro(taxaServico)}</span>
-                </div>
-                <div className="flex justify-between text-xl font-semibold text-gray-900 pt-4 border-t border-gray-200">
-                  <span>Total</span>
-                  <span>{formatarDinheiro(total)}</span>
+
+                {/* Totais */}
+                <div className="space-y-2">
+                  <div className="flex justify-between text-gray-500">
+                    <span>Subtotal</span>
+                    <span>{formatarDinheiro(subtotal)}</span>
+                  </div>
+                  {incluirTaxaServico && (
+                    <div className="flex justify-between text-gray-500">
+                      <span>Taxa de serviço (10%)</span>
+                      <span>{formatarDinheiro(taxaServico)}</span>
+                    </div>
+                  )}
+                  {incluirCouvert && parseFloat(valorCouvert) > 0 && (
+                    <div className="flex justify-between text-gray-500">
+                      <span>Couvert Artístico</span>
+                      <span>{formatarDinheiro(parseFloat(valorCouvert))}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-xl font-semibold text-gray-900 pt-4 border-t border-gray-200">
+                    <span>Total</span>
+                    <span>{formatarDinheiro(total)}</span>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-3 gap-4 mt-6">
@@ -599,6 +710,7 @@ const PDV: React.FC = () => {
                   <div className="mt-1 relative rounded-md shadow-sm">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                       <span className="text-gray-500 sm:text-sm">R$</span>
+                    
                     </div>
                     <input
                       type="number"
