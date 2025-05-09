@@ -32,7 +32,7 @@ const planosMensais = [
       'Teste grátis de 7 dias'
     ],
     destaque: false,
-    botao: 'Comece agora'
+    botao: 'Assine Agora'
   },
   {
     nome: 'Profissional',
