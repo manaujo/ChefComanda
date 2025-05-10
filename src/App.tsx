@@ -2,6 +2,8 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import Planos from './pages/profile/Planos';
+import UserProfile from './pages/profile/UserProfile';
+import Settings from './pages/profile/Settings';
 
 // Layouts
 import DashboardLayout from './layouts/DashboardLayout';
@@ -63,9 +65,13 @@ function App() {
                 <Route path="pdv" element={<PrivateRoute allowedRoles={['admin', 'cashier']}><PDV /></PrivateRoute>} />
                 
                 {/* Profile Routes */}
-                <Route path="profile/company" element={<PrivateRoute allowedRoles={['admin']}><CompanyProfile /></PrivateRoute>} />
-                <Route path="profile/employees" element={<PrivateRoute allowedRoles={['admin']}><EmployeeManagement /></PrivateRoute>} />
-                <Route path="profile/planos" element={<PrivateRoute allowedRoles={['admin']}><Planos /></PrivateRoute>} />
+                <Route path="profile">
+                  <Route path="user" element={<PrivateRoute><UserProfile /></PrivateRoute>} />
+                  <Route path="settings" element={<PrivateRoute><Settings /></PrivateRoute>} />
+                  <Route path="company" element={<PrivateRoute allowedRoles={['admin']}><CompanyProfile /></PrivateRoute>} />
+                  <Route path="employees" element={<PrivateRoute allowedRoles={['admin']}><EmployeeManagement /></PrivateRoute>} />
+                  <Route path="planos" element={<PrivateRoute allowedRoles={['admin']}><Planos /></PrivateRoute>} />
+                </Route>
               </Route>
               
               {/* Redirect any unknown routes to dashboard */}
