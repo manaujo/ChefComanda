@@ -9,7 +9,8 @@ interface Plan {
   id: string;
   name: string;
   description: string;
-  price: number;
+  monthlyPrice: number;
+  yearlyPrice: number;
   features: string[];
   popular?: boolean;
 }
@@ -22,59 +23,66 @@ interface Subscription {
   cancel_at_period_end: boolean;
 }
 
+const plans: Plan[] = [
+  {
+    id: 'starter',
+    name: 'Starter',
+    description: 'Sistema de Ponto de venda e estoque',
+    monthlyPrice: 40.00,
+    yearlyPrice: 430.80,
+    features: [
+      'Sistema de PDV completo',
+      'Controle de estoque',
+      'Dashboard e relatórios',
+      'Exportação de dados (PDF e Excel)',
+      'Relatórios avançados de vendas',
+      'Suporte padrão',
+      'Teste grátis de 7 dias'
+    ]
+  },
+  {
+    id: 'basic',
+    name: 'Básico',
+    description: 'Ideal para começar',
+    monthlyPrice: 60.90,
+    yearlyPrice: 599.88,
+    features: [
+      'Acesso completo às comandas e mesas',
+      'Gerenciamento para garçons e cozinha',
+      'Controle de estoque',
+      'Acesso ao dashboard',
+      'Relatórios avançados de vendas',
+      'Exportação de dados (PDF e Excel)',
+      'Suporte padrão',
+      'Teste grátis de 7 dias'
+    ]
+  },
+  {
+    id: 'pro',
+    name: 'Profissional',
+    description: 'Mais completo',
+    monthlyPrice: 85.90,
+    yearlyPrice: 790.80,
+    features: [
+      'Todas as funcionalidades do plano Básico',
+      'Sistema de PDV completo',
+      'Integração com ifood',
+      'Controle de estoque avançado',
+      'Relatórios detalhados',
+      'Exportação de dados (PDF e Excel)',
+      'Relatórios avançados de vendas',
+      'Suporte prioritário',
+      'Teste grátis de 7 dias'
+    ],
+    popular: true
+  }
+];
+
 const Planos: React.FC = () => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [currentSubscription, setCurrentSubscription] = useState<Subscription | null>(null);
-  const [showCancelModal, setShowCancelModal] = useState(false);
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
-
-  const plans: Plan[] = [
-    {
-      id: 'starter',
-      name: 'Starter',
-      description: 'Ideal para pequenos estabelecimentos',
-      price: billingCycle === 'monthly' ? 99.90 : 999.00,
-      features: [
-        'Até 5 mesas',
-        'Sistema de PDV básico',
-        'Controle de comandas',
-        'Relatórios básicos',
-        'Suporte por email'
-      ]
-    },
-    {
-      id: 'pro',
-      name: 'Professional',
-      description: 'Para restaurantes em crescimento',
-      price: billingCycle === 'monthly' ? 199.90 : 1999.00,
-      features: [
-        'Até 15 mesas',
-        'Sistema de PDV completo',
-        'Controle de estoque',
-        'Relatórios avançados',
-        'Integração com iFood',
-        'Suporte prioritário',
-        'Backup diário'
-      ],
-      popular: true
-    },
-    {
-      id: 'enterprise',
-      name: 'Enterprise',
-      description: 'Solução completa para seu negócio',
-      price: billingCycle === 'monthly' ? 299.90 : 2999.00,
-      features: [
-        'Mesas ilimitadas',
-        'Todas as funcionalidades Pro',
-        'API personalizada',
-        'Múltiplas filiais',
-        'Suporte 24/7',
-        'Treinamento personalizado',
-        'Backup em tempo real'
-      ]
-    }
-  ];
 
   useEffect(() => {
     if (user) {
@@ -111,29 +119,16 @@ const Planos: React.FC = () => {
     }
   };
 
-  const handleCancelSubscription = async () => {
-    setLoading(true);
-    try {
-      const { error } = await supabase
-        .from('subscriptions')
-        .update({ cancel_at_period_end: true })
-        .eq('id', currentSubscription?.id);
+  const calculateYearlySavings = (plan: Plan) => {
+    const monthlyTotal = plan.monthlyPrice * 12;
+    return monthlyTotal - plan.yearlyPrice;
+  };
 
-      if (error) throw error;
-
-      setCurrentSubscription(prev => prev ? {
-        ...prev,
-        cancel_at_period_end: true
-      } : null);
-
-      toast.success('Assinatura cancelada com sucesso');
-      setShowCancelModal(false);
-    } catch (error) {
-      console.error('Error canceling subscription:', error);
-      toast.error('Erro ao cancelar assinatura');
-    } finally {
-      setLoading(false);
-    }
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(price);
   };
 
   return (
@@ -186,7 +181,7 @@ const Planos: React.FC = () => {
           >
             Anual
             <span className="ml-1 text-green-500 text-xs">
-              Economize 20%
+              Economize até {formatPrice(calculateYearlySavings(plans[2]))}
             </span>
           </button>
         </div>
@@ -205,7 +200,7 @@ const Planos: React.FC = () => {
           >
             {plan.popular && (
               <div className="absolute top-0 right-0 bg-blue-500 text-white px-3 py-1 text-sm font-medium">
-                Popular
+                Melhor escolha
               </div>
             )}
 
@@ -218,12 +213,18 @@ const Planos: React.FC = () => {
               </p>
               <p className="mt-4">
                 <span className="text-4xl font-extrabold text-gray-900">
-                  R$ {plan.price.toFixed(2)}
+                  {formatPrice(billingCycle === 'monthly' ? plan.monthlyPrice : plan.yearlyPrice)}
                 </span>
                 <span className="text-base font-medium text-gray-500">
                   /{billingCycle === 'monthly' ? 'mês' : 'ano'}
                 </span>
               </p>
+
+              {billingCycle === 'yearly' && (
+                <p className="mt-2 text-sm text-green-600">
+                  Economize {formatPrice(calculateYearlySavings(plan))} ao ano
+                </p>
+              )}
 
               <ul className="mt-6 space-y-4">
                 {plan.features.map((feature, index) => (
@@ -246,65 +247,13 @@ const Planos: React.FC = () => {
                   isLoading={loading}
                   disabled={currentSubscription?.plan_id === plan.id && !currentSubscription?.cancel_at_period_end}
                 >
-                  {currentSubscription?.plan_id === plan.id
-                    ? currentSubscription?.cancel_at_period_end
-                      ? 'Reativar Assinatura'
-                      : 'Plano Atual'
-                    : 'Assinar Agora'}
+                  {billingCycle === 'yearly' ? 'Assinar Plano Anual' : 'Comece agora'}
                 </Button>
               </div>
             </div>
           </div>
         ))}
       </div>
-
-      {/* Cancel Subscription Modal */}
-      {showCancelModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 transition-opacity" aria-hidden="true">
-              <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
-            </div>
-
-            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-              <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                <div className="sm:flex sm:items-start">
-                  <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
-                    <AlertTriangle className="h-6 w-6 text-red-600" />
-                  </div>
-                  <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
-                    <h3 className="text-lg font-medium text-gray-900">
-                      Cancelar Assinatura
-                    </h3>
-                    <div className="mt-2">
-                      <p className="text-sm text-gray-500">
-                        Tem certeza que deseja cancelar sua assinatura? Você continuará tendo acesso até o final do período atual.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                <Button
-                  variant="danger"
-                  onClick={handleCancelSubscription}
-                  isLoading={loading}
-                  className="w-full sm:w-auto sm:ml-3"
-                >
-                  Cancelar Assinatura
-                </Button>
-                <Button
-                  variant="ghost"
-                  onClick={() => setShowCancelModal(false)}
-                  className="w-full sm:w-auto mt-3 sm:mt-0"
-                >
-                  Voltar
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
