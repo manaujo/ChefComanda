@@ -1,7 +1,11 @@
 import React, { useState } from 'react';
-import { ShoppingBag, RefreshCcw, Clock, Check, X } from 'lucide-react';
+import { 
+  ShoppingBag, RefreshCcw, Clock, Check, X, Search,
+  ChefHat, Truck, AlertTriangle, Filter, Download
+} from 'lucide-react';
 import Button from '../components/ui/Button';
 import { formatarDinheiro } from '../utils/formatters';
+import toast from 'react-hot-toast';
 
 interface IFoodPedido {
   id: string;
@@ -17,6 +21,8 @@ interface IFoodPedido {
     observacao?: string;
   }>;
   total: number;
+  tempoEstimado?: number;
+  avaliacao?: number;
 }
 
 const mockPedidos: IFoodPedido[] = [
@@ -31,7 +37,8 @@ const mockPedidos: IFoodPedido[] = [
       { id: 2, nome: 'Batata Frita', quantidade: 1, preco: 15.90 },
       { id: 3, nome: 'Refrigerante 350ml', quantidade: 2, preco: 6.90 }
     ],
-    total: 81.50
+    total: 81.50,
+    tempoEstimado: 30
   },
   {
     id: 'IF123457',
@@ -43,31 +50,54 @@ const mockPedidos: IFoodPedido[] = [
       { id: 4, nome: 'Pizza Grande Margherita', quantidade: 1, preco: 49.90 },
       { id: 5, nome: 'Cerveja 600ml', quantidade: 2, preco: 12.90 }
     ],
-    total: 75.70
+    total: 75.70,
+    tempoEstimado: 45
   }
 ];
 
 const IFoodPedidos: React.FC = () => {
   const [pedidos, setPedidos] = useState<IFoodPedido[]>(mockPedidos);
   const [filtroStatus, setFiltroStatus] = useState<string>('todos');
+  const [busca, setBusca] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const pedidosFiltrados = filtroStatus === 'todos'
-    ? pedidos
-    : pedidos.filter(pedido => pedido.status === filtroStatus);
-
-  const statusClasses = {
-    novo: 'bg-yellow-100 text-yellow-800',
-    aceito: 'bg-blue-100 text-blue-800',
-    preparando: 'bg-orange-100 text-orange-800',
-    pronto: 'bg-green-100 text-green-800',
-    entregue: 'bg-gray-100 text-gray-800',
-    cancelado: 'bg-red-100 text-red-800'
+  const atualizarPedidos = async () => {
+    setLoading(true);
+    try {
+      // Simulação de atualização
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      toast.success('Pedidos atualizados!');
+    } catch (error) {
+      toast.error('Erro ao atualizar pedidos');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const atualizarStatusPedido = (pedidoId: string, novoStatus: IFoodPedido['status']) => {
     setPedidos(pedidos.map(pedido => 
       pedido.id === pedidoId ? { ...pedido, status: novoStatus } : pedido
     ));
+    toast.success(`Pedido ${pedidoId} ${novoStatus}`);
+  };
+
+  const pedidosFiltrados = pedidos.filter(pedido => {
+    const matchStatus = filtroStatus === 'todos' || pedido.status === filtroStatus;
+    const matchBusca = pedido.cliente.toLowerCase().includes(busca.toLowerCase()) ||
+                      pedido.id.toLowerCase().includes(busca.toLowerCase());
+    return matchStatus && matchBusca;
+  });
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'novo': return <AlertTriangle className="text-yellow-500" />;
+      case 'aceito': return <Check className="text-blue-500" />;
+      case 'preparando': return <ChefHat className="text-orange-500" />;
+      case 'pronto': return <Check className="text-green-500" />;
+      case 'entregue': return <Truck className="text-gray-500" />;
+      case 'cancelado': return <X className="text-red-500" />;
+      default: return null;
+    }
   };
 
   return (
@@ -79,113 +109,134 @@ const IFoodPedidos: React.FC = () => {
             Gerenciamento de pedidos do iFood
           </p>
         </div>
-        <div className="mt-4 md:mt-0">
+        <div className="mt-4 md:mt-0 flex space-x-3">
+          <Button
+            variant="ghost"
+            icon={<Download size={18} />}
+            onClick={() => toast.success('Relatório exportado!')}
+          >
+            Exportar
+          </Button>
           <Button
             variant="primary"
             icon={<RefreshCcw size={18} />}
+            onClick={atualizarPedidos}
+            isLoading={loading}
           >
-            Atualizar Pedidos
+            Atualizar
           </Button>
         </div>
       </div>
 
       {/* Filtros */}
       <div className="bg-white rounded-lg shadow-sm p-4">
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variant={filtroStatus === 'todos' ? 'primary' : 'ghost'}
-            size="sm"
-            onClick={() => setFiltroStatus('todos')}
-          >
-            Todos
-          </Button>
-          <Button
-            variant={filtroStatus === 'novo' ? 'warning' : 'ghost'}
-            size="sm"
-            onClick={() => setFiltroStatus('novo')}
-          >
-            Novos
-          </Button>
-          <Button
-            variant={filtroStatus === 'preparando' ? 'primary' : 'ghost'}
-            size="sm"
-            onClick={() => setFiltroStatus('preparando')}
-          >
-            Preparando
-          </Button>
-          <Button
-            variant={filtroStatus === 'pronto' ? 'success' : 'ghost'}
-            size="sm"
-            onClick={() => setFiltroStatus('pronto')}
-          >
-            Prontos
-          </Button>
-          <Button
-            variant={filtroStatus === 'entregue' ? 'ghost' : 'ghost'}
-            size="sm"
-            onClick={() => setFiltroStatus('entregue')}
-          >
-            Entregues
-          </Button>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-2.5 text-gray-400" size={20} />
+            <input
+              type="text"
+              placeholder="Buscar por cliente ou número do pedido..."
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              className="pl-10 w-full rounded-lg border border-gray-300 py-2 px-4 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant={filtroStatus === 'todos' ? 'primary' : 'ghost'}
+              size="sm"
+              onClick={() => setFiltroStatus('todos')}
+            >
+              Todos
+            </Button>
+            <Button
+              variant={filtroStatus === 'novo' ? 'warning' : 'ghost'}
+              size="sm"
+              onClick={() => setFiltroStatus('novo')}
+            >
+              Novos
+            </Button>
+            <Button
+              variant={filtroStatus === 'preparando' ? 'primary' : 'ghost'}
+              size="sm"
+              onClick={() => setFiltroStatus('preparando')}
+            >
+              Preparando
+            </Button>
+            <Button
+              variant={filtroStatus === 'pronto' ? 'success' : 'ghost'}
+              size="sm"
+              onClick={() => setFiltroStatus('pronto')}
+            >
+              Prontos
+            </Button>
+          </div>
         </div>
       </div>
 
       {/* Lista de Pedidos */}
-      <div className="space-y-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
         {pedidosFiltrados.map((pedido) => (
-          <div key={pedido.id} className="bg-white rounded-lg shadow-sm overflow-hidden">
+          <div
+            key={pedido.id}
+            className={`card border-l-4 ${
+              pedido.status === 'novo' ? 'border-l-yellow-500' :
+              pedido.status === 'aceito' ? 'border-l-blue-500' :
+              pedido.status === 'preparando' ? 'border-l-orange-500' :
+              pedido.status === 'pronto' ? 'border-l-green-500' :
+              pedido.status === 'entregue' ? 'border-l-gray-500' :
+              'border-l-red-500'
+            }`}
+          >
             <div className="p-6">
-              <div className="flex justify-between items-start">
+              <div className="flex justify-between items-start mb-4">
                 <div>
                   <div className="flex items-center">
-                    <ShoppingBag size={20} className="text-orange-500 mr-2" />
-                    <h3 className="text-lg font-medium">Pedido #{pedido.id}</h3>
-                    <span className={`ml-3 px-2 py-1 text-xs font-medium rounded-full ${statusClasses[pedido.status]}`}>
-                      {pedido.status.charAt(0).toUpperCase() + pedido.status.slice(1)}
-                    </span>
+                    {getStatusIcon(pedido.status)}
+                    <h3 className="text-lg font-medium ml-2">Pedido #{pedido.id}</h3>
                   </div>
-                  <div className="mt-2 text-sm text-gray-500">
-                    <p className="font-medium">{pedido.cliente}</p>
-                    <p>{pedido.endereco}</p>
-                    <div className="flex items-center mt-1">
-                      <Clock size={14} className="mr-1" />
-                      <span>{new Date(pedido.horario).toLocaleTimeString('pt-BR')}</span>
-                    </div>
+                  <div className="flex items-center mt-1 text-sm text-gray-500">
+                    <Clock size={14} className="mr-1" />
+                    <span>{new Date(pedido.horario).toLocaleTimeString('pt-BR')}</span>
+                    {pedido.tempoEstimado && (
+                      <span className="ml-2">({pedido.tempoEstimado} min)</span>
+                    )}
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm text-gray-500">Total do Pedido</p>
-                  <p className="text-lg font-medium">{formatarDinheiro(pedido.total)}</p>
+                <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                  `status-${pedido.status}`
+                }`}>
+                  {pedido.status.charAt(0).toUpperCase() + pedido.status.slice(1)}
+                </span>
+              </div>
+
+              <div className="mb-4">
+                <h4 className="font-medium">{pedido.cliente}</h4>
+                <p className="text-sm text-gray-500">{pedido.endereco}</p>
+              </div>
+
+              <div className="space-y-2 mb-4">
+                {pedido.itens.map((item) => (
+                  <div key={item.id} className="flex justify-between text-sm">
+                    <span>{item.quantidade}x {item.nome}</span>
+                    <span className="text-gray-600">{formatarDinheiro(item.preco * item.quantidade)}</span>
+                  </div>
+                ))}
+                <div className="pt-2 border-t border-gray-200 flex justify-between font-medium">
+                  <span>Total</span>
+                  <span>{formatarDinheiro(pedido.total)}</span>
                 </div>
               </div>
 
-              {/* Itens do Pedido */}
-              <div className="mt-6">
-                <h4 className="text-sm font-medium text-gray-900 mb-3">Itens do Pedido</h4>
-                <div className="space-y-3">
-                  {pedido.itens.map((item) => (
-                    <div key={item.id} className="flex justify-between items-center">
-                      <div>
-                        <p className="text-sm font-medium">{item.quantidade}x {item.nome}</p>
-                        {item.observacao && (
-                          <p className="text-xs text-gray-500">{item.observacao}</p>
-                        )}
-                      </div>
-                      <p className="text-sm font-medium">{formatarDinheiro(item.preco * item.quantidade)}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Ações */}
-              <div className="mt-6 flex justify-end space-x-3">
+              <div className="flex justify-end space-x-2">
                 {pedido.status === 'novo' && (
                   <>
                     <Button
                       variant="ghost"
                       size="sm"
                       icon={<X size={16} />}
-                      className="text-red-600 hover:text-red-700"
+                      className="text-red-600"
                       onClick={() => atualizarStatusPedido(pedido.id, 'cancelado')}
                     >
                       Recusar
@@ -205,6 +256,7 @@ const IFoodPedidos: React.FC = () => {
                   <Button
                     variant="primary"
                     size="sm"
+                    icon={<ChefHat size={16} />}
                     onClick={() => atualizarStatusPedido(pedido.id, 'preparando')}
                   >
                     Iniciar Preparo
@@ -215,9 +267,10 @@ const IFoodPedidos: React.FC = () => {
                   <Button
                     variant="success"
                     size="sm"
+                    icon={<Check size={16} />}
                     onClick={() => atualizarStatusPedido(pedido.id, 'pronto')}
                   >
-                    Marcar como Pronto
+                    Pronto para Entrega
                   </Button>
                 )}
                 
@@ -225,6 +278,7 @@ const IFoodPedidos: React.FC = () => {
                   <Button
                     variant="success"
                     size="sm"
+                    icon={<Truck size={16} />}
                     onClick={() => atualizarStatusPedido(pedido.id, 'entregue')}
                   >
                     Confirmar Entrega
