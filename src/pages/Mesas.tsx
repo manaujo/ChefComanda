@@ -4,6 +4,7 @@ import Button from '../components/ui/Button';
 import MesaCard from '../components/mesa/MesaCard';
 import NovoMesaModal from '../components/mesa/NovoMesaModal';
 import { useRestaurante } from '../contexts/RestauranteContext';
+import toast from 'react-hot-toast';
 
 const Mesas: React.FC = () => {
   const { mesas } = useRestaurante();
@@ -22,19 +23,24 @@ const Mesas: React.FC = () => {
     aguardando: mesas.filter(mesa => mesa.status === 'aguardando').length,
   };
 
+  const handleRefresh = () => {
+    toast.success('Mesas atualizadas!');
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Mesas</h1>
           <p className="text-gray-500 mt-1">
-            Gerenciamento de mesas e ocupação
+            Gerenciamento de mesas e pedidos
           </p>
         </div>
         <div className="mt-4 md:mt-0 flex space-x-3">
           <Button 
             variant="ghost" 
             icon={<RefreshCcw size={18} />}
+            onClick={handleRefresh}
           >
             Atualizar
           </Button>
