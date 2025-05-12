@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Search, ShoppingCart, Trash2, Plus, Minus, CreditCard, Receipt, ArrowLeft, X, User, Clock, ArrowUpCircle, Music } from 'lucide-react';
+import { 
+  Menu, X, Search, Filter, Clock, Users, CreditCard, Receipt, ArrowLeft, 
+  ArrowUpCircle, Music, Percent, AlertTriangle
+} from 'lucide-react';
+import Button from '../components/ui/Button';
 import { useRestaurante } from '../contexts/RestauranteContext';
 import { useAuth } from '../contexts/AuthContext';
 import { formatarDinheiro, formatarTempo } from '../utils/formatters';
-import Button from '../components/ui/Button';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
@@ -45,6 +48,8 @@ const PDV: React.FC = () => {
   const [incluirTaxaServico, setIncluirTaxaServico] = useState(true);
   const [incluirCouvert, setIncluirCouvert] = useState(false);
   const [valorCouvert, setValorCouvert] = useState<string>('15.00');
+  const [desconto, setDesconto] = useState<string>('');
+  const [descontoError, setDescontoError] = useState<string>('');
   const [caixa, setCaixa] = useState<CaixaState>({
     isOpen: false,
     valorInicial: 0,
@@ -53,9 +58,8 @@ const PDV: React.FC = () => {
   });
   const [showCaixaModal, setShowCaixaModal] = useState(false);
   const [loading, setLoading] = useState(false);
-  
+
   useEffect(() => {
-    // Carregar todas as mesas com comandas em aberto
     const mesasComComandas = mesas.filter(m => m.status === 'ocupada' || m.status === 'aguardando');
     const comandas: ComandaPendente[] = mesasComComandas.map(mesa => {
       const itens = itensComanda
@@ -80,6 +84,33 @@ const PDV: React.FC = () => {
     setComandasPendentes(comandas);
   }, [mesas, itensComanda]);
 
+  const handleDescontoChange = (value: string) => {
+    setDescontoError('');
+    
+    if (value === '') {
+      setDesconto('');
+      return;
+    }
+
+    const numeroDesconto = parseFloat(value);
+    if (isNaN(numeroDesconto)) {
+      setDescontoError('Digite um número válido');
+      return;
+    }
+
+    if (numeroDesconto < 0) {
+      setDescontoError('O desconto não pode ser negativo');
+      return;
+    }
+
+    if (numeroDesconto > 100) {
+      setDescontoError('O desconto não pode ser maior que 100%');
+      return;
+    }
+
+    setDesconto(value);
+  };
+
   const produtosFiltrados = produtos.filter(produto => {
     const matchBusca = produto.nome.toLowerCase().includes(busca.toLowerCase());
     const matchCategoria = categoriaSelecionada === 'todas' || produto.categoria === categoriaSelecionada;
@@ -91,14 +122,24 @@ const PDV: React.FC = () => {
       ? comandaSelecionada.total 
       : pedidoAtual.reduce((total, item) => total + (item.preco * item.quantidade), 0);
     
-    const taxaServico = incluirTaxaServico ? subtotal * 0.1 : 0;
+    const descontoValor = desconto ? (subtotal * (parseFloat(desconto) / 100)) : 0;
+    const subtotalComDesconto = subtotal - descontoValor;
+    
+    const taxaServico = incluirTaxaServico ? subtotalComDesconto * 0.1 : 0;
     const couvert = incluirCouvert ? parseFloat(valorCouvert) || 0 : 0;
-    const total = subtotal + taxaServico + couvert;
+    const total = subtotalComDesconto + taxaServico + couvert;
 
-    return { subtotal, taxaServico, couvert, total };
+    return { 
+      subtotal, 
+      descontoValor,
+      subtotalComDesconto,
+      taxaServico, 
+      couvert, 
+      total 
+    };
   };
 
-  const { subtotal, taxaServico, couvert, total } = calcularTotais();
+  const { subtotal, descontoValor, subtotalComDesconto, taxaServico, couvert, total } = calcularTotais();
 
   const adicionarItem = (produto: Produto) => {
     setLoading(true);
@@ -221,6 +262,8 @@ const PDV: React.FC = () => {
     setIncluirTaxaServico(true);
     setIncluirCouvert(false);
     setValorCouvert('15.00');
+    setDesconto('');
+    setDescontoError('');
     toast.success('Pedido limpo');
   };
 
@@ -367,7 +410,7 @@ const PDV: React.FC = () => {
               
               {comandasPendentes.length === 0 && (
                 <div className="text-center py-8 text-gray-500">
-                  <ShoppingCart size={48} className="mx-auto mb-3 text-gray-400" />
+                  <Receipt size={48} className="mx-auto mb-3 text-gray-400" />
                   <p>Nenhuma comanda em aberto</p>
                 </div>
               )}
@@ -393,7 +436,7 @@ const PDV: React.FC = () => {
                   variant="primary"
                   onClick={() => setShowAddItemModal(true)}
                   disabled={!caixa.isOpen}
-                  icon={<Plus size={20} />}
+                  icon={<Menu size={20} />}
                 >
                   Adicionar Item
                 </Button>
@@ -403,7 +446,7 @@ const PDV: React.FC = () => {
             <div className="divide-y divide-gray-200 max-h-[calc(100vh-600px)] overflow-y-auto p-6">
               {(comandaSelecionada?.itens || pedidoAtual).length === 0 ? (
                 <div className="text-center py-8">
-                  <ShoppingCart size={48} className="mx-auto text-gray-400" />
+                  <Receipt size={48} className="mx-auto text-gray-400" />
                   <p className="mt-2 text-gray-500">
                     Nenhum item adicionado
                   </p>
@@ -424,14 +467,14 @@ const PDV: React.FC = () => {
                           onClick={() => atualizarQuantidade(item.id, -1)}
                           className="text-gray-500 hover:text-red-500 transition-colors"
                         >
-                          <Minus size={16} />
+                          <Menu size={16} />
                         </button>
                         <span className="mx-3 font-medium">{item.quantidade}</span>
                         <button
                           onClick={() => atualizarQuantidade(item.id, 1)}
                           className="text-gray-500 hover:text-green-500 transition-colors"
                         >
-                          <Plus size={16} />
+                          <Menu size={16} />
                         </button>
                       </div>
                     </div>
@@ -447,7 +490,7 @@ const PDV: React.FC = () => {
                         onClick={() => removerItem(item.id)}
                         className="text-red-500 hover:text-red-700 transition-colors mt-2"
                       >
-                        <Trash2 size={16} />
+                        <X size={16} />
                       </button>
                     </div>
                   </div>
@@ -502,9 +545,47 @@ const PDV: React.FC = () => {
                       )}
                     </div>
                     {incluirCouvert && (
-                      <p className="text-xs text-gray-500 italic">
-                        O couvert artístico é uma taxa opcional cobrada por apresentações ao vivo. 
-                        O valor deve ser previamente informado ao cliente.
+                      <p className="text-xs text-gray-500 italic flex items-center">
+                        <Music size={12} className="mr-1" />
+                        O couvert artístico é uma taxa opcional cobrada por apresentações ao vivo
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Desconto */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="flex items-center space-x-2">
+                        <Percent size={16} className="text-gray-500" />
+                        <span className="text-sm text-gray-700">Aplicar Desconto</span>
+                      </label>
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="number"
+                          value={desconto}
+                          onChange={(e) => handleDescontoChange(e.target.value)}
+                          className={`w-20 rounded-md text-right text-sm ${
+                            descontoError 
+                              ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
+                              : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                          }`}
+                          placeholder="0"
+                          min="0"
+                          max="100"
+                          step="0.1"
+                        />
+                        <span className="text-sm text-gray-500">%</span>
+                      </div>
+                    </div>
+                    {descontoError && (
+                      <p className="text-xs text-red-500 flex items-center">
+                        <AlertTriangle size={12} className="mr-1" />
+                        {descontoError}
+                      </p>
+                    )}
+                    {desconto && !descontoError && (
+                      <p className="text-xs text-green-500 italic">
+                        Desconto de {formatarDinheiro(descontoValor)} aplicado
                       </p>
                     )}
                   </div>
@@ -516,18 +597,34 @@ const PDV: React.FC = () => {
                     <span>Subtotal</span>
                     <span>{formatarDinheiro(subtotal)}</span>
                   </div>
+                  
+                  {desconto && !descontoError && (
+                    <>
+                      <div className="flex justify-between text-gray-500">
+                        <span>Desconto ({desconto}%)</span>
+                        <span>- {formatarDinheiro(descontoValor)}</span>
+                      </div>
+                      <div className="flex justify-between text-gray-700 font-medium">
+                        <span>Subtotal com desconto</span>
+                        <span>{formatarDinheiro(subtotalComDesconto)}</span>
+                      </div>
+                    </>
+                  )}
+                  
                   {incluirTaxaServico && (
                     <div className="flex justify-between text-gray-500">
                       <span>Taxa de serviço (10%)</span>
                       <span>{formatarDinheiro(taxaServico)}</span>
                     </div>
                   )}
+                  
                   {incluirCouvert && parseFloat(valorCouvert) > 0 && (
                     <div className="flex justify-between text-gray-500">
                       <span>Couvert Artístico</span>
                       <span>{formatarDinheiro(parseFloat(valorCouvert))}</span>
                     </div>
                   )}
+                  
                   <div className="flex justify-between text-xl font-semibold text-gray-900 pt-4 border-t border-gray-200">
                     <span>Total</span>
                     <span>{formatarDinheiro(total)}</span>
@@ -587,7 +684,7 @@ const PDV: React.FC = () => {
                     fullWidth
                     disabled={(comandaSelecionada?.itens || pedidoAtual).length === 0}
                     onClick={limparPedido}
-                    icon={<Trash2 size={18} />}
+                    icon={<X size={18} />}
                   >
                     {comandaSelecionada ? 'Cancelar' : 'Limpar'}
                   </Button>
@@ -633,7 +730,7 @@ const PDV: React.FC = () => {
                     className={`px-4 py-2 rounded-full whitespace-nowrap transition-colors ${
                       categoriaSelecionada === 'todas'
                         ? 'bg-blue-500 text-white'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        : 'bg-gray-100  text-gray-700 hover:bg-gray-200'
                     }`}
                   >
                     Todas
@@ -710,7 +807,6 @@ const PDV: React.FC = () => {
                   <div className="mt-1 relative rounded-md shadow-sm">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                       <span className="text-gray-500 sm:text-sm">R$</span>
-                    
                     </div>
                     <input
                       type="number"
