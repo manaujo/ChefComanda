@@ -104,7 +104,16 @@ const EmployeeManagement: React.FC = () => {
         .maybeSingle();
 
       if (companyError) throw companyError;
-      if (!companyData) throw new Error('Company not found');
+      
+      // Check if company profile exists
+      if (!companyData) {
+        toast.error('Por favor, complete seu perfil empresarial antes de cadastrar funcionários', {
+          duration: 5000
+        });
+        // Navigate to company profile page
+        window.location.href = '/profile/company';
+        return;
+      }
 
       // Create auth user for employee
       const { error: authError } = await supabase.auth.signUp({
