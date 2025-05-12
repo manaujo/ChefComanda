@@ -15,6 +15,7 @@ const DashboardLayout: React.FC = () => {
   const location = useLocation();
   const { theme, toggleTheme } = useTheme();
   const isPDV = location.pathname === '/pdv';
+  const isComandas = location.pathname === '/comandas';
 
   const navItems = [
     { name: 'Dashboard', path: '/', icon: <LayoutDashboard size={20} />, roles: ['admin', 'cashier'] },
@@ -29,7 +30,8 @@ const DashboardLayout: React.FC = () => {
 
   const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
-  if (isPDV) return <Outlet />;
+  // Return just the outlet for fullscreen pages
+  if (isPDV || isComandas) return <Outlet />;
 
   return (
     <div className={`min-h-screen bg-gray-100 flex ${theme === 'dark' ? 'dark' : ''}`}>
