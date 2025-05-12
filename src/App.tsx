@@ -16,7 +16,7 @@ import VerifyEmail from './pages/auth/VerifyEmail';
 import Dashboard from './pages/Dashboard';
 import Mesas from './pages/Mesas';
 import Comandas from './pages/Comandas';
-import Produtos from './pages/Produtos';
+import Cardapio from './pages/Produtos';
 import Estoque from './pages/Estoque';
 import Relatorios from './pages/Relatorios';
 import IFoodPedidos from './pages/IFoodPedidos';
@@ -62,7 +62,7 @@ function App() {
                 <Route index element={<Dashboard />} />
                 <Route path="mesas" element={<PrivateRoute allowedRoles={['admin', 'waiter', 'cashier']}><Mesas /></PrivateRoute>} />
                 <Route path="comandas" element={<PrivateRoute allowedRoles={['admin', 'kitchen', 'waiter', 'cashier']}><Comandas /></PrivateRoute>} />
-                <Route path="produtos" element={<PrivateRoute allowedRoles={['admin', 'stock']}><Produtos /></PrivateRoute>} />
+                <Route path="cardapio" element={<PrivateRoute allowedRoles={['admin', 'stock']}><Cardapio /></PrivateRoute>} />
                 <Route path="estoque" element={<PrivateRoute allowedRoles={['admin', 'stock']}><Estoque /></PrivateRoute>} />
                 <Route path="relatorios" element={<PrivateRoute allowedRoles={['admin', 'cashier']}><Relatorios /></PrivateRoute>} />
                 <Route path="ifood" element={<PrivateRoute allowedRoles={['admin', 'kitchen', 'cashier']}><IFoodPedidos /></PrivateRoute>} />
