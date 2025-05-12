@@ -22,6 +22,8 @@ import Relatorios from './pages/Relatorios';
 import IFoodPedidos from './pages/IFoodPedidos';
 import CaixaRegistradora from './pages/CaixaRegistradora';
 import PDV from './pages/PDV';
+import CardapioOnline from './pages/CardapioOnline';
+import CardapioPublico from './pages/CardapioPublico';
 
 // Profile Pages
 import CompanyProfile from './pages/profile/CompanyProfile';
@@ -48,6 +50,9 @@ function App() {
               <Route path="/signup" element={<AuthLayout><SignUp /></AuthLayout>} />
               <Route path="/auth/verify-email" element={<AuthLayout><VerifyEmail /></AuthLayout>} />
               
+              {/* Public Menu Route */}
+              <Route path="/cardapio/:restauranteId" element={<CardapioPublico />} />
+              
               {/* Protected Routes */}
               <Route path="/" element={
                 <PrivateRoute>
@@ -63,6 +68,7 @@ function App() {
                 <Route path="ifood" element={<PrivateRoute allowedRoles={['admin', 'kitchen', 'cashier']}><IFoodPedidos /></PrivateRoute>} />
                 <Route path="caixa" element={<PrivateRoute allowedRoles={['admin', 'cashier']}><CaixaRegistradora /></PrivateRoute>} />
                 <Route path="pdv" element={<PrivateRoute allowedRoles={['admin', 'cashier']}><PDV /></PrivateRoute>} />
+                <Route path="cardapio-online" element={<PrivateRoute allowedRoles={['admin']}><CardapioOnline /></PrivateRoute>} />
                 
                 {/* Profile Routes */}
                 <Route path="profile">
