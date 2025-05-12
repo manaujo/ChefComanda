@@ -18,7 +18,7 @@ interface ProdutoFormData {
 }
 
 const Produtos: React.FC = () => {
-  const { produtos, categorias } = useRestaurante();
+  const { produtos, categorias, setProdutos } = useRestaurante();
   const [busca, setBusca] = useState('');
   const [categoriaSelecionada, setCategoriaSelecionada] = useState('todas');
   const [statusFiltro, setStatusFiltro] = useState<'todos' | 'ativos' | 'inativos'>('todos');
@@ -66,8 +66,27 @@ const Produtos: React.FC = () => {
     setLoading(true);
 
     try {
-      // Simulação de salvamento
+      // Validate form data
+      if (!formData.nome || !formData.categoria || formData.preco <= 0) {
+        throw new Error('Preencha todos os campos obrigatórios');
+      }
+
+      // Simulate saving product
       await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Add to products list
+      const newProduct = {
+        id: Math.max(0, ...produtos.map(p => p.id)) + 1,
+        nome: formData.nome,
+        categoria: formData.categoria,
+        preco: formData.preco,
+        descricao: formData.descricao || '',
+        disponivel: formData.disponivel,
+        estoque: 0,
+        estoqueMinimo: 5
+      };
+      
+      setProdutos([...produtos, newProduct]);
       
       toast.success(produtoSelecionado 
         ? 'Produto atualizado com sucesso!' 
@@ -78,7 +97,7 @@ const Produtos: React.FC = () => {
       resetForm();
     } catch (error) {
       console.error('Erro ao salvar produto:', error);
-      toast.error('Erro ao salvar produto');
+      toast.error(error instanceof Error ? error.message : 'Erro ao salvar produto');
     } finally {
       setLoading(false);
     }
