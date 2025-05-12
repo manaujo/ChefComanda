@@ -15,6 +15,8 @@ interface RestauranteContextData {
   ocuparMesa: (mesaId: number) => void;
   liberarMesa: (mesaId: number) => void;
   solicitarPagamento: (mesaId: number) => void;
+  excluirMesa: (mesaId: number) => void;
+  finalizarPagamento: (mesaId: number, formaPagamento: string) => Promise<void>;
   
   adicionarItemComanda: (dados: { mesaId: number; produtoId: number; nome: string; categoria: string; quantidade: number; preco: number; observacao?: string }) => void;
   removerItemComanda: (itemId: number) => void;
@@ -189,6 +191,24 @@ export const RestauranteProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const imprimirComanda = (mesaId: number) => {
     toast.success(`Comanda enviada para impressão!`);
   };
+
+  const excluirMesa = (mesaId: number) => {
+    setMesas(mesas.filter(mesa => mesa.id !== mesaId));
+    setItensComanda(itensComanda.filter(item => item.mesaId !== mesaId));
+  };
+
+  const finalizarPagamento = async (mesaId: number, formaPagamento: string) => {
+    const mesa = mesas.find(m => m.id === mesaId);
+    if (!mesa) return;
+
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    setMesas(mesas.map(m => 
+      m.id === mesaId ? { ...m, status: 'aguardando' } : m
+    ));
+
+    console.log(`Adicionando ${mesa.valorTotal} ao caixa (${formaPagamento})`);
+  };
   
   return (
     <RestauranteContext.Provider value={{
@@ -204,6 +224,8 @@ export const RestauranteProvider: React.FC<{ children: React.ReactNode }> = ({ c
       ocuparMesa,
       liberarMesa,
       solicitarPagamento,
+      excluirMesa,
+      finalizarPagamento,
       
       adicionarItemComanda,
       removerItemComanda,
