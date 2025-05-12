@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { Clock, Users, CreditCard, MoreVertical, ClipboardEdit, Printer, Plus, Trash2 } from 'lucide-react';
+import { Clock, Users, CreditCard, MoreVertical, ClipboardEdit, Printer, Plus, Trash2, Receipt } from 'lucide-react';
 import { formatarTempo, formatarDinheiro } from '../../utils/formatters';
 import { useRestaurante } from '../../contexts/RestauranteContext';
 import Button from '../ui/Button';
 import ComandaModal from '../comanda/ComandaModal';
 import AdicionarItemModal from '../comanda/AdicionarItemModal';
+import PagamentoModal from './PagamentoModal';
+import toast from 'react-hot-toast';
 
 interface MesaCardProps {
   mesa: Mesa;
@@ -13,8 +15,10 @@ interface MesaCardProps {
 const MesaCard: React.FC<MesaCardProps> = ({ mesa }) => {
   const [comandaModalAberta, setComandaModalAberta] = useState(false);
   const [adicionarItemModalAberto, setAdicionarItemModalAberto] = useState(false);
+  const [pagamentoModalAberto, setPagamentoModalAberto] = useState(false);
   const [menuAberto, setMenuAberto] = useState(false);
-  const { ocuparMesa, liberarMesa, solicitarPagamento, imprimirComanda } = useRestaurante();
+  
+  const { ocuparMesa, liberarMesa, imprimirComanda, excluirMesa } = useRestaurante();
 
   const statusClasses = {
     livre: 'border-l-4 border-green-500 bg-green-50',
@@ -38,6 +42,7 @@ const MesaCard: React.FC<MesaCardProps> = ({ mesa }) => {
     switch (acao) {
       case 'ocupar':
         ocuparMesa(mesa.id);
+        toast.success('Mesa ocupada com sucesso!');
         break;
       case 'comanda':
         setComandaModalAberta(true);
@@ -47,12 +52,14 @@ const MesaCard: React.FC<MesaCardProps> = ({ mesa }) => {
         break;
       case 'imprimir':
         imprimirComanda(mesa.id);
+        toast.success('Comanda enviada para impressão!');
         break;
       case 'pagamento':
-        solicitarPagamento(mesa.id);
+        setPagamentoModalAberto(true);
         break;
-      case 'liberar':
-        liberarMesa(mesa.id);
+      case 'excluir':
+        excluirMesa(mesa.id);
+        toast.success('Mesa excluída com sucesso!');
         break;
       default:
         break;
@@ -105,7 +112,7 @@ const MesaCard: React.FC<MesaCardProps> = ({ mesa }) => {
                           onClick={() => handleAcao('adicionar')}
                           className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                         >
-                          Adicionar Item
+                          Criar Pedido
                         </button>
                         <button 
                           onClick={() => handleAcao('imprimir')}
@@ -117,17 +124,17 @@ const MesaCard: React.FC<MesaCardProps> = ({ mesa }) => {
                           onClick={() => handleAcao('pagamento')}
                           className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                         >
-                          Solicitar Pagamento
+                          Pagamento
                         </button>
                       </>
                     )}
                     
                     {mesa.status === 'aguardando' && (
                       <button 
-                        onClick={() => handleAcao('liberar')}
-                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        onClick={() => handleAcao('excluir')}
+                        className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
                       >
-                        Liberar Mesa
+                        Excluir Mesa
                       </button>
                     )}
                   </div>
@@ -187,12 +194,12 @@ const MesaCard: React.FC<MesaCardProps> = ({ mesa }) => {
                   icon={<Plus size={16} />}
                   onClick={() => handleAcao('adicionar')}
                 >
-                  Adicionar Item
+                  Criar Pedido
                 </Button>
                 <Button 
                   variant="ghost" 
                   size="sm"
-                  icon={<Printer size={16} />}
+                  icon={<Receipt size={16} />}
                   onClick={() => handleAcao('imprimir')}
                 >
                   Imprimir
@@ -210,13 +217,13 @@ const MesaCard: React.FC<MesaCardProps> = ({ mesa }) => {
             
             {mesa.status === 'aguardando' && (
               <Button 
-                variant="warning" 
+                variant="danger" 
                 size="sm" 
                 fullWidth
                 icon={<Trash2 size={16} />}
-                onClick={() => handleAcao('liberar')}
+                onClick={() => handleAcao('excluir')}
               >
-                Finalizar
+                Excluir Mesa
               </Button>
             )}
           </div>
@@ -234,6 +241,12 @@ const MesaCard: React.FC<MesaCardProps> = ({ mesa }) => {
         isOpen={adicionarItemModalAberto}
         onClose={() => setAdicionarItemModalAberto(false)}
         mesaId={mesa.id}
+      />
+
+      <PagamentoModal
+        isOpen={pagamentoModalAberto}
+        onClose={() => setPagamentoModalAberto(false)}
+        mesa={mesa}
       />
     </>
   );
