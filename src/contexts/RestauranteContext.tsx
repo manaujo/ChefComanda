@@ -28,18 +28,15 @@ export const useRestaurante = () => useContext(RestauranteContext);
 
 export const RestauranteProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [mesas, setMesas] = useState<Mesa[]>(dadosMesas);
-  const [produtos] = useState<Produto[]>(dadosProdutos);
+  const [produtos, setProdutos] = useState<Produto[]>(dadosProdutos);
   const [produtosPopulares] = useState<ProdutoPopular[]>(dadosProdutosPopulares);
   const [pedidos] = useState<Pedido[]>(dadosPedidos);
   const [itensComanda, setItensComanda] = useState<ItemComanda[]>(dadosItensComanda);
   const [alertasEstoque] = useState<AlertaEstoque[]>(dadosAlertasEstoque);
   
-  // Extrair categorias únicas dos produtos
   const categorias = Array.from(new Set(produtos.map(produto => produto.categoria)));
   
-  // Funções de gerenciamento de mesas
   const adicionarMesa = ({ numero, capacidade }: { numero: number; capacidade: number }) => {
-    // Verificar se já existe uma mesa com esse número
     if (mesas.some(mesa => mesa.numero === numero)) {
       toast.error(`Mesa ${numero} já existe!`);
       return;
@@ -85,7 +82,6 @@ export const RestauranteProvider: React.FC<{ children: React.ReactNode }> = ({ c
         : mesa
     ));
     
-    // Remover itens da comanda da mesa
     setItensComanda(itensComanda.filter(item => item.mesaId !== mesaId));
     
     toast.success(`Mesa liberada com sucesso!`);
@@ -101,8 +97,7 @@ export const RestauranteProvider: React.FC<{ children: React.ReactNode }> = ({ c
     toast.success(`Pagamento solicitado para a mesa!`);
   };
   
-  // Funções de comanda
-  const adicionarItemComanda = ({ 
+  const adicionarItemComanda = async ({ 
     mesaId, 
     produtoId, 
     nome, 
@@ -119,30 +114,49 @@ export const RestauranteProvider: React.FC<{ children: React.ReactNode }> = ({ c
     preco: number; 
     observacao?: string 
   }) => {
-    const novoItem: ItemComanda = {
-      id: Math.max(0, ...itensComanda.map(i => i.id)) + 1,
-      mesaId,
-      produtoId,
-      nome,
-      categoria,
-      quantidade,
-      preco,
-      observacao,
-      status: 'pendente',
-      horario: new Date().toISOString(),
-    };
-    
-    setItensComanda([...itensComanda, novoItem]);
-    
-    // Atualizar o valor total da mesa
-    const valorItemTotal = quantidade * preco;
-    setMesas(mesas.map(mesa => 
-      mesa.id === mesaId
-        ? { ...mesa, valorTotal: (mesa.valorTotal || 0) + valorItemTotal }
-        : mesa
-    ));
-    
-    toast.success(`Item adicionado à comanda!`);
+    try {
+      const novoItem: ItemComanda = {
+        id: Math.max(0, ...itensComanda.map(i => i.id)) + 1,
+        mesaId,
+        produtoId,
+        nome,
+        categoria,
+        quantidade,
+        preco,
+        observacao,
+        status: 'pendente',
+        horario: new Date().toISOString(),
+      };
+      
+      const produto = produtos.find(p => p.id === produtoId);
+      if (produto) {
+        if (produto.estoque < quantidade) {
+          toast.error(`Estoque insuficiente para ${produto.nome}`);
+          return;
+        }
+        
+        const produtosAtualizados = produtos.map(p => 
+          p.id === produtoId 
+            ? { ...p, estoque: p.estoque - quantidade }
+            : p
+        );
+        setProdutos(produtosAtualizados);
+      }
+      
+      setItensComanda([...itensComanda, novoItem]);
+      
+      const valorItemTotal = quantidade * preco;
+      setMesas(mesas.map(mesa => 
+        mesa.id === mesaId
+          ? { ...mesa, valorTotal: (mesa.valorTotal || 0) + valorItemTotal }
+          : mesa
+      ));
+      
+      toast.success(`Item adicionado à comanda!`);
+    } catch (error) {
+      console.error('Erro ao adicionar item:', error);
+      toast.error('Erro ao adicionar item à comanda');
+    }
   };
   
   const removerItemComanda = (itemId: number) => {
@@ -150,7 +164,6 @@ export const RestauranteProvider: React.FC<{ children: React.ReactNode }> = ({ c
     
     if (!item) return;
     
-    // Atualizar o valor total da mesa
     const valorItemTotal = item.quantidade * item.preco;
     setMesas(mesas.map(mesa => 
       mesa.id === item.mesaId
@@ -158,7 +171,6 @@ export const RestauranteProvider: React.FC<{ children: React.ReactNode }> = ({ c
         : mesa
     ));
     
-    // Remover o item
     setItensComanda(itensComanda.filter(i => i.id !== itemId));
     
     toast.success(`Item removido da comanda!`);
