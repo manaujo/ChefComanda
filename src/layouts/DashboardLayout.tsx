@@ -3,7 +3,7 @@ import { Outlet, Link, useLocation } from 'react-router-dom';
 import {
   Menu, X, LayoutDashboard, Users, ShoppingBag,
   ClipboardList, ChefHat, PieChart, Settings, LogOut,
-  Bell, CreditCard, Moon, Sun, Coffee
+  Bell, CreditCard, Moon, Sun, Coffee, QrCode
 } from 'lucide-react';
 
 import { useAuth } from '../contexts/AuthContext';
@@ -26,6 +26,7 @@ const DashboardLayout: React.FC = () => {
     { name: 'Estoque', path: '/estoque', icon: <ChefHat size={20} />, roles: ['admin', 'stock'] },
     { name: 'Pedidos iFood', path: '/ifood', icon: <ShoppingBag size={20} />, roles: ['admin', 'kitchen'] },
     { name: 'Relatórios', path: '/relatorios', icon: <PieChart size={20} />, roles: ['admin', 'cashier'] },
+    { name: 'Cardápio Online', path: '/cardapio-online', icon: <QrCode size={20} />, roles: ['admin'] },
   ];
 
   const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
@@ -99,7 +100,7 @@ const DashboardLayout: React.FC = () => {
         </div>
       </div>
 
-      {/* Cabeçalho limpo */}
+      {/* Main Content */}
       <div className="flex flex-col flex-1 overflow-hidden">
         <header className="shadow-sm z-10 bg-white dark:bg-gray-800">
           <div className="px-4 sm:px-6 lg:px-8 py-3">
