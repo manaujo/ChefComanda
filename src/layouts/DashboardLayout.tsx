@@ -22,7 +22,7 @@ const DashboardLayout: React.FC = () => {
     { name: 'Mesas', path: '/mesas', icon: <Coffee size={20} />, roles: ['admin', 'waiter'] },
     { name: 'Comandas', path: '/comandas', icon: <ClipboardList size={20} />, roles: ['admin', 'kitchen', 'waiter'] },
     { name: 'PDV', path: '/pdv', icon: <CreditCard size={20} />, roles: ['admin', 'cashier'] },
-    { name: 'Produtos', path: '/produtos', icon: <ShoppingBag size={20} />, roles: ['admin', 'stock'] },
+    { name: 'Cardápio', path: '/cardapio', icon: <ShoppingBag size={20} />, roles: ['admin', 'stock'] },
     { name: 'Estoque', path: '/estoque', icon: <ChefHat size={20} />, roles: ['admin', 'stock'] },
     { name: 'Pedidos iFood', path: '/ifood', icon: <ShoppingBag size={20} />, roles: ['admin', 'kitchen'] },
     { name: 'Relatórios', path: '/relatorios', icon: <PieChart size={20} />, roles: ['admin', 'cashier'] },
