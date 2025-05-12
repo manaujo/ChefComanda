@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, UserPlus, Edit2, Trash2 } from 'lucide-react';
+import { Users, UserPlus, Edit2, Trash2, Search, AlertTriangle } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../services/supabase';
@@ -18,11 +18,15 @@ const EmployeeManagement: React.FC = () => {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     cpf: '',
     role: 'waiter',
-    password: ''
+    password: '',
+    confirmPassword: ''
   });
 
   useEffect(() => {
@@ -52,8 +56,6 @@ const EmployeeManagement: React.FC = () => {
 
         if (employeesError) throw employeesError;
         setEmployees(employeesData || []);
-      } else {
-        setEmployees([]);
       }
     } catch (error) {
       console.error('Error loading employees:', error);
@@ -61,11 +63,38 @@ const EmployeeManagement: React.FC = () => {
     }
   };
 
+  const validateCPF = (cpf: string) => {
+    const cpfRegex = /^\d{3}\.\d{3}\.\d{3}-\d{2}$/;
+    return cpfRegex.test(cpf);
+  };
+
+  const formatCPF = (value: string) => {
+    const digits = value.replace(/\D/g, '');
+    return digits
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d{1,2})/, '$1-$2')
+      .slice(0, 14);
+  };
+
+  const handleCPFChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatCPF(e.target.value);
+    setFormData({ ...formData, cpf: formatted });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
+      if (!validateCPF(formData.cpf)) {
+        throw new Error('CPF inválido');
+      }
+
+      if (formData.password !== formData.confirmPassword) {
+        throw new Error('As senhas não conferem');
+      }
+
       if (!user) throw new Error('User not authenticated');
 
       const { data: companyData, error: companyError } = await supabase
@@ -77,8 +106,9 @@ const EmployeeManagement: React.FC = () => {
       if (companyError) throw companyError;
       if (!companyData) throw new Error('Company not found');
 
-      const { error: authError, data: authData } = await supabase.auth.signUp({
-        email: `${formData.cpf}@internal.chefcomanda.com`,
+      // Create auth user for employee
+      const { error: authError } = await supabase.auth.signUp({
+        email: `${formData.cpf.replace(/\D/g, '')}@internal.chefcomanda.com`,
         password: formData.password,
         options: {
           data: {
@@ -104,16 +134,56 @@ const EmployeeManagement: React.FC = () => {
       toast.success('Funcionário cadastrado com sucesso!');
       setShowModal(false);
       loadEmployees();
+      resetForm();
     } catch (error) {
       console.error('Error creating employee:', error);
-      toast.error('Erro ao cadastrar funcionário');
+      toast.error(error instanceof Error ? error.message : 'Erro ao cadastrar funcionário');
     } finally {
       setLoading(false);
     }
   };
 
+  const handleDelete = async () => {
+    if (!selectedEmployee) return;
+    
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from('employees')
+        .update({ active: false })
+        .eq('id', selectedEmployee.id);
+
+      if (error) throw error;
+
+      toast.success('Funcionário desativado com sucesso!');
+      setShowDeleteModal(false);
+      setSelectedEmployee(null);
+      loadEmployees();
+    } catch (error) {
+      console.error('Error deactivating employee:', error);
+      toast.error('Erro ao desativar funcionário');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      cpf: '',
+      role: 'waiter',
+      password: '',
+      confirmPassword: ''
+    });
+  };
+
+  const filteredEmployees = employees.filter(employee => 
+    employee.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    employee.cpf.includes(searchTerm)
+  );
+
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
         <div className="p-6">
           <div className="flex items-center justify-between mb-6">
@@ -133,10 +203,27 @@ const EmployeeManagement: React.FC = () => {
             <Button
               variant="primary"
               icon={<UserPlus size={16} />}
-              onClick={() => setShowModal(true)}
+              onClick={() => {
+                resetForm();
+                setShowModal(true);
+              }}
             >
               Novo Funcionário
             </Button>
+          </div>
+
+          {/* Search Bar */}
+          <div className="mb-6">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+              <input
+                type="text"
+                placeholder="Buscar por nome ou CPF..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 w-full rounded-lg border border-gray-300 py-2 px-4 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
           </div>
 
           <div className="overflow-x-auto">
@@ -161,8 +248,8 @@ const EmployeeManagement: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                {employees.map((employee) => (
-                  <tr key={employee.id}>
+                {filteredEmployees.map((employee) => (
+                  <tr key={employee.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900 dark:text-white">
                         {employee.name}
@@ -193,6 +280,16 @@ const EmployeeManagement: React.FC = () => {
                         size="sm"
                         icon={<Edit2 size={16} />}
                         className="mr-2"
+                        onClick={() => {
+                          setSelectedEmployee(employee);
+                          setFormData({
+                            ...formData,
+                            name: employee.name,
+                            cpf: employee.cpf,
+                            role: employee.role
+                          });
+                          setShowModal(true);
+                        }}
                       >
                         Editar
                       </Button>
@@ -201,6 +298,10 @@ const EmployeeManagement: React.FC = () => {
                         size="sm"
                         icon={<Trash2 size={16} />}
                         className="text-red-600 dark:text-red-400"
+                        onClick={() => {
+                          setSelectedEmployee(employee);
+                          setShowDeleteModal(true);
+                        }}
                       >
                         Excluir
                       </Button>
@@ -209,11 +310,19 @@ const EmployeeManagement: React.FC = () => {
                 ))}
               </tbody>
             </table>
+
+            {filteredEmployees.length === 0 && (
+              <div className="text-center py-8">
+                <p className="text-gray-500 dark:text-gray-400">
+                  Nenhum funcionário encontrado
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Modal de Novo Funcionário */}
+      {/* Modal de Novo/Editar Funcionário */}
       {showModal && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
@@ -225,7 +334,7 @@ const EmployeeManagement: React.FC = () => {
               <form onSubmit={handleSubmit}>
                 <div className="px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                   <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
-                    Novo Funcionário
+                    {selectedEmployee ? 'Editar Funcionário' : 'Novo Funcionário'}
                   </h3>
 
                   <div className="space-y-4">
@@ -249,7 +358,7 @@ const EmployeeManagement: React.FC = () => {
                       <input
                         type="text"
                         value={formData.cpf}
-                        onChange={(e) => setFormData({ ...formData, cpf: e.target.value })}
+                        onChange={handleCPFChange}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
                         placeholder="000.000.000-00"
                         required
@@ -272,18 +381,37 @@ const EmployeeManagement: React.FC = () => {
                       </select>
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Senha
-                      </label>
-                      <input
-                        type="password"
-                        value={formData.password}
-                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
-                        required
-                      />
-                    </div>
+                    {!selectedEmployee && (
+                      <>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Senha
+                          </label>
+                          <input
+                            type="password"
+                            value={formData.password}
+                            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
+                            required={!selectedEmployee}
+                            minLength={6}
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Confirmar Senha
+                          </label>
+                          <input
+                            type="password"
+                            value={formData.confirmPassword}
+                            onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
+                            required={!selectedEmployee}
+                            minLength={6}
+                          />
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
 
@@ -294,18 +422,73 @@ const EmployeeManagement: React.FC = () => {
                     isLoading={loading}
                     className="w-full sm:w-auto sm:ml-3"
                   >
-                    Cadastrar
+                    {selectedEmployee ? 'Atualizar' : 'Cadastrar'}
                   </Button>
                   <Button
                     type="button"
                     variant="ghost"
-                    onClick={() => setShowModal(false)}
+                    onClick={() => {
+                      setShowModal(false);
+                      setSelectedEmployee(null);
+                      resetForm();
+                    }}
                     className="w-full sm:w-auto mt-3 sm:mt-0"
                   >
                     Cancelar
                   </Button>
                 </div>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Confirmação de Exclusão */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 transition-opacity" aria-hidden="true">
+              <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
+            </div>
+
+            <div className="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+              <div className="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div className="sm:flex sm:items-start">
+                  <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
+                    <AlertTriangle className="h-6 w-6 text-red-600" />
+                  </div>
+                  <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                      Desativar Funcionário
+                    </h3>
+                    <div className="mt-2">
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        Tem certeza que deseja desativar este funcionário? Esta ação pode ser revertida posteriormente.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-gray-50 dark:bg-gray-700 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <Button
+                  variant="danger"
+                  onClick={handleDelete}
+                  isLoading={loading}
+                  className="w-full sm:w-auto sm:ml-3"
+                >
+                  Desativar
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    setShowDeleteModal(false);
+                    setSelectedEmployee(null);
+                  }}
+                  className="w-full sm:w-auto mt-3 sm:mt-0"
+                >
+                  Cancelar
+                </Button>
+              </div>
             </div>
           </div>
         </div>
