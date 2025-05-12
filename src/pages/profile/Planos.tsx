@@ -98,7 +98,14 @@ const Planos: React.FC = () => {
         .eq('user_id', user?.id)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        if (error.code === 'PGRST116') {
+          // No subscription found - this is okay
+          setCurrentSubscription(null);
+          return;
+        }
+        throw error;
+      }
       setCurrentSubscription(data);
     } catch (error) {
       console.error('Error loading subscription:', error);
