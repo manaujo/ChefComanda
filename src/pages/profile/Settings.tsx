@@ -1,11 +1,27 @@
 import React, { useState } from 'react';
-import { Settings as SettingsIcon, Bell, Moon, Sun, Globe, Shield, Printer } from 'lucide-react';
+import { Settings as SettingsIcon, Bell, Moon, Sun, Globe, Shield, Printer, Lock } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useAuth } from '../../contexts/AuthContext';
+import { supabase } from '../../services/supabase';
 import toast from 'react-hot-toast';
+
+interface PasswordData {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}
 
 const Settings: React.FC = () => {
   const { theme, toggleTheme } = useTheme();
+  const { user } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [passwordData, setPasswordData] = useState<PasswordData>({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
   const [settings, setSettings] = useState({
     language: 'pt-BR',
     notifications: {
@@ -23,6 +39,51 @@ const Settings: React.FC = () => {
       sessionTimeout: 30
     }
   });
+
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      if (passwordData.newPassword !== passwordData.confirmPassword) {
+        throw new Error('As senhas não conferem');
+      }
+
+      if (passwordData.newPassword.length < 6) {
+        throw new Error('A senha deve ter no mínimo 6 caracteres');
+      }
+
+      // Verify current password
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user?.email || '',
+        password: passwordData.currentPassword
+      });
+
+      if (signInError) {
+        throw new Error('Senha atual incorreta');
+      }
+
+      // Update password
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: passwordData.newPassword
+      });
+
+      if (updateError) throw updateError;
+
+      toast.success('Senha alterada com sucesso!');
+      setShowPasswordModal(false);
+      setPasswordData({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      });
+    } catch (error) {
+      console.error('Error changing password:', error);
+      toast.error(error instanceof Error ? error.message : 'Erro ao alterar senha');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSave = () => {
     toast.success('Configurações salvas com sucesso!');
@@ -171,63 +232,6 @@ const Settings: React.FC = () => {
               </div>
             </div>
 
-            {/* Printer Settings */}
-            <div>
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
-                Impressora
-              </h3>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Nome da Impressora
-                  </label>
-                  <div className="mt-1 flex rounded-md shadow-sm">
-                    <div className="relative flex items-stretch flex-grow focus-within:z-10">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <Printer size={20} className="text-gray-400" />
-                      </div>
-                      <input
-                        type="text"
-                        value={settings.printer.name}
-                        onChange={(e) => setSettings({
-                          ...settings,
-                          printer: {
-                            ...settings.printer,
-                            name: e.target.value
-                          }
-                        })}
-                        className="focus:ring-blue-500 focus:border-blue-500 block w-full rounded-md pl-10 sm:text-sm border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <Printer size={20} className="text-gray-500 dark:text-gray-400" />
-                    <span className="ml-3 text-sm text-gray-700 dark:text-gray-300">
-                      Impressão Automática
-                    </span>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={settings.printer.autoprint}
-                      onChange={(e) => setSettings({
-                        ...settings,
-                        printer: {
-                          ...settings.printer,
-                          autoprint: e.target.checked
-                        }
-                      })}
-                      className="sr-only peer"
-                    />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
-                  </label>
-                </div>
-              </div>
-            </div>
-
             {/* Security */}
             <div>
               <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
@@ -259,25 +263,13 @@ const Settings: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Tempo Limite da Sessão (minutos)
-                  </label>
-                  <select
-                    value={settings.security.sessionTimeout}
-                    onChange={(e) => setSettings({
-                      ...settings,
-                      security: {
-                        ...settings.security,
-                        sessionTimeout: parseInt(e.target.value)
-                      }
-                    })}
-                    className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  <Button
+                    variant="ghost"
+                    icon={<Lock size={16} />}
+                    onClick={() => setShowPasswordModal(true)}
                   >
-                    <option value={15}>15 minutos</option>
-                    <option value={30}>30 minutos</option>
-                    <option value={60}>1 hora</option>
-                    <option value={120}>2 horas</option>
-                  </select>
+                    Alterar Senha
+                  </Button>
                 </div>
               </div>
             </div>
@@ -288,6 +280,7 @@ const Settings: React.FC = () => {
                   variant="primary"
                   onClick={handleSave}
                 >
+                  
                   Salvar Configurações
                 </Button>
               </div>
@@ -295,6 +288,89 @@ const Settings: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Password Change Modal */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 transition-opacity" aria-hidden="true">
+              <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
+            </div>
+
+            <div className="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+              <form onSubmit={handlePasswordChange}>
+                <div className="px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+                    Alterar Senha
+                  </h3>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Senha Atual
+                      </label>
+                      <input
+                        type="password"
+                        value={passwordData.currentPassword}
+                        onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Nova Senha
+                      </label>
+                      <input
+                        type="password"
+                        value={passwordData.newPassword}
+                        onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
+                        required
+                        minLength={6}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Confirmar Nova Senha
+                      </label>
+                      <input
+                        type="password"
+                        value={passwordData.confirmPassword}
+                        onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
+                        required
+                        minLength={6}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 dark:bg-gray-700 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    isLoading={loading}
+                    className="w-full sm:w-auto sm:ml-3"
+                  >
+                    Alterar Senha
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setShowPasswordModal(false)}
+                    className="w-full sm:w-auto mt-3 sm:mt-0"
+                  >
+                    Cancelar
+                  </Button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
