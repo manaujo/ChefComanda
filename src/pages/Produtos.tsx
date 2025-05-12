@@ -155,7 +155,7 @@ const Produtos: React.FC = () => {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Produtos</h1>
           <p className="text-gray-500 mt-1">
-            Gerenciamento de produtos e cardápio
+            Gerenciamento do menu do cardápio
           </p>
         </div>
         <div className="mt-4 md:mt-0 flex flex-wrap gap-2">
