@@ -3,12 +3,11 @@ import { Outlet, Link, useLocation } from 'react-router-dom';
 import {
   Menu, ChefHat, LayoutDashboard, Users, ShoppingBag,
   ClipboardList, PieChart, Settings, Coffee, QrCode,
-  CreditCard, Moon, Sun, Globe
+  Bell, CreditCard, Moon, Sun, Globe
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import ProfileDropdown from '../components/profile/ProfileDropdown';
-import NotificationDropdown from '../components/notification/NotificationDropdown'; // ✅ IMPORTAÇÃO ADICIONADA
 
 const DashboardLayout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -42,10 +41,11 @@ const DashboardLayout: React.FC = () => {
     return () => window.removeEventListener('keydown', handleEscape);
   }, []);
 
-  // Para tela cheia (PDV e Comandas)
+  // Return just the outlet for fullscreen pages
   if (isPDV || isComandas) {
     return (
       <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
+        {/* Fixed Header */}
         <header className="fixed top-0 left-0 right-0 z-50 bg-white dark:bg-gray-800 shadow-sm">
           <div className="h-16 px-4 flex items-center justify-between">
             <button
@@ -55,28 +55,38 @@ const DashboardLayout: React.FC = () => {
               <Menu size={24} className="text-gray-600 dark:text-gray-300" />
             </button>
 
-            <div className="flex items-center space-x-2">
-              <ChefHat size={28} className="text-blue-600 dark:text-blue-400" />
-              <span className="text-xl font-bold text-gray-800 dark:text-gray-200">
-                Chef Comanda
-              </span>
+            <div className="flex items-center justify-center">
+              <div className="flex items-center space-x-2">
+                <ChefHat size={28} className="text-blue-600 dark:text-blue-400" />
+                <span className="text-xl font-bold text-gray-800 dark:text-gray-200">
+                  Chef Comanda
+                </span>
+              </div>
             </div>
 
             <div className="flex items-center space-x-4">
               <button
                 onClick={toggleTheme}
                 className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"
+                title="Alternar tema"
               >
                 {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
               </button>
 
-              <NotificationDropdown /> {/* ✅ AQUI ESTÁ O NOVO COMPONENTE */}
+              <button
+                className="relative p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"
+                title="Notificações"
+              >
+                <Bell size={20} />
+                <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full"></span>
+              </button>
 
               <ProfileDropdown />
             </div>
           </div>
         </header>
 
+        {/* Sidebar */}
         {sidebarOpen && (
           <>
             <aside
@@ -111,6 +121,7 @@ const DashboardLayout: React.FC = () => {
           </>
         )}
 
+        {/* Main Content */}
         <main className="pt-16 min-h-screen">
           <Outlet />
         </main>
@@ -120,6 +131,7 @@ const DashboardLayout: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
+      {/* Fixed Header */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-white dark:bg-gray-800 shadow-sm">
         <div className="h-16 px-4 flex items-center justify-between">
           <button
@@ -129,11 +141,13 @@ const DashboardLayout: React.FC = () => {
             <Menu size={24} className="text-gray-600 dark:text-gray-300" />
           </button>
 
-          <div className="flex items-center space-x-2">
-            <ChefHat size={28} className="text-blue-600 dark:text-blue-400" />
-            <span className="text-xl font-bold text-gray-800 dark:text-gray-200">
-              Chef Comanda
-            </span>
+          <div className="flex items-center justify-center">
+            <div className="flex items-center space-x-2">
+              <ChefHat size={28} className="text-blue-600 dark:text-blue-400" />
+              <span className="text-xl font-bold text-gray-800 dark:text-gray-200">
+                Chef Comanda
+              </span>
+            </div>
           </div>
 
           <div className="flex items-center space-x-4">
@@ -145,13 +159,20 @@ const DashboardLayout: React.FC = () => {
               {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
             </button>
 
-            <NotificationDropdown /> {/* ✅ SUBSTITUIÇÃO TAMBÉM AQUI */}
+            <button
+              className="relative p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"
+              title="Notificações"
+            >
+              <Bell size={20} />
+              <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full"></span>
+            </button>
 
             <ProfileDropdown />
           </div>
         </div>
       </header>
 
+      {/* Sidebar */}
       <aside
         className={`fixed left-0 top-16 bottom-0 z-40 w-64 bg-white dark:bg-gray-800 shadow-lg transform transition-transform duration-300 ease-in-out ${
           sidebarOpen || sidebarHover ? 'translate-x-0' : '-translate-x-full'
@@ -180,6 +201,7 @@ const DashboardLayout: React.FC = () => {
         </nav>
       </aside>
 
+      {/* Overlay */}
       {sidebarOpen && (
         <div
           className="fixed inset-0 z-30 bg-black/20 dark:bg-black/40 transition-opacity"
@@ -187,6 +209,7 @@ const DashboardLayout: React.FC = () => {
         ></div>
       )}
 
+      {/* Main Content */}
       <main className="pt-16 min-h-screen">
         <div className="p-4 sm:p-6 lg:p-8">
           <Outlet />
