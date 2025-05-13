@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, CreditCard, QrCode, Wallet } from 'lucide-react';
+import { X, CreditCard, QrCode, Wallet, Percent, Music, Receipt } from 'lucide-react';
 import Button from '../ui/Button';
 import { useRestaurante } from '../../contexts/RestauranteContext';
 import { formatarDinheiro } from '../../utils/formatters';
@@ -14,8 +14,27 @@ interface PagamentoModalProps {
 const PagamentoModal: React.FC<PagamentoModalProps> = ({ isOpen, onClose, mesa }) => {
   const [formaPagamento, setFormaPagamento] = useState<'pix' | 'dinheiro' | 'cartao' | null>(null);
   const [loading, setLoading] = useState(false);
+  const [taxaServico, setTaxaServico] = useState(false);
+  const [couvertArtistico, setCouvertArtistico] = useState(false);
+  const [desconto, setDesconto] = useState({
+    tipo: 'percentual' as 'percentual' | 'valor',
+    valor: 0
+  });
   
   const { finalizarPagamento } = useRestaurante();
+
+  const valorTaxaServico = taxaServico ? mesa.valorTotal * 0.1 : 0;
+  const valorCouvert = couvertArtistico ? 15 * (mesa.capacidade || 1) : 0;
+  
+  const calcularDesconto = () => {
+    if (desconto.tipo === 'percentual') {
+      return (mesa.valorTotal + valorTaxaServico + valorCouvert) * (desconto.valor / 100);
+    }
+    return desconto.valor;
+  };
+
+  const valorDesconto = calcularDesconto();
+  const valorTotal = mesa.valorTotal + valorTaxaServico + valorCouvert - valorDesconto;
 
   const handlePagamento = async () => {
     if (!formaPagamento) {
@@ -60,15 +79,106 @@ const PagamentoModal: React.FC<PagamentoModalProps> = ({ isOpen, onClose, mesa }
           </div>
 
           <div className="px-6 py-4">
+            {/* Subtotal */}
             <div className="mb-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                Total a Pagar
+              <h3 className="text-sm font-medium text-gray-700 mb-2">
+                Consumo
               </h3>
-              <p className="text-3xl font-bold text-gray-900">
+              <p className="text-2xl font-bold text-gray-900">
                 {formatarDinheiro(mesa.valorTotal)}
               </p>
             </div>
 
+            {/* Adicionais */}
+            <div className="space-y-4 mb-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id="taxaServico"
+                    checked={taxaServico}
+                    onChange={(e) => setTaxaServico(e.target.checked)}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="taxaServico" className="ml-2 text-sm text-gray-700">
+                    Taxa de Serviço (10%)
+                  </label>
+                </div>
+                <span className="text-sm font-medium">
+                  {formatarDinheiro(valorTaxaServico)}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id="couvert"
+                    checked={couvertArtistico}
+                    onChange={(e) => setCouvertArtistico(e.target.checked)}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="couvert" className="ml-2 text-sm text-gray-700">
+                    Couvert Artístico (R$ 15,00 p/ pessoa)
+                  </label>
+                </div>
+                <span className="text-sm font-medium">
+                  {formatarDinheiro(valorCouvert)}
+                </span>
+              </div>
+
+              <div className="border-t pt-4">
+                <h4 className="text-sm font-medium text-gray-700 mb-2">Desconto</h4>
+                <div className="flex space-x-4 mb-2">
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      checked={desconto.tipo === 'percentual'}
+                      onChange={() => setDesconto({ ...desconto, tipo: 'percentual' })}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                    />
+                    <span className="ml-2 text-sm text-gray-700">Percentual (%)</span>
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      checked={desconto.tipo === 'valor'}
+                      onChange={() => setDesconto({ ...desconto, tipo: 'valor' })}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                    />
+                    <span className="ml-2 text-sm text-gray-700">Valor (R$)</span>
+                  </label>
+                </div>
+                <div className="flex items-center">
+                  <input
+                    type="number"
+                    value={desconto.valor}
+                    onChange={(e) => setDesconto({ ...desconto, valor: parseFloat(e.target.value) || 0 })}
+                    min="0"
+                    step={desconto.tipo === 'percentual' ? '1' : '0.01'}
+                    className="block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    placeholder={desconto.tipo === 'percentual' ? "0%" : "R$ 0,00"}
+                  />
+                </div>
+                {valorDesconto > 0 && (
+                  <p className="text-sm text-gray-500 mt-1">
+                    Desconto aplicado: {formatarDinheiro(valorDesconto)}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Total */}
+            <div className="border-t border-gray-200 pt-4 mb-6">
+              <div className="flex justify-between items-center">
+                <span className="text-lg font-medium text-gray-900">Total</span>
+                <span className="text-2xl font-bold text-gray-900">
+                  {formatarDinheiro(valorTotal)}
+                </span>
+              </div>
+            </div>
+
+            {/* Formas de Pagamento */}
             <div className="space-y-4">
               <button
                 onClick={() => setFormaPagamento('pix')}
@@ -126,6 +236,7 @@ const PagamentoModal: React.FC<PagamentoModalProps> = ({ isOpen, onClose, mesa }
               onClick={handlePagamento}
               isLoading={loading}
               disabled={!formaPagamento}
+              icon={<Receipt size={18} />}
             >
               Finalizar Pagamento
             </Button>
