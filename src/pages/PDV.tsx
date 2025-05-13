@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Menu, X, Search, Filter, Clock, Users, CreditCard, Receipt, ArrowLeft, 
-  ArrowUpCircle, Music, Percent, AlertTriangle
+  ArrowUpCircle, Music, Percent, AlertTriangle, Coffee, ShoppingBag, Store
 } from 'lucide-react';
 import Button from '../components/ui/Button';
 import { useRestaurante } from '../contexts/RestauranteContext';
@@ -34,10 +34,31 @@ interface CaixaState {
   saldoAtual: number;
 }
 
+interface IFoodPedido {
+  id: string;
+  cliente: string;
+  itens: OrderItem[];
+  total: number;
+  status: 'pendente' | 'aceito' | 'recusado';
+  horario: string;
+}
+
+interface PedidoCaixa {
+  id: number;
+  cliente: string;
+  itens: OrderItem[];
+  total: number;
+  status: 'pendente' | 'finalizado';
+  horario: string;
+}
+
+type TabType = 'mesas' | 'ifood' | 'caixa';
+
 const PDV: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { produtos, categorias, mesas, itensComanda } = useRestaurante();
+  const [activeTab, setActiveTab] = useState<TabType>('mesas');
   const [busca, setBusca] = useState('');
   const [categoriaSelecionada, setCategoriaSelecionada] = useState('todas');
   const [pedidoAtual, setPedidoAtual] = useState<OrderItem[]>([]);
@@ -45,6 +66,8 @@ const PDV: React.FC = () => {
   const [comandaSelecionada, setComandaSelecionada] = useState<ComandaPendente | null>(null);
   const [formaPagamento, setFormaPagamento] = useState<'dinheiro' | 'cartao' | 'pix'>('dinheiro');
   const [showAddItemModal, setShowAddItemModal] = useState(false);
+  const [showPedidoCaixaModal, setShowPedidoCaixaModal] = useState(false);
+  const [nomeClienteCaixa, setNomeClienteCaixa] = useState('');
   const [incluirTaxaServico, setIncluirTaxaServico] = useState(true);
   const [incluirCouvert, setIncluirCouvert] = useState(false);
   const [valorCouvert, setValorCouvert] = useState<string>('15.00');
@@ -58,6 +81,24 @@ const PDV: React.FC = () => {
   });
   const [showCaixaModal, setShowCaixaModal] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // Mock iFood orders
+  const [ifoodPedidos] = useState<IFoodPedido[]>([
+    {
+      id: 'IF123',
+      cliente: 'João Silva',
+      itens: [
+        { id: 1, nome: 'X-Burger', quantidade: 2, preco: 25.90 },
+        { id: 2, nome: 'Coca-Cola', quantidade: 2, preco: 6.00 }
+      ],
+      total: 63.80,
+      status: 'pendente',
+      horario: new Date().toISOString()
+    }
+  ]);
+
+  // Mock caixa orders
+  const [pedidosCaixa, setPedidosCaixa] = useState<PedidoCaixa[]>([]);
 
   useEffect(() => {
     const mesasComComandas = mesas.filter(m => m.status === 'ocupada' || m.status === 'aguardando');
@@ -172,137 +213,73 @@ const PDV: React.FC = () => {
     }, 500);
   };
 
-  const removerItem = (itemId: number) => {
+  const handleAcceptIFoodOrder = (pedidoId: string) => {
     setLoading(true);
     setTimeout(() => {
-      if (comandaSelecionada) {
-        const item = comandaSelecionada.itens.find(i => i.id === itemId);
-        if (!item) return;
+      const pedido = ifoodPedidos.find(p => p.id === pedidoId);
+      if (!pedido) return;
 
-        const comandaAtualizada = {
-          ...comandaSelecionada,
-          itens: comandaSelecionada.itens.filter(i => i.id !== itemId),
-          total: comandaSelecionada.total - (item.preco * item.quantidade)
-        };
-        setComandaSelecionada(comandaAtualizada);
-        setComandasPendentes(prev => 
-          prev.map(c => c.id === comandaSelecionada.id ? comandaAtualizada : c)
-        );
-        toast.success('Item removido da comanda');
-      } else {
-        setPedidoAtual(prev => prev.filter(item => item.id !== itemId));
-        toast.success('Item removido do pedido');
-      }
-      setLoading(false);
-    }, 300);
-  };
-
-  const atualizarQuantidade = (itemId: number, delta: number) => {
-    if (comandaSelecionada) {
-      const comandaAtualizada = {
-        ...comandaSelecionada,
-        itens: comandaSelecionada.itens.map(item => {
-          if (item.id === itemId) {
-            const novaQuantidade = Math.max(1, item.quantidade + delta);
-            return { ...item, quantidade: novaQuantidade };
-          }
-          return item;
-        })
+      // Create a new comanda for iFood order
+      const novaComanda: ComandaPendente = {
+        id: Date.now(),
+        mesa: 0, // Special identifier for iFood orders
+        total: pedido.total,
+        itens: pedido.itens,
+        horario: new Date().toISOString()
       };
-      setComandaSelecionada(comandaAtualizada);
-      setComandasPendentes(prev => 
-        prev.map(c => c.id === comandaSelecionada.id ? comandaAtualizada : c)
-      );
-    } else {
-      setPedidoAtual(prev =>
-        prev.map(item => {
-          if (item.id === itemId) {
-            const novaQuantidade = Math.max(1, item.quantidade + delta);
-            return { ...item, quantidade: novaQuantidade };
-          }
-          return item;
-        })
-      );
+
+      setComandasPendentes(prev => [...prev, novaComanda]);
+      toast.success(`Pedido ${pedidoId} aceito e comanda criada`);
+      setLoading(false);
+    }, 500);
+  };
+
+  const handleRejectIFoodOrder = (pedidoId: string) => {
+    setLoading(true);
+    setTimeout(() => {
+      toast.success(`Pedido ${pedidoId} recusado`);
+      setLoading(false);
+    }, 500);
+  };
+
+  const handleCreateCaixaOrder = () => {
+    if (!nomeClienteCaixa || pedidoAtual.length === 0) {
+      toast.error('Preencha o nome do cliente e adicione itens ao pedido');
+      return;
     }
-  };
 
-  const abrirCaixa = (valor: number) => {
-    setLoading(true);
-    setTimeout(() => {
-      setCaixa({
-        isOpen: true,
-        valorInicial: valor,
-        operador: user?.email || '',
-        dataAbertura: new Date(),
-        saldoAtual: valor
-      });
-      setShowCaixaModal(false);
-      toast.success('Caixa aberto com sucesso!');
-      setLoading(false);
-    }, 500);
-  };
+    const novoPedido: PedidoCaixa = {
+      id: Date.now(),
+      cliente: nomeClienteCaixa,
+      itens: pedidoAtual,
+      total: total,
+      status: 'pendente',
+      horario: new Date().toISOString()
+    };
 
-  const fecharCaixa = () => {
-    setLoading(true);
-    setTimeout(() => {
-      setCaixa({
-        isOpen: false,
-        valorInicial: 0,
-        operador: '',
-        saldoAtual: 0
-      });
-      toast.success('Caixa fechado com sucesso!');
-      setLoading(false);
-    }, 500);
-  };
-
-  const limparPedido = () => {
+    setPedidosCaixa(prev => [...prev, novoPedido]);
     setPedidoAtual([]);
-    setComandaSelecionada(null);
-    setIncluirTaxaServico(true);
-    setIncluirCouvert(false);
-    setValorCouvert('15.00');
-    setDesconto('');
-    setDescontoError('');
-    toast.success('Pedido limpo');
-  };
-
-  const finalizarPedido = () => {
-    setLoading(true);
-    setTimeout(() => {
-      if (comandaSelecionada) {
-        setComandasPendentes(prev => 
-          prev.filter(c => c.id !== comandaSelecionada.id)
-        );
-      }
-      
-      setCaixa(prev => ({
-        ...prev,
-        saldoAtual: prev.saldoAtual + total
-      }));
-      
-      toast.success('Pagamento finalizado com sucesso!');
-      limparPedido();
-      setLoading(false);
-    }, 1000);
+    setNomeClienteCaixa('');
+    setShowPedidoCaixaModal(false);
+    toast.success('Pedido de caixa criado com sucesso');
   };
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
+      <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
               <button
                 onClick={() => navigate(-1)}
-                className="mr-4 text-gray-500 hover:text-gray-700 transition-colors"
+                className="mr-4 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 transition-colors"
               >
                 <ArrowLeft size={24} />
               </button>
               <div>
-                <h1 className="text-xl font-semibold text-gray-900">PDV</h1>
-                <p className="text-sm text-gray-500">Ponto de Venda</p>
+                <h1 className="text-xl font-semibold text-gray-900 dark:text-white">PDV</h1>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Ponto de Venda</p>
               </div>
             </div>
             
@@ -318,14 +295,22 @@ const PDV: React.FC = () => {
               ) : (
                 <div className="flex items-center space-x-4">
                   <div className="text-right">
-                    <p className="text-sm text-gray-500">{caixa.operador}</p>
-                    <p className="text-lg font-semibold text-gray-900">
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{caixa.operador}</p>
+                    <p className="text-lg font-semibold text-gray-900 dark:text-white">
                       {formatarDinheiro(caixa.saldoAtual)}
                     </p>
                   </div>
                   <Button
                     variant="warning"
-                    onClick={fecharCaixa}
+                    onClick={() => {
+                      setCaixa({
+                        isOpen: false,
+                        valorInicial: 0,
+                        operador: '',
+                        saldoAtual: 0
+                      });
+                      toast.success('Caixa fechado com sucesso');
+                    }}
                     isLoading={loading}
                   >
                     Fechar Caixa
@@ -334,377 +319,633 @@ const PDV: React.FC = () => {
               )}
             </div>
           </div>
+
+          {/* Tabs */}
+          <div className="flex space-x-4 -mb-px">
+            <button
+              onClick={() => setActiveTab('mesas')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'mesas'
+                  ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+              }`}
+            >
+              <div className="flex items-center space-x-2">
+                <Coffee size={20} />
+                <span>Mesas</span>
+              </div>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('ifood')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'ifood'
+                  ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+              }`}
+            >
+              <div className="flex items-center space-x-2">
+                <ShoppingBag size={20} />
+                <span>iFood</span>
+              </div>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('caixa')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'caixa'
+                  ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+              }`}
+            >
+              <div className="flex items-center space-x-2">
+                <Store size={20} />
+                <span>Pedidos de Caixa</span>
+              </div>
+            </button>
+          </div>
         </div>
       </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Comandas em Aberto */}
-          <div>
-            <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-              <h2 className="text-lg font-medium text-gray-900 mb-4">
-                Comandas em Aberto
-              </h2>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {comandasPendentes.map(comanda => {
-                  const tempoAberto = new Date(comanda.horario);
-                  const horasAberto = Math.floor((new Date().getTime() - tempoAberto.getTime()) / (1000 * 60 * 60));
-                  
-                  return (
-                    <button
-                      key={comanda.id}
-                      onClick={() => setComandaSelecionada(comanda)}
-                      className={`p-4 rounded-lg border transition-all ${
-                        comandaSelecionada?.id === comanda.id
-                          ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200'
-                          : horasAberto >= 2
-                          ? 'border-orange-300 shadow-orange-100'
-                          : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
-                      }`}
-                    >
-                      <div className="flex justify-between items-start mb-2">
-                        <div>
-                          <h3 className="font-medium text-lg">Mesa {comanda.mesa}</h3>
-                          <p className="text-sm text-gray-500 flex items-center">
-                            <Clock size={14} className="mr-1" />
-                            {formatarTempo(comanda.horario)}
-                          </p>
-                        </div>
-                        <span className="text-lg font-semibold text-blue-600">
-                          {formatarDinheiro(comanda.total)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center mt-3">
-                        <span className="text-sm text-gray-500">
-                          {comanda.itens.length} itens
-                        </span>
-                        <div className="flex space-x-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setShowAddItemModal(true);
-                              setComandaSelecionada(comanda);
-                            }}
-                          >
-                            Adicionar
-                          </Button>
-                          <Button
-                            variant="primary"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setComandaSelecionada(comanda);
-                            }}
-                          >
-                            Fechar
-                          </Button>
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-              
-              {comandasPendentes.length === 0 && (
-                <div className="text-center py-8 text-gray-500">
-                  <Receipt size={48} className="mx-auto mb-3 text-gray-400" />
-                  <p>Nenhuma comanda em aberto</p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Pedido Atual */}
-          <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-            <div className="p-6 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-lg font-medium text-gray-900">
-                    {comandaSelecionada 
-                      ? `Comanda - Mesa ${comandaSelecionada.mesa}`
-                      : 'Novo Pedido'
-                    }
-                  </h2>
-                  <p className="text-sm text-gray-500 mt-1">
-                    {(comandaSelecionada?.itens || pedidoAtual).length} itens
-                  </p>
-                </div>
-                <Button
-                  variant="primary"
-                  onClick={() => setShowAddItemModal(true)}
-                  disabled={!caixa.isOpen}
-                  icon={<Menu size={20} />}
-                >
-                  Adicionar Item
-                </Button>
-              </div>
-            </div>
-
-            <div className="divide-y divide-gray-200 max-h-[calc(100vh-600px)] overflow-y-auto p-6">
-              {(comandaSelecionada?.itens || pedidoAtual).length === 0 ? (
-                <div className="text-center py-8">
-                  <Receipt size={48} className="mx-auto text-gray-400" />
-                  <p className="mt-2 text-gray-500">
-                    Nenhum item adicionado
-                  </p>
-                </div>
-              ) : (
-                (comandaSelecionada?.itens || pedidoAtual).map(item => (
-                  <div
-                    key={item.id}
-                    className="py-4 first:pt-0 last:pb-0 flex items-center justify-between"
-                  >
-                    <div className="flex-1">
-                      <h4 className="font-medium text-gray-900">{item.nome}</h4>
-                      {item.observacao && (
-                        <p className="text-sm text-gray-500 mt-1">{item.observacao}</p>
-                      )}
-                      <div className="flex items-center mt-2">
-                        <button
-                          onClick={() => atualizarQuantidade(item.id, -1)}
-                          className="text-gray-500 hover:text-red-500 transition-colors"
-                        >
-                          <Menu size={16} />
-                        </button>
-                        <span className="mx-3 font-medium">{item.quantidade}</span>
-                        <button
-                          onClick={() => atualizarQuantidade(item.id, 1)}
-                          className="text-gray-500 hover:text-green-500 transition-colors"
-                        >
-                          <Menu size={16} />
-                        </button>
-                      </div>
-                    </div>
+        {/* Mesas Tab */}
+        {activeTab === 'mesas' && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Comandas em Aberto */}
+            <div>
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 mb-6">
+                <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+                  Comandas em Aberto
+                </h2>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {comandasPendentes.map(comanda => {
+                    const tempoAberto = new Date(comanda.horario);
+                    const horasAberto = Math.floor((new Date().getTime() - tempoAberto.getTime()) / (1000 * 60 * 60));
                     
-                    <div className="text-right ml-4">
-                      <p className="text-sm text-gray-500">
-                        {formatarDinheiro(item.preco)} un
-                      </p>
-                      <p className="font-medium text-gray-900">
-                        {formatarDinheiro(item.preco * item.quantidade)}
-                      </p>
+                    return (
                       <button
-                        onClick={() => removerItem(item.id)}
-                        className="text-red-500 hover:text-red-700 transition-colors mt-2"
+                        key={comanda.id}
+                        onClick={() => setComandaSelecionada(comanda)}
+                        className={`p-4 rounded-lg border transition-all ${
+                          comandaSelecionada?.id === comanda.id
+                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/50 ring-2 ring-blue-200 dark:ring-blue-800'
+                            : horasAberto >= 2
+                            ? 'border-orange-300 shadow-orange-100 dark:border-orange-700'
+                            : 'border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600 hover:bg-gray-50 dark:hover:bg-gray-700'
+                        }`}
                       >
-                        <X size={16} />
+                        <div className="flex justify-between items-start mb-2">
+                          <div>
+                            <h3 className="font-medium text-gray-900 dark:text-white">Mesa {comanda.mesa}</h3>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center">
+                              <Clock size={14} className="mr-1" />
+                              {formatarTempo(comanda.horario)}
+                            </p>
+                          </div>
+                          <span className="text-lg font-semibold text-blue-600 dark:text-blue-400">
+                            {formatarDinheiro(comanda.total)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center mt-3">
+                          <span className="text-sm text-gray-500 dark:text-gray-400">
+                            {comanda.itens.length} itens
+                          </span>
+                          <div className="flex space-x-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setShowAddItemModal(true);
+                                setComandaSelecionada(comanda);
+                              }}
+                            >
+                              Adicionar
+                            </Button>
+                            <Button
+                              variant="primary"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setComandaSelecionada(comanda);
+                              }}
+                            >
+                              Fechar
+                            </Button>
+                          </div>
+                        </div>
                       </button>
-                    </div>
-                  </div>
-                ))
-              )}
+                    );
+                  })}
+                </div>
+              </div>
             </div>
 
-            <div className="p-6 bg-gray-50 border-t border-gray-200">
-              <div className="space-y-4">
-                {/* Taxas e Adicionais */}
-                <div className="space-y-3 border-b border-gray-200 pb-4">
-                  <div className="flex items-center justify-between">
-                    <label className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        checked={incluirTaxaServico}
-                        onChange={(e) => setIncluirTaxaServico(e.target.checked)}
-                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                      />
-                      <span className="text-sm text-gray-700">Incluir taxa de serviço (10%)</span>
-                    </label>
-                    {incluirTaxaServico && (
-                      <span className="text-sm font-medium text-gray-700">
-                        {formatarDinheiro(taxaServico)}
-                      </span>
-                    )}
+            {/* Pedido Atual */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
+              <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-lg font-medium text-gray-900 dark:text-white">
+                      {comandaSelecionada 
+                        ? `Comanda - Mesa ${comandaSelecionada.mesa}`
+                        : 'Novo Pedido'
+                      }
+                    </h2>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                      {(comandaSelecionada?.itens || pedidoAtual).length} itens
+                    </p>
                   </div>
+                  <Button
+                    variant="primary"
+                    onClick={() => setShowAddItemModal(true)}
+                    disabled={!caixa.isOpen}
+                    icon={<Menu size={20} />}
+                  >
+                    Adicionar Item
+                  </Button>
+                </div>
+              </div>
 
-                  <div className="space-y-2">
+              <div className="divide-y divide-gray-200 dark:divide-gray-700 max-h-[calc(100vh-600px)] overflow-y-auto p-6">
+                {(comandaSelecionada?.itens || pedidoAtual).length === 0 ? (
+                  <div className="text-center py-8">
+                    <Receipt size={48} className="mx-auto text-gray-400 dark:text-gray-600" />
+                    <p className="mt-2 text-gray-500 dark:text-gray-400">
+                      Nenhum item adicionado
+                    </p>
+                  </div>
+                ) : (
+                  (comandaSelecionada?.itens || pedidoAtual).map(item => (
+                    <div
+                      key={item.id}
+                      className="py-4 first:pt-0 last:pb-0 flex items-center justify-between"
+                    >
+                      <div className="flex-1">
+                        <h4 className="font-medium text-gray-900 dark:text-white">{item.nome}</h4>
+                        {item.observacao && (
+                          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{item.observacao}</p>
+                        )}
+                        <div className="flex items-center mt-2">
+                          <button
+                            onClick={() => {
+                              if (comandaSelecionada) {
+                                const updatedItems = comandaSelecionada.itens.map(i =>
+                                  i.id === item.id
+                                    ? { ...i, quantidade: Math.max(1, i.quantidade - 1) }
+                                    : i
+                                );
+                                setComandaSelecionada({
+                                  ...comandaSelecionada,
+                                  itens: updatedItems,
+                                  total: updatedItems.reduce((acc, i) => acc + (i.preco * i.quantidade), 0)
+                                });
+                              } else {
+                                setPedidoAtual(prev =>
+                                  prev.map(i =>
+                                    i.id === item.id
+                                      ? { ...i, quantidade: Math.max(1, i.quantidade - 1) }
+                                      : i
+                                  )
+                                );
+                              }
+                            }}
+                            className="text-gray-500 hover:text-red-500 dark:text-gray-400 dark:hover:text-red-400 transition-colors"
+                          >
+                            <Menu size={16} />
+                          </button>
+                          <span className="mx-3 font-medium text-gray-900 dark:text-white">{item.quantidade}</span>
+                          <button
+                            onClick={() => {
+                              if (comandaSelecionada) {
+                                const updatedItems = comandaSelecionada.itens.map(i =>
+                                  i.id === item.id
+                                    ? { ...i, quantidade: i.quantidade + 1 }
+                                    : i
+                                );
+                                setComandaSelecionada({
+                                  ...comandaSelecionada,
+                                  itens: updatedItems,
+                                  total: updatedItems.reduce((acc, i) => acc + (i.preco * i.quantidade), 0)
+                                });
+                              } else {
+                                setPedidoAtual(prev =>
+                                  prev.map(i =>
+                                    i.id === item.id
+                                      ? { ...i, quantidade: i.quantidade + 1 }
+                                      : i
+                                  )
+                                );
+                              }
+                            }}
+                            className="text-gray-500 hover:text-green-500 dark:text-gray-400 dark:hover:text-green-400 transition-colors"
+                          >
+                            <Menu size={16} />
+                          </button>
+                        </div>
+                      </div>
+                      
+                      <div className="text-right ml-4">
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          {formatarDinheiro(item.preco)} un
+                        </p>
+                        <p className="font-medium text-gray-900 dark:text-white">
+                          {formatarDinheiro(item.preco * item.quantidade)}
+                        </p>
+                        <button
+                          onClick={() => {
+                            if (comandaSelecionada) {
+                              const updatedItems = comandaSelecionada.itens.filter(i => i.id !== item.id);
+                              setComandaSelecionada({
+                                ...comandaSelecionada,
+                                itens: updatedItems,
+                                total: updatedItems.reduce((acc, i) => acc + (i.preco * i.quantidade), 0)
+                              });
+                            } else {
+                              setPedidoAtual(prev => prev.filter(i => i.id !== item.id));
+                            }
+                          }}
+                          className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 transition-colors mt-2"
+                        >
+                          <X size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <div className="p-6 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
+                <div className="space-y-4">
+                  {/* Taxas e Adicionais */}
+                  <div className="space-y-3 border-b border-gray-200 dark:border-gray-700 pb-4">
                     <div className="flex items-center justify-between">
                       <label className="flex items-center space-x-2">
                         <input
                           type="checkbox"
-                          checked={incluirCouvert}
-                          onChange={(e) => setIncluirCouvert(e.target.checked)}
-                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          checked={incluirTaxaServico}
+                          onChange={(e) => setIncluirTaxaServico(e.target.checked)}
+                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700"
                         />
-                        <span className="text-sm text-gray-700">Adicionar Couvert Artístico</span>
+                        <span className="text-sm text-gray-700 dark:text-gray-300">Incluir taxa de serviço (10%)</span>
                       </label>
-                      {incluirCouvert && (
-                        <div className="flex items-center space-x-2">
-                          <span className="text-sm text-gray-500">R$</span>
-                          <input
-                            type="number"
-                            value={valorCouvert}
-                            onChange={(e) => setValorCouvert(e.target.value)}
-                            className="w-20 rounded-md border-gray-300 text-right text-sm"
-                            step="0.01"
-                            min="0"
-                          />
-                        </div>
+                      {incluirTaxaServico && (
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          {formatarDinheiro(taxaServico)}
+                        </span>
                       )}
                     </div>
-                    {incluirCouvert && (
-                      <p className="text-xs text-gray-500 italic flex items-center">
-                        <Music size={12} className="mr-1" />
-                        O couvert artístico é uma taxa opcional cobrada por apresentações ao vivo
-                      </p>
-                    )}
+
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            checked={incluirCouvert}
+                            onChange={(e) => setIncluirCouvert(e.target.checked)}
+                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700"
+                          />
+                          <span className="text-sm text-gray-700 dark:text-gray-300">Adicionar Couvert Artístico</span>
+                        </label>
+                        {incluirCouvert && (
+                          <div className="flex items-center space-x-2">
+                            <span className="text-sm text-gray-500 dark:text-gray-400">R$</span>
+                            <input
+                              type="number"
+                              value={valorCouvert}
+                              onChange={(e) => setValorCouvert(e.target.value)}
+                              className="w-20 rounded-md border-gray-300 text-right text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                              step="0.01"
+                              min="0"
+                            />
+                          </div>
+                        )}
+                      </div>
+                      {incluirCouvert && (
+                        <p className="text-xs text-gray-500 dark:text-gray-400 italic flex items-center">
+                          <Music size={12} className="mr-1" />
+                          O couvert artístico é uma taxa opcional cobrada por apresentações ao vivo
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Desconto */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="flex items-center space-x-2">
+                          <Percent size={16} className="text-gray-500 dark:text-gray-400" />
+                          <span className="text-sm text-gray-700 dark:text-gray-300">Aplicar Desconto</span>
+                        </label>
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="number"
+                            value={desconto}
+                            onChange={(e) => handleDescontoChange(e.target.value)}
+                            className={`w-20 rounded-md text-right text-sm ${
+                              descontoError 
+                                ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
+                                : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                            } dark:border-gray-600 dark:bg-gray-700 dark:text-white`}
+                            placeholder="0"
+                            min="0"
+                            max="100"
+                            step="0.1"
+                          />
+                          <span className="text-sm text-gray-500 dark:text-gray-400">%</span>
+                        </div>
+                      </div>
+                      {descontoError && (
+                        <p className="text-xs text-red-500 dark:text-red-400 flex items-center">
+                          <AlertTriangle size={12} className="mr-1" />
+                          {descontoError}
+                        </p>
+                      )}
+                      {desconto && !descontoError && (
+                        <p className="text-xs text-green-500 dark:text-green-400 italic">
+                          Desconto de {formatarDinheiro(descontoValor)} aplicado
+                        </p>
+                      )}
+                    </div>
                   </div>
 
-                  {/* Desconto */}
+                  {/* Totais */}
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <label className="flex items-center space-x-2">
-                        <Percent size={16} className="text-gray-500" />
-                        <span className="text-sm text-gray-700">Aplicar Desconto</span>
-                      </label>
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="number"
-                          value={desconto}
-                          onChange={(e) => handleDescontoChange(e.target.value)}
-                          className={`w-20 rounded-md text-right text-sm ${
-                            descontoError 
-                              ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
-                              : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
-                          }`}
-                          placeholder="0"
-                          min="0"
-                          max="100"
-                          step="0.1"
-                        />
-                        <span className="text-sm text-gray-500">%</span>
-                      </div>
+                    <div className="flex justify-between text-gray-500 dark:text-gray-400">
+                      <span>Subtotal</span>
+                      <span>{formatarDinheiro(subtotal)}</span>
                     </div>
-                    {descontoError && (
-                      <p className="text-xs text-red-500 flex items-center">
-                        <AlertTriangle size={12} className="mr-1" />
-                        {descontoError}
-                      </p>
-                    )}
+                    
                     {desconto && !descontoError && (
-                      <p className="text-xs text-green-500 italic">
-                        Desconto de {formatarDinheiro(descontoValor)} aplicado
-                      </p>
+                      <>
+                        <div className="flex justify-between text-gray-500 dark:text-gray-400">
+                          <span>Desconto ({desconto}%)</span>
+                          <span>- {formatarDinheiro(descontoValor)}</span>
+                        </div>
+                        <div className="flex justify-between text-gray-700 dark:text-gray-300 font-medium">
+                          <span>Subtotal com desconto</span>
+                          <span>{formatarDinheiro(subtotalComDesconto)}</span>
+                        </div>
+                      </>
                     )}
-                  </div>
-                </div>
-
-                {/* Totais */}
-                <div className="space-y-2">
-                  <div className="flex justify-between text-gray-500">
-                    <span>Subtotal</span>
-                    <span>{formatarDinheiro(subtotal)}</span>
-                  </div>
-                  
-                  {desconto && !descontoError && (
-                    <>
-                      <div className="flex justify-between text-gray-500">
-                        <span>Desconto ({desconto}%)</span>
-                        <span>- {formatarDinheiro(descontoValor)}</span>
+                    
+                    {incluirTaxaServico && (
+                      <div className="flex justify-between text-gray-500 dark:text-gray-400">
+                        <span>Taxa de serviço (10%)</span>
+                        <span>{formatarDinheiro(taxaServico)}</span>
                       </div>
-                      <div className="flex justify-between text-gray-700 font-medium">
-                        <span>Subtotal com desconto</span>
-                        <span>{formatarDinheiro(subtotalComDesconto)}</span>
+                    )}
+                    
+                    {incluirCouvert && parseFloat(valorCouvert) > 0 && (
+                      <div className="flex justify-between text-gray-500 dark:text-gray-400">
+                        <span>Couvert Artístico</span>
+                        <span>{formatarDinheiro(parseFloat(valorCouvert))}</span>
                       </div>
-                    </>
-                  )}
-                  
-                  {incluirTaxaServico && (
-                    <div className="flex justify-between text-gray-500">
-                      <span>Taxa de serviço (10%)</span>
-                      <span>{formatarDinheiro(taxaServico)}</span>
+                    )}
+                    
+                    <div className="flex justify-between text-xl font-semibold text-gray-900 dark:text-white pt-4 border-t border-gray-200 dark:border-gray-700">
+                      <span>Total</span>
+                      <span>{formatarDinheiro(total)}</span>
                     </div>
-                  )}
-                  
-                  {incluirCouvert && parseFloat(valorCouvert) > 0 && (
-                    <div className="flex justify-between text-gray-500">
-                      <span>Couvert Artístico</span>
-                      <span>{formatarDinheiro(parseFloat(valorCouvert))}</span>
-                    </div>
-                  )}
-                  
-                  <div className="flex justify-between text-xl font-semibold text-gray-900 pt-4 border-t border-gray-200">
-                    <span>Total</span>
-                    <span>{formatarDinheiro(total)}</span>
                   </div>
-                </div>
 
-                <div className="grid grid-cols-3 gap-4 mt-6">
-                  <button
-                    onClick={() => setFormaPagamento('dinheiro')}
-                    className={`p-4 rounded-lg border text-center transition-all ${
-                      formaPagamento === 'dinheiro'
-                        ? 'border-blue-500 bg-blue-50 text-blue-700'
-                        : 'border-gray-200 hover:border-blue-200 hover:bg-gray-50'
-                    }`}
-                  >
-                    <Receipt size={24} className="mx-auto mb-2" />
-                    <span className="text-sm">Dinheiro</span>
-                  </button>
-                  <button
-                    onClick={() => setFormaPagamento('cartao')}
-                    className={`p-4 rounded-lg border text-center transition-all ${
-                      formaPagamento === 'cartao'
-                        ? 'border-blue-500 bg-blue-50 text-blue-700'
-                        : 'border-gray-200 hover:border-blue-200 hover:bg-gray-50'
-                    }`}
-                  >
-                    <CreditCard size={24} className="mx-auto mb-2" />
-                    <span className="text-sm">Cartão</span>
-                  </button>
-                  <button
-                    onClick={() => setFormaPagamento('pix')}
-                    className={`p-4 rounded-lg border text-center transition-all ${
-                      formaPagamento === 'pix'
-                        ? 'border-blue-500 bg-blue-50 text-blue-700'
-                        : 'border-gray-200 hover:border-blue-200 hover:bg-gray-50'
-                    }`}
-                  >
-                    <Receipt size={24} className="mx-auto mb-2" />
-                    <span className="text-sm">PIX</span>
-                  </button>
-                </div>
+                  <div className="grid grid-cols-3 gap-4 mt-6">
+                    <button
+                      onClick={() => setFormaPagamento('dinheiro')}
+                      className={`p-4 rounded-lg border text-center transition-all ${
+                        formaPagamento === 'dinheiro'
+                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/50 text-blue-700 dark:text-blue-400'
+                          : 'border-gray-200 dark:border-gray-700 hover:border-blue-200 dark:hover:border-blue-800 hover:bg-gray-50 dark:hover:bg-gray-700'
+                      }`}
+                    >
+                      <Receipt size={24} className="mx-auto mb-2" />
+                      <span className="text-sm">Dinheiro</span>
+                    </button>
+                    <button
+                      onClick={() => setFormaPagamento('cartao')}
+                      className={`p-4 rounded-lg border text-center transition-all ${
+                        formaPagamento === 'cartao'
+                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/50 text-blue-700 dark:text-blue-400'
+                          : 'border-gray-200 dark:border-gray-700 hover:border-blue-200 dark:hover:border-blue-800 hover:bg-gray-50 dark:hover:bg-gray-700'
+                      }`}
+                    >
+                      <CreditCard size={24} className="mx-auto mb-2" />
+                      <span className="text-sm">Cartão</span>
+                    </button>
+                    <button
+                      onClick={() => setFormaPagamento('pix')}
+                      className={`p-4 rounded-lg border text-center transition-all ${
+                        formaPagamento === 'pix'
+                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/50 text-blue-700 dark:text-blue-400'
+                          : 'border-gray-200 dark:border-gray-700 hover:border-blue-200 dark:hover:border-blue-800 hover:bg-gray-50 dark:hover:bg-gray-700'
+                      }`}
+                    >
+                      <Receipt size={24} className="mx-auto mb-2" />
+                      <span className="text-sm">PIX</span>
+                    </button>
+                  </div>
 
-                <div className="space-y-3 pt-4">
-                  <Button
-                    variant="primary"
-                    fullWidth
-                    size="lg"
-                    disabled={!caixa.isOpen || (comandaSelecionada?.itens || pedidoAtual).length === 0}
-                    onClick={finalizarPedido}
-                    isLoading={loading}
-                  >
-                    Finalizar {comandaSelecionada ? 'Pagamento' : 'Pedido'}
-                  </Button>
-                  
-                  <Button
-                    variant="ghost"
-                    fullWidth
-                    disabled={(comandaSelecionada?.itens || pedidoAtual).length === 0}
-                    onClick={limparPedido}
-                    icon={<X size={18} />}
-                  >
-                    {comandaSelecionada ? 'Cancelar' : 'Limpar'}
-                  </Button>
+                  <div className="space-y-3 pt-4">
+                    <Button
+                      variant="primary"
+                      fullWidth
+                      size="lg"
+                      disabled={!caixa.isOpen || (comandaSelecionada?.itens || pedidoAtual).length === 0}
+                      onClick={() => {
+                        toast.success('Pagamento finalizado com sucesso!');
+                        if (comandaSelecionada) {
+                          setComandasPendentes(prev => prev.filter(c => c.id !== comandaSelecionada.id));
+                        }
+                        setComandaSelecionada(null);
+                        setPedidoAtual([]);
+                      }}
+                      isLoading={loading}
+                    >
+                      Finalizar {comandaSelecionada ? 'Pagamento' : 'Pedido'}
+                    </Button>
+                    
+                    <Button
+                      variant="ghost"
+                      fullWidth
+                      disabled={(comandaSelecionada?.itens || pedidoAtual).length === 0}
+                      onClick={() => {
+                        setComandaSelecionada(null);
+                        setPedidoAtual([]);
+                      }}
+                      icon={<X size={18} />}
+                    >
+                      {comandaSelecionada ? 'Cancelar' : 'Limpar'}
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
+        )}
+
+        {/* iFood Tab */}
+        {activeTab === 'ifood' && (
+          <div className="space-y-6">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
+              <div className="p-6">
+                <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-6">
+                  Pedidos iFood
+                </h2>
+
+                {ifoodPedidos.length === 0 ? (
+                  <div className="text-center py-8">
+                    <ShoppingBag size={48} className="mx-auto text-gray-400 dark:text-gray-600" />
+                    <p className="mt-2 text-gray-500 dark:text-gray-400">
+                      Nenhum pedido pendente
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {ifoodPedidos.map(pedido => (
+                      <div
+                        key={pedido.id}
+                        className="border border-gray-200 dark:border-gray-700 rounded-lg p-6"
+                      >
+                        <div className="flex justify-between items-start mb-4">
+                          <div>
+                            <h3 className="font-medium text-gray-900 dark:text-white">
+                              Pedido #{pedido.id}
+                            </h3>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                              Cliente: {pedido.cliente}
+                            </p>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                              {formatarTempo(pedido.horario)}
+                            </p>
+                          </div>
+                          <span className="text-lg font-semibold text-gray-900 dark:text-white">
+                            {formatarDinheiro(pedido.total)}
+                          </span>
+                        </div>
+
+                        <div className="space-y-2 mb-6">
+                          {pedido.itens.map((item, index) => (
+                            <div
+                              key={index}
+                              className="flex justify-between text-sm"
+                            >
+                              <span className="text-gray-700 dark:text-gray-300">
+                                {item.quantidade}x {item.nome}
+                              </span>
+                              <span className="text-gray-500 dark:text-gray-400">
+                                {formatarDinheiro(item.preco * item.quantidade)}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="flex justify-end space-x-3">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleRejectIFoodOrder(pedido.id)}
+                            className="text-red-600 dark:text-red-400"
+                          >
+                            Recusar
+                          </Button>
+                          <Button
+                            variant="primary"
+                            size="sm"
+                            onClick={() => handleAcceptIFoodOrder(pedido.id)}
+                          >
+                            Aceitar
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Pedidos de Caixa Tab */}
+        {activeTab === 'caixa' && (
+          <div className="space-y-6">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
+              <div className="p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-lg font-medium text-gray-900 dark:text-white">
+                    Pedidos de Caixa
+                  </h2>
+                  <Button
+                    variant="primary"
+                    onClick={() => setShowPedidoCaixaModal(true)}
+                    icon={<Plus size={20} />}
+                  >
+                    Criar Pedido
+                  </Button>
+                </div>
+
+                {pedidosCaixa.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Store size={48} className="mx-auto text-gray-400 dark:text-gray-600" />
+                    <p className="mt-2 text-gray-500 dark:text-gray-400">
+                      Nenhum pedido de caixa
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {pedidosCaixa.map(pedido => (
+                      <div
+                        key={pedido.id}
+                        className="border border-gray-200 dark:border-gray-700 rounded-lg p-6"
+                      >
+                        <div className="flex justify-between items-start mb-4">
+                          <div>
+                            <h3 className="font-medium text-gray-900 dark:text-white">
+                              {pedido.cliente}
+                            </h3>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                              {formatarTempo(pedido.horario)}
+                            </p>
+                          </div>
+                          <span className="text-lg font-semibold text-gray-900 dark:text-white">
+                            {formatarDinheiro(pedido.total)}
+                          </span>
+                        </div>
+
+                        <div className="space-y-2">
+                          {pedido.itens.map((item, index) => (
+                            <div
+                              key={index}
+                              className="flex justify-between text-sm"
+                            >
+                              <span className="text-gray-700 dark:text-gray-300">
+                                {item.quantidade}x {item.nome}
+                              </span>
+                              <span className="text-gray-500 dark:text-gray-400">
+                                {formatarDinheiro(item.preco * item.quantidade)}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Modal de Adicionar Item */}
       {showAddItemModal && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-black bg-opacity-50 flex items-center justify-center">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl m-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-4xl m-4">
             <div className="p-6">
               <div className="flex justify-between items-center mb-6">
-                <h3 className="text-lg font-medium">Adicionar Item</h3>
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white">Adicionar Item</h3>
                 <button 
                   onClick={() => setShowAddItemModal(false)}
-                  className="text-gray-400 hover:text-gray-500 transition-colors"
+                  className="text-gray-400 dark:text-gray-500 hover:text-gray-500 dark:hover:text-gray-400 transition-colors"
                 >
                   <X size={24} />
                 </button>
@@ -719,7 +960,7 @@ const PDV: React.FC = () => {
                     placeholder="Buscar produtos..."
                     value={busca}
                     onChange={(e) => setBusca(e.target.value)}
-                    className="pl-10 w-full rounded-lg border border-gray-300 py-2 px-4 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="pl-10 w-full rounded-lg border border-gray-300 dark:border-gray-600 py-2 px-4 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
                   />
                 </div>
 
@@ -730,7 +971,7 @@ const PDV: React.FC = () => {
                     className={`px-4 py-2 rounded-full whitespace-nowrap transition-colors ${
                       categoriaSelecionada === 'todas'
                         ? 'bg-blue-500 text-white'
-                        : 'bg-gray-100  text-gray-700 hover:bg-gray-200'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                     }`}
                   >
                     Todas
@@ -742,7 +983,7 @@ const PDV: React.FC = () => {
                       className={`px-4 py-2 rounded-full whitespace-nowrap transition-colors ${
                         categoriaSelecionada === categoria
                           ? 'bg-blue-500 text-white'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                       }`}
                     >
                       {categoria}
@@ -756,11 +997,11 @@ const PDV: React.FC = () => {
                     <button
                       key={produto.id}
                       onClick={() => adicionarItem(produto)}
-                      className="p-4 border border-gray-200 rounded-lg text-left hover:bg-gray-50 transition-all hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg text-left hover:bg-gray-50 dark:hover:bg-gray-700 transition-all hover:border-blue-300 dark:hover:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
-                      <h3 className="font-medium text-gray-900">{produto.nome}</h3>
-                      <p className="text-sm text-gray-500">{produto.categoria}</p>
-                      <p className="mt-2 font-semibold text-blue-600">
+                      <h3 className="font-medium text-gray-900 dark:text-white">{produto.nome}</h3>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">{produto.categoria}</p>
+                      <p className="mt-2 font-semibold text-blue-600 dark:text-blue-400">
                         {formatarDinheiro(produto.preco)}
                       </p>
                     </button>
@@ -772,16 +1013,122 @@ const PDV: React.FC = () => {
         </div>
       )}
 
+      {/* Modal de Pedido de Caixa */}
+      {showPedidoCaixaModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black bg-opacity-50 flex items-center justify-center">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-4xl m-4">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                  Novo Pedido de Caixa
+                </h3>
+                <button 
+                  onClick={() => setShowPedidoCaixaModal(false)}
+                  className="text-gray-400 dark:text-gray-500 hover:text-gray-500 dark:hover:text-gray-400 transition-colors"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Nome do Cliente
+                  </label>
+                  <input
+                    type="text"
+                    value={nomeClienteCaixa}
+                    onChange={(e) => setNomeClienteCaixa(e.target.value)}
+                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:text-white sm:text-sm"
+                    placeholder="Digite o nome do cliente"
+                  />
+                </div>
+
+                <div>
+                  <Button
+                    variant="primary"
+                    fullWidth
+                    onClick={() => setShowAddItemModal(true)}
+                    icon={<Plus size={20} />}
+                  >
+                    Adicionar Itens
+                  </Button>
+                </div>
+
+                {pedidoAtual.length > 0 && (
+                  <div className="space-y-4">
+                    <h4 className="font-medium text-gray-900 dark:text-white">
+                      Itens do Pedido
+                    </h4>
+                    <div className="space-y-2">
+                      {pedidoAtual.map(item => (
+                        <div
+                          key={item.id}
+                          className="flex justify-between items-center"
+                        >
+                          <div>
+                            <p className="text-gray-900 dark:text-white">
+                              {item.quantidade}x {item.nome}
+                            </p>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                              {formatarDinheiro(item.preco)} un
+                            </p>
+                          </div>
+                          <span className="font-medium text-gray-900 dark:text-white">
+                            {formatarDinheiro(item.preco * item.quantidade)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
+                  <div className="flex justify-between items-center">
+                    <span className="text-lg font-medium text-gray-900 dark:text-white">
+                      Total
+                    </span>
+                    <span className="text-xl font-semibold text-gray-900 dark:text-white">
+                      {formatarDinheiro(total)}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex justify-end space-x-3">
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      setShowPedidoCaixaModal(false);
+                      setPedidoAtual([]);
+                      setNomeClienteCaixa('');
+                    }}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    variant="primary"
+                    onClick={handleCreateCaixaOrder}
+                    disabled={!nomeClienteCaixa || pedidoAtual.length === 0}
+                  >
+                    Criar Pedido
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal de Abertura de Caixa */}
       {showCaixaModal && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-black bg-opacity-50 flex items-center justify-center">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md m-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md m-4">
             <div className="p-6">
               <div className="flex justify-between items-center mb-6">
-                <h3 className="text-lg font-medium">Abertura de Caixa</h3>
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white">Abertura de Caixa</h3>
                 <button 
                   onClick={() => setShowCaixaModal(false)}
-                  className="text-gray-400 hover:text-gray-500 transition-colors"
+                  className="text-gray-400 dark:text-gray-500 hover:text-gray-500 dark:hover:text-gray-400 transition-colors"
                 >
                   <X size={24} />
                 </button>
@@ -789,24 +1136,24 @@ const PDV: React.FC = () => {
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                     Operador
                   </label>
                   <input
                     type="text"
                     value={user?.email || ''}
                     disabled
-                    className="mt-1 block w-full rounded-md border-gray-300 bg-gray-100 cursor-not-allowed p-2"
+                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 cursor-not-allowed p-2 text-gray-500 dark:text-gray-400"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                     Valor Inicial em Caixa
                   </label>
                   <div className="mt-1 relative rounded-md shadow-sm">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <span className="text-gray-500 sm:text-sm">R$</span>
+                      <span className="text-gray-500 dark:text-gray-400 sm:text-sm">R$</span>
                     </div>
                     <input
                       type="number"
@@ -814,7 +1161,7 @@ const PDV: React.FC = () => {
                       min="0"
                       value={caixa.valorInicial}
                       onChange={(e) => setCaixa({ ...caixa, valorInicial: parseFloat(e.target.value) || 0 })}
-                      className="pl-12 block w-full pr-12 sm:text-sm border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 p-2"
+                      className="pl-12 block w-full pr-12 sm:text-sm border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white p-2"
                       placeholder="0,00"
                     />
                   </div>
@@ -823,7 +1170,16 @@ const PDV: React.FC = () => {
                 <Button
                   variant="primary"
                   fullWidth
-                  onClick={() => abrirCaixa(caixa.valorInicial)}
+                  onClick={() => {
+                    setCaixa(prev => ({
+                      ...prev,
+                      isOpen: true,
+                      dataAbertura: new Date(),
+                      saldoAtual: prev.valorInicial
+                    }));
+                    setShowCaixaModal(false);
+                    toast.success('Caixa aberto com sucesso!');
+                  }}
                   isLoading={loading}
                 >
                   Abrir Caixa
