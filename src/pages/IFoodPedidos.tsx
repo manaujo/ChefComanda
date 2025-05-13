@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { 
   ShoppingBag, RefreshCcw, Clock, Check, X, Search,
-  ChefHat, Truck, AlertTriangle, Filter, Download
+  ChefHat, Truck, AlertTriangle, Filter
 } from 'lucide-react';
 import Button from '../components/ui/Button';
 import { formatarDinheiro } from '../utils/formatters';
 import toast from 'react-hot-toast';
 
-interface IFoodPedido {
+interface DeliveryPedido {
   id: string;
   status: 'novo' | 'aceito' | 'preparando' | 'pronto' | 'entregue' | 'cancelado';
   horario: string;
@@ -23,9 +23,10 @@ interface IFoodPedido {
   total: number;
   tempoEstimado?: number;
   avaliacao?: number;
+  plataforma: 'ifood' | 'whatsapp' | 'telefone';
 }
 
-const mockPedidos: IFoodPedido[] = [
+const mockPedidos: DeliveryPedido[] = [
   {
     id: 'IF123456',
     status: 'novo',
@@ -38,10 +39,11 @@ const mockPedidos: IFoodPedido[] = [
       { id: 3, nome: 'Refrigerante 350ml', quantidade: 2, preco: 6.90 }
     ],
     total: 81.50,
-    tempoEstimado: 30
+    tempoEstimado: 30,
+    plataforma: 'ifood'
   },
   {
-    id: 'IF123457',
+    id: 'WP123457',
     status: 'preparando',
     horario: '2025-03-10T15:15:00',
     cliente: 'Maria Oliveira',
@@ -51,12 +53,13 @@ const mockPedidos: IFoodPedido[] = [
       { id: 5, nome: 'Cerveja 600ml', quantidade: 2, preco: 12.90 }
     ],
     total: 75.70,
-    tempoEstimado: 45
+    tempoEstimado: 45,
+    plataforma: 'whatsapp'
   }
 ];
 
-const IFoodPedidos: React.FC = () => {
-  const [pedidos, setPedidos] = useState<IFoodPedido[]>(mockPedidos);
+const DeliveryPedidos: React.FC = () => {
+  const [pedidos, setPedidos] = useState<DeliveryPedido[]>(mockPedidos);
   const [filtroStatus, setFiltroStatus] = useState<string>('todos');
   const [busca, setBusca] = useState('');
   const [loading, setLoading] = useState(false);
@@ -74,7 +77,7 @@ const IFoodPedidos: React.FC = () => {
     }
   };
 
-  const atualizarStatusPedido = (pedidoId: string, novoStatus: IFoodPedido['status']) => {
+  const atualizarStatusPedido = (pedidoId: string, novoStatus: DeliveryPedido['status']) => {
     setPedidos(pedidos.map(pedido => 
       pedido.id === pedidoId ? { ...pedido, status: novoStatus } : pedido
     ));
@@ -104,19 +107,12 @@ const IFoodPedidos: React.FC = () => {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Pedidos iFood</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Pedidos Delivery</h1>
           <p className="text-gray-500 mt-1">
-            Gerenciamento de pedidos do iFood
+            Gerenciamento de pedidos de delivery
           </p>
         </div>
-        <div className="mt-4 md:mt-0 flex space-x-3">
-          <Button
-            variant="ghost"
-            icon={<Download size={18} />}
-            onClick={() => toast.success('Relatório exportado!')}
-          >
-            Exportar
-          </Button>
+        <div className="mt-4 md:mt-0">
           <Button
             variant="primary"
             icon={<RefreshCcw size={18} />}
@@ -293,4 +289,4 @@ const IFoodPedidos: React.FC = () => {
   );
 };
 
-export default IFoodPedidos;
+export default DeliveryPedidos;
