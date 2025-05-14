@@ -1,197 +1,279 @@
-// Tipos
-interface Mesa {
-  id: number;
-  numero: number;
-  capacidade: number;
-  status: 'livre' | 'ocupada' | 'aguardando';
-  horarioAbertura?: string;
-  garcom?: string;
-  valorTotal: number;
-}
-
-interface Produto {
-  id: number;
-  nome: string;
-  descricao: string;
-  preco: number;
-  categoria: string;
-  disponivel: boolean;
-  estoque: number;
-  estoqueMinimo: number;
-}
-
-interface ProdutoPopular {
-  id: number;
-  nome: string;
-  preco: number;
-  categoria: string;
-  vendidos: number;
-  percentual: number;
-}
-
-interface Pedido {
-  id: number;
-  mesaId: number;
-  status: 'pendente' | 'preparando' | 'pronto' | 'entregue' | 'cancelado';
-  horario: string;
-  itens: {
-    id: number;
-    produtoId: number;
-    nome: string;
-    quantidade: number;
-  }[];
-}
-
-interface ItemComanda {
-  id: number;
-  mesaId: number;
-  produtoId: number;
-  nome: string;
-  categoria: string;
-  quantidade: number;
-  preco: number;
-  observacao?: string;
-  status: 'pendente' | 'preparando' | 'pronto' | 'entregue' | 'cancelado';
-  horario: string;
-}
-
-interface AlertaEstoque {
-  id: number;
-  produto: string;
-  quantidade: number;
-  estoqueMinimo: number;
-  data: string;
-}
-
-// Dados simulados
-export const dadosMesas: Mesa[] = [
-  { id: 1, numero: 1, capacidade: 4, status: 'livre', valorTotal: 0 },
-  { id: 2, numero: 2, capacidade: 2, status: 'ocupada', horarioAbertura: '2025-03-10T14:30:00', garcom: 'Carlos Garçom', valorTotal: 98.50 },
-  { id: 3, numero: 3, capacidade: 6, status: 'ocupada', horarioAbertura: '2025-03-10T15:15:00', garcom: 'Carlos Garçom', valorTotal: 157.80 },
-  { id: 4, numero: 4, capacidade: 4, status: 'aguardando', horarioAbertura: '2025-03-10T13:45:00', garcom: 'Carlos Garçom', valorTotal: 210.75 },
-  { id: 5, numero: 5, capacidade: 2, status: 'livre', valorTotal: 0 },
-  { id: 6, numero: 6, capacidade: 8, status: 'ocupada', horarioAbertura: '2025-03-10T15:30:00', garcom: 'Carlos Garçom', valorTotal: 65.90 },
-  { id: 7, numero: 7, capacidade: 4, status: 'livre', valorTotal: 0 },
-  { id: 8, numero: 8, capacidade: 4, status: 'livre', valorTotal: 0 },
-  { id: 9, numero: 9, capacidade: 2, status: 'ocupada', horarioAbertura: '2025-03-10T16:00:00', garcom: 'Carlos Garçom', valorTotal: 45.50 },
-  { id: 10, numero: 10, capacidade: 6, status: 'livre', valorTotal: 0 },
+// Add to existing mockData.ts
+export const cardapioItems = [
+  {
+    id: 1,
+    nome: "Picanha Grelhada",
+    descricao: "Suculenta picanha grelhada na brasa, acompanhada de arroz, farofa especial, vinagrete e pão de alho. Serve 2 pessoas.",
+    preco: 159.90,
+    categoria: "Menu Principal",
+    imagem: "https://images.pexels.com/photos/1251198/pexels-photo-1251198.jpeg",
+    disponivel: true
+  },
+  {
+    id: 2,
+    nome: "Frango à Parmegiana",
+    descricao: "Peito de frango empanado coberto com molho de tomate caseiro, queijo muçarela gratinado e manjericão fresco. Acompanha arroz e fritas.",
+    preco: 89.90,
+    categoria: "Menu Principal",
+    imagem: "https://images.pexels.com/photos/2338407/pexels-photo-2338407.jpeg",
+    disponivel: true
+  },
+  {
+    id: 3,
+    nome: "Mini Hambúrguer com Batata",
+    descricao: "Dois deliciosos mini hambúrgueres de carne bovina, queijo cheddar, alface e tomate. Acompanha porção de batatas fritas crocantes.",
+    preco: 45.90,
+    categoria: "Menu Kids",
+    imagem: "https://images.pexels.com/photos/2271107/pexels-photo-2271107.jpeg",
+    disponivel: true
+  },
+  {
+    id: 4,
+    nome: "Macarrãozinho",
+    descricao: "Espaguete ao molho de tomate suave, finalizado com queijo parmesão ralado. Perfeito para as crianças.",
+    preco: 35.90,
+    categoria: "Menu Kids",
+    imagem: "https://images.pexels.com/photos/1527603/pexels-photo-1527603.jpeg",
+    disponivel: true
+  },
+  {
+    id: 5,
+    nome: "Bruschettas Italianas",
+    descricao: "Mix de bruschettas com tomate e manjericão, cogumelos salteados e presunto de parma. 6 unidades.",
+    preco: 42.90,
+    categoria: "Entradas",
+    imagem: "https://images.pexels.com/photos/2228566/pexels-photo-2228566.jpeg",
+    disponivel: true
+  },
+  {
+    id: 6,
+    nome: "Coxinha de Frango",
+    descricao: "Coxinha cremosa de frango com catupiry, massa crocante por fora e recheio suculento. 6 unidades.",
+    preco: 32.90,
+    categoria: "Entradas",
+    imagem: "https://images.pexels.com/photos/6941026/pexels-photo-6941026.jpeg",
+    disponivel: true
+  },
+  {
+    id: 7,
+    nome: "Refrigerante Lata",
+    descricao: "Coca-Cola, Guaraná Antarctica, Fanta ou Sprite. Lata 350ml gelada.",
+    preco: 7.90,
+    categoria: "Bebidas",
+    imagem: "https://images.pexels.com/photos/2983100/pexels-photo-2983100.jpeg",
+    disponivel: true
+  },
+  {
+    id: 8,
+    nome: "Suco Natural",
+    descricao: "Sucos naturais: Laranja, Abacaxi, Limão ou Maracujá. Copo 400ml.",
+    preco: 12.90,
+    categoria: "Bebidas",
+    imagem: "https://images.pexels.com/photos/1337825/pexels-photo-1337825.jpeg",
+    disponivel: true
+  },
+  {
+    id: 9,
+    nome: "Brownie com Sorvete",
+    descricao: "Brownie caseiro quentinho com sorvete de creme, calda de chocolate e chantilly.",
+    preco: 28.90,
+    categoria: "Sobremesas",
+    imagem: "https://images.pexels.com/photos/3026804/pexels-photo-3026804.jpeg",
+    disponivel: true
+  },
+  {
+    id: 10,
+    nome: "Pudim de Leite Condensado",
+    descricao: "Clássico pudim de leite condensado com calda de caramelo. Receita tradicional da casa.",
+    preco: 22.90,
+    categoria: "Sobremesas",
+    imagem: "https://images.pexels.com/photos/4051583/pexels-photo-4051583.jpeg",
+    disponivel: true
+  }
 ];
 
-export const dadosProdutos: Produto[] = [
-  { id: 1, nome: 'Filé Mignon ao Molho Madeira', descricao: 'Filé mignon grelhado com molho madeira, acompanha arroz e batatas', preco: 69.90, categoria: 'Cozinha', disponivel: true, estoque: 20, estoqueMinimo: 5 },
-  { id: 2, nome: 'Risoto de Camarão', descricao: 'Risoto cremoso com camarões salteados e ervas finas', preco: 75.50, categoria: 'Cozinha', disponivel: true, estoque: 15, estoqueMinimo: 3 },
-  { id: 3, nome: 'Espaguete à Carbonara', descricao: 'Espaguete com molho cremoso, bacon crocante e ovo', preco: 45.90, categoria: 'Cozinha', disponivel: true, estoque: 30, estoqueMinimo: 8 },
-  { id: 4, nome: 'Caesar Salad', descricao: 'Alface americana, croutons, queijo parmesão e molho caesar', preco: 35.90, categoria: 'Cozinha', disponivel: true, estoque: 25, estoqueMinimo: 5 },
-  { id: 5, nome: 'Caipirinha de Limão', descricao: 'Cachaça, limão, açúcar e gelo', preco: 18.50, categoria: 'Bar', disponivel: true, estoque: 50, estoqueMinimo: 10 },
-  { id: 6, nome: 'Mojito', descricao: 'Rum, hortelã, limão, açúcar e água com gás', preco: 22.90, categoria: 'Bar', disponivel: true, estoque: 40, estoqueMinimo: 8 },
-  { id: 7, nome: 'Cerveja Artesanal IPA', descricao: 'Cerveja artesanal do tipo India Pale Ale', preco: 25.90, categoria: 'Bar', disponivel: true, estoque: 35, estoqueMinimo: 12 },
-  { id: 8, nome: 'Suco de Laranja Natural', descricao: 'Suco de laranja natural sem adição de açúcar', preco: 12.50, categoria: 'Bar', disponivel: true, estoque: 60, estoqueMinimo: 15 },
-  { id: 9, nome: 'Tiramisù', descricao: 'Sobremesa italiana com café, queijo mascarpone e cacau em pó', preco: 28.90, categoria: 'Sobremesa', disponivel: true, estoque: 18, estoqueMinimo: 4 },
-  { id: 10, nome: 'Pudim de Leite', descricao: 'Pudim tradicional de leite condensado com calda de caramelo', preco: 15.90, categoria: 'Sobremesa', disponivel: true, estoque: 22, estoqueMinimo: 5 },
-  { id: 11, nome: 'Petit Gateau', descricao: 'Bolo de chocolate quente com interior derretido, acompanha sorvete de creme', preco: 32.50, categoria: 'Sobremesa', disponivel: true, estoque: 20, estoqueMinimo: 5 },
-  { id: 12, nome: 'Água Mineral', descricao: 'Água mineral sem gás', preco: 6.50, categoria: 'Bar', disponivel: true, estoque: 2, estoqueMinimo: 20 },
+export const dadosAlertasEstoque = [
+  {
+    id: 1,
+    produto: "Picanha",
+    quantidadeAtual: 5,
+    quantidadeMinima: 10,
+    unidade: "kg",
+    status: "crítico",
+    ultimaAtualizacao: "2025-05-14T10:30:00Z"
+  },
+  {
+    id: 2,
+    produto: "Arroz",
+    quantidadeAtual: 15,
+    quantidadeMinima: 20,
+    unidade: "kg",
+    status: "baixo",
+    ultimaAtualizacao: "2025-05-14T09:15:00Z"
+  },
+  {
+    id: 3,
+    produto: "Coca-Cola Lata",
+    quantidadeAtual: 24,
+    quantidadeMinima: 50,
+    unidade: "unidades",
+    status: "baixo",
+    ultimaAtualizacao: "2025-05-14T11:45:00Z"
+  },
+  {
+    id: 4,
+    produto: "Queijo Muçarela",
+    quantidadeAtual: 2,
+    quantidadeMinima: 5,
+    unidade: "kg",
+    status: "crítico",
+    ultimaAtualizacao: "2025-05-14T08:20:00Z"
+  },
+  {
+    id: 5,
+    produto: "Óleo de Cozinha",
+    quantidadeAtual: 8,
+    quantidadeMinima: 10,
+    unidade: "litros",
+    status: "baixo",
+    ultimaAtualizacao: "2025-05-14T12:00:00Z"
+  }
 ];
 
-export const dadosProdutosPopulares: ProdutoPopular[] = [
-  { id: 1, nome: 'Filé Mignon ao Molho Madeira', preco: 69.90, categoria: 'Cozinha', vendidos: 28, percentual: 85 },
-  { id: 3, nome: 'Espaguete à Carbonara', preco: 45.90, categoria: 'Cozinha', vendidos: 22, percentual: 78 },
-  { id: 5, nome: 'Caipirinha de Limão', preco: 18.50, categoria: 'Bar', vendidos: 45, percentual: 92 },
-  { id: 9, nome: 'Tiramisù', preco: 28.90, categoria: 'Sobremesa', vendidos: 18, percentual: 65 },
+export const dadosItensComanda = [
+  {
+    id: 1,
+    mesaId: 1,
+    produtoId: 1,
+    nome: "Picanha Grelhada",
+    categoria: "Menu Principal",
+    quantidade: 1,
+    preco: 159.90,
+    observacao: "Ao ponto",
+    status: "pendente",
+    horario: "2025-05-14T10:30:00Z"
+  },
+  {
+    id: 2,
+    mesaId: 1,
+    produtoId: 7,
+    nome: "Refrigerante Lata",
+    categoria: "Bebidas",
+    quantidade: 2,
+    preco: 7.90,
+    observacao: "Coca-Cola bem gelada",
+    status: "pronto",
+    horario: "2025-05-14T10:32:00Z"
+  },
+  {
+    id: 3,
+    mesaId: 2,
+    produtoId: 2,
+    nome: "Frango à Parmegiana",
+    categoria: "Menu Principal",
+    quantidade: 1,
+    preco: 89.90,
+    observacao: "",
+    status: "preparando",
+    horario: "2025-05-14T10:45:00Z"
+  }
 ];
 
-export const dadosPedidos: Pedido[] = [
-  { 
-    id: 1, 
-    mesaId: 2, 
-    status: 'pendente', 
-    horario: '2025-03-10T15:05:00', 
-    itens: [
-      { id: 1, produtoId: 3, nome: 'Espaguete à Carbonara', quantidade: 2 },
-      { id: 2, produtoId: 5, nome: 'Caipirinha de Limão', quantidade: 2 },
-    ] 
+// Add other required mock data exports that are used in RestauranteContext
+export const dadosMesas = [
+  {
+    id: 1,
+    numero: 1,
+    capacidade: 4,
+    status: 'ocupada',
+    valorTotal: 175.70,
+    horarioAbertura: "2025-05-14T10:15:00Z",
+    garcom: "Carlos Garçom"
   },
-  { 
-    id: 2, 
-    mesaId: 3, 
-    status: 'preparando', 
-    horario: '2025-03-10T15:20:00', 
-    itens: [
-      { id: 3, produtoId: 1, nome: 'Filé Mignon ao Molho Madeira', quantidade: 1 },
-      { id: 4, produtoId: 8, nome: 'Suco de Laranja Natural', quantidade: 1 },
-    ] 
+  {
+    id: 2,
+    numero: 2,
+    capacidade: 2,
+    status: 'ocupada',
+    valorTotal: 89.90,
+    horarioAbertura: "2025-05-14T10:40:00Z",
+    garcom: "Carlos Garçom"
   },
-  { 
-    id: 3, 
-    mesaId: 6, 
-    status: 'pendente', 
-    horario: '2025-03-10T15:35:00', 
-    itens: [
-      { id: 5, produtoId: 2, nome: 'Risoto de Camarão', quantidade: 1 },
-    ] 
-  },
+  {
+    id: 3,
+    numero: 3,
+    capacidade: 6,
+    status: 'livre',
+    valorTotal: 0
+  }
 ];
 
-export const dadosItensComanda: ItemComanda[] = [
-  { 
-    id: 1, 
-    mesaId: 2, 
-    produtoId: 3, 
-    nome: 'Espaguete à Carbonara', 
-    categoria: 'Cozinha',
-    quantidade: 2, 
-    preco: 45.90, 
-    status: 'pendente', 
-    horario: '2025-03-10T15:05:00' 
+export const dadosProdutos = [
+  {
+    id: 1,
+    nome: "Picanha Grelhada",
+    preco: 159.90,
+    categoria: "Menu Principal",
+    estoque: 15
   },
-  { 
-    id: 2, 
-    mesaId: 2, 
-    produtoId: 5, 
-    nome: 'Caipirinha de Limão', 
-    categoria: 'Bar',
-    quantidade: 1, 
-    preco: 18.50, 
-    observacao: 'Pouco açúcar',
-    status: 'entregue', 
-    horario: '2025-03-10T15:00:00' 
+  {
+    id: 2,
+    nome: "Frango à Parmegiana",
+    preco: 89.90,
+    categoria: "Menu Principal",
+    estoque: 20
   },
-  { 
-    id: 3, 
-    mesaId: 3, 
-    produtoId: 1, 
-    nome: 'Filé Mignon ao Molho Madeira', 
-    categoria: 'Cozinha',
-    quantidade: 1, 
-    preco: 69.90, 
-    observacao: 'Ao ponto',
-    status: 'preparando', 
-    horario: '2025-03-10T15:20:00' 
-  },
-  { 
-    id: 4, 
-    mesaId: 3, 
-    produtoId: 8, 
-    nome: 'Suco de Laranja Natural', 
-    categoria: 'Bar',
-    quantidade: 1, 
-    preco: 12.50, 
-    status: 'entregue', 
-    horario: '2025-03-10T15:22:00' 
-  },
-  { 
-    id: 5, 
-    mesaId: 6, 
-    produtoId: 2, 
-    nome: 'Risoto de Camarão', 
-    categoria: 'Cozinha',
-    quantidade: 1, 
-    preco: 75.50, 
-    status: 'pendente', 
-    horario: '2025-03-10T15:35:00' 
-  },
+  {
+    id: 7,
+    nome: "Refrigerante Lata",
+    preco: 7.90,
+    categoria: "Bebidas",
+    estoque: 50
+  }
 ];
 
-export const dadosAlertasEstoque: AlertaEstoque[] = [
-  { id: 1, produto: 'Água Mineral', quantidade: 2, estoqueMinimo: 20, data: '2025-03-10T15:00:00' },
-  { id: 2, produto: 'Camarão', quantidade: 1, estoqueMinimo: 3, data: '2025-03-10T14:30:00' },
+export const dadosProdutosPopulares = [
+  {
+    id: 1,
+    nome: "Picanha Grelhada",
+    quantidade: 150,
+    valor: 23985.00
+  },
+  {
+    id: 2,
+    nome: "Frango à Parmegiana",
+    quantidade: 120,
+    valor: 10788.00
+  }
+];
+
+export const dadosPedidos = [
+  {
+    id: 1,
+    mesa: 1,
+    status: "em preparo",
+    horario: "2025-05-14T10:30:00Z",
+    items: [
+      {
+        id: 1,
+        nome: "Picanha Grelhada",
+        quantidade: 1,
+        preco: 159.90
+      }
+    ]
+  },
+  {
+    id: 2,
+    mesa: 2,
+    status: "em preparo",
+    horario: "2025-05-14T10:45:00Z",
+    items: [
+      {
+        id: 2,
+        nome: "Frango à Parmegiana",
+        quantidade: 1,
+        preco: 89.90
+      }
+    ]
+  }
 ];
