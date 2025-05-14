@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { ChefHat, ShoppingBag, X, Plus, Minus, Search } from 'lucide-react';
-import { useRestaurante } from '../contexts/RestauranteContext';
 import { formatarDinheiro } from '../utils/formatters';
 import Button from '../components/ui/Button';
 import toast from 'react-hot-toast';
+import { cardapioItems } from '../data/mockData';
 
 interface CartItem {
   id: number;
@@ -14,15 +14,14 @@ interface CartItem {
 }
 
 const CardapioPublico: React.FC = () => {
-  const { produtos } = useRestaurante();
   const [loading, setLoading] = useState(true);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [showCart, setShowCart] = useState(false);
   const [showProductModal, setShowProductModal] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<Produto | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<(typeof cardapioItems)[0] | null>(null);
   const [quantidade, setQuantidade] = useState(1);
   const [observacao, setObservacao] = useState('');
-  const [activeCategory, setActiveCategory] = useState('menu-principal');
+  const [activeCategory, setActiveCategory] = useState('Menu Principal');
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
@@ -30,19 +29,17 @@ const CardapioPublico: React.FC = () => {
   }, []);
 
   const menuSections = [
-    { id: 'menu-principal', title: 'Menu Principal', categories: ['Carnes', 'Massas', 'Frutos do Mar'] },
-    { id: 'menu-kids', title: 'Menu Kids', categories: ['Kids'] },
-    { id: 'entradas', title: 'Entradas', categories: ['Entradas', 'Petiscos'] },
-    { id: 'bebidas', title: 'Bebidas', categories: ['Bebidas', 'Drinks'] },
-    { id: 'sobremesas', title: 'Sobremesas', categories: ['Sobremesas'] }
+    { id: 'menu-principal', title: 'Menu Principal' },
+    { id: 'menu-kids', title: 'Menu Kids' },
+    { id: 'entradas', title: 'Entradas' },
+    { id: 'bebidas', title: 'Bebidas' },
+    { id: 'sobremesas', title: 'Sobremesas' }
   ];
 
-  const filteredProducts = produtos.filter(produto => {
+  const filteredProducts = cardapioItems.filter(produto => {
     const matchSearch = produto.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
                        produto.descricao.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchCategory = menuSections.find(section => 
-      section.id === activeCategory
-    )?.categories.includes(produto.categoria);
+    const matchCategory = produto.categoria === activeCategory;
     return matchSearch && matchCategory;
   });
 
@@ -129,7 +126,7 @@ const CardapioPublico: React.FC = () => {
 
       {/* Hero Section */}
       <div className="relative h-[40vh] bg-cover bg-center" style={{ 
-        backgroundImage: 'url(https://images.pexels.com/photos/958545/pexels-photo-958545.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2)'
+        backgroundImage: 'url(https://images.pexels.com/photos/958545/pexels-photo-958545.jpeg)'
       }}>
         <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
           <div className="text-center text-white">
@@ -162,9 +159,9 @@ const CardapioPublico: React.FC = () => {
             {menuSections.map((section) => (
               <button
                 key={section.id}
-                onClick={() => setActiveCategory(section.id)}
+                onClick={() => setActiveCategory(section.title)}
                 className={`whitespace-nowrap text-sm font-medium px-3 py-2 rounded-full transition-colors ${
-                  activeCategory === section.id
+                  activeCategory === section.title
                     ? 'bg-[#8B0000] text-white'
                     : 'text-gray-600 hover:text-[#8B0000]'
                 }`}
@@ -189,7 +186,7 @@ const CardapioPublico: React.FC = () => {
               className="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow cursor-pointer transform hover:scale-[1.02] duration-300"
             >
               <div className="h-48 bg-cover bg-center" style={{
-                backgroundImage: `url(https://images.pexels.com/photos/675951/pexels-photo-675951.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2)`
+                backgroundImage: `url(${produto.imagem})`
               }} />
               <div className="p-4">
                 <h3 className="font-serif text-xl text-[#4A4A4A]">{produto.nome}</h3>
@@ -220,7 +217,7 @@ const CardapioPublico: React.FC = () => {
             </button>
 
             <div className="h-64 bg-cover bg-center" style={{
-              backgroundImage: `url(https://images.pexels.com/photos/675951/pexels-photo-675951.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2)`
+              backgroundImage: `url(${selectedProduct.imagem})`
             }} />
 
             <div className="p-6">
