@@ -23,7 +23,7 @@ const ProdutoPopular: React.FC<ProdutoPopularProps> = ({ produto }) => {
       
       <div className="mt-2 flex items-center text-sm text-gray-500">
         <span className="mr-2">Valor unitário:</span>
-        <span className="font-semibold text-gray-900">{formatarDinheiro(produto.preco)}</span>
+        <span className="font-semibold text-gray-900">{formatarDinheiro(produto.preco || 0)}</span>
       </div>
       
       <div className="mt-3 flex items-center">
