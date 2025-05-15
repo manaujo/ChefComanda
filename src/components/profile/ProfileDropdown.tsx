@@ -10,10 +10,9 @@ import { useTheme } from '../../contexts/ThemeContext';
 const ProfileDropdown: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const { user, userRole, signOut } = useAuth();
+  const { user, userRole, displayName, signOut } = useAuth();
   const { theme, toggleTheme } = useTheme();
 
-  // Fecha o menu ao clicar fora
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -35,7 +34,7 @@ const ProfileDropdown: React.FC = () => {
         </div>
         <div className="hidden md:block text-left">
           <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-            {user?.email}
+            {displayName || 'Usuário'}
           </p>
           <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">
             {userRole}
@@ -45,7 +44,7 @@ const ProfileDropdown: React.FC = () => {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg py-1 z-50">
+        <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg z-50">
           {userRole === 'admin' && (
             <>
               <Link
