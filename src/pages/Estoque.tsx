@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Search, AlertTriangle, Plus, Download, FileSpreadsheet, 
-  Package2, Calendar, ArrowUpCircle, ArrowDownCircle, Edit2,
-  Trash2, X, Filter, RefreshCcw
+  Plus, Search, Filter, Edit2, Trash2, Upload, Download, 
+  FileSpreadsheet, AlertTriangle, MoreVertical, X
 } from 'lucide-react';
 import Button from '../components/ui/Button';
 import { useRestaurante } from '../contexts/RestauranteContext';
@@ -37,9 +36,9 @@ const Estoque: React.FC = () => {
   const [busca, setBusca] = useState('');
   const [filtroStatus, setFiltroStatus] = useState<'todos' | 'ativos' | 'vencidos' | 'proximos'>('todos');
   const [visualizacao, setVisualizacao] = useState<'cards' | 'tabela'>('cards');
-  const [showNovoInsumoModal, setShowNovoInsumoModal] = useState(false);
-  const [showMovimentacaoModal, setShowMovimentacaoModal] = useState(false);
-  const [insumoSelecionado, setInsumoSelecionado] = useState<Insumo | null>(null);
+  const [showModal, setShowModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [selectedInsumo, setSelectedInsumo] = useState<Insumo | null>(null);
   const [formData, setFormData] = useState({
     nome: '',
     descricao: '',
@@ -49,29 +48,34 @@ const Estoque: React.FC = () => {
     data_validade: '',
     preco_unitario: 0
   });
-  const [movimentacao, setMovimentacao] = useState({
-    tipo: 'entrada' as 'entrada' | 'saida',
-    quantidade: 0,
-    motivo: '',
-    observacao: ''
-  });
 
   useEffect(() => {
-    carregarInsumos();
+    loadInsumos();
   }, []);
 
-  const carregarInsumos = async () => {
+  const loadInsumos = async () => {
     try {
       setLoading(true);
+      const { data: restaurante } = await supabase
+        .from('restaurantes')
+        .select('id')
+        .single();
+
+      if (!restaurante) {
+        toast.error('Restaurante não encontrado');
+        return;
+      }
+
       const { data, error } = await supabase
         .from('insumos')
         .select('*')
+        .eq('restaurante_id', restaurante.id)
         .order('nome');
 
       if (error) throw error;
       setInsumos(data || []);
     } catch (error) {
-      console.error('Erro ao carregar insumos:', error);
+      console.error('Error loading insumos:', error);
       toast.error('Erro ao carregar insumos');
     } finally {
       setLoading(false);
@@ -106,44 +110,12 @@ const Estoque: React.FC = () => {
       if (error) throw error;
 
       toast.success('Insumo cadastrado com sucesso!');
-      setShowNovoInsumoModal(false);
-      carregarInsumos();
+      setShowModal(false);
+      loadInsumos();
       resetForm();
     } catch (error) {
-      console.error('Erro ao salvar insumo:', error);
+      console.error('Error saving insumo:', error);
       toast.error(error instanceof Error ? error.message : 'Erro ao salvar insumo');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleMovimentacao = async () => {
-    if (!insumoSelecionado) return;
-    setLoading(true);
-
-    try {
-      if (movimentacao.tipo === 'saida' && insumoSelecionado.quantidade < movimentacao.quantidade) {
-        throw new Error('Quantidade insuficiente em estoque');
-      }
-
-      const { error } = await supabase
-        .from('movimentacoes_estoque')
-        .insert({
-          insumo_id: insumoSelecionado.id,
-          ...movimentacao,
-          created_by: (await supabase.auth.getUser()).data.user?.id
-        });
-
-      if (error) throw error;
-
-      toast.success(`${movimentacao.tipo === 'entrada' ? 'Entrada' : 'Saída'} registrada com sucesso!`);
-      setShowMovimentacaoModal(false);
-      setInsumoSelecionado(null);
-      carregarInsumos();
-      resetMovimentacao();
-    } catch (error) {
-      console.error('Erro ao registrar movimentação:', error);
-      toast.error(error instanceof Error ? error.message : 'Erro ao registrar movimentação');
     } finally {
       setLoading(false);
     }
@@ -159,15 +131,31 @@ const Estoque: React.FC = () => {
       data_validade: '',
       preco_unitario: 0
     });
+    setSelectedInsumo(null);
   };
 
-  const resetMovimentacao = () => {
-    setMovimentacao({
-      tipo: 'entrada',
-      quantidade: 0,
-      motivo: '',
-      observacao: ''
-    });
+  const handleDelete = async () => {
+    if (!selectedInsumo) return;
+    
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from('insumos')
+        .update({ ativo: false })
+        .eq('id', selectedInsumo.id);
+
+      if (error) throw error;
+
+      toast.success('Insumo desativado com sucesso!');
+      setShowDeleteModal(false);
+      setSelectedInsumo(null);
+      loadInsumos();
+    } catch (error) {
+      console.error('Error deactivating insumo:', error);
+      toast.error('Erro ao desativar insumo');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const isVencido = (data_validade?: string) => {
@@ -231,33 +219,13 @@ const Estoque: React.FC = () => {
             icon={<Plus size={18} />}
             onClick={() => {
               resetForm();
-              setShowNovoInsumoModal(true);
+              setShowModal(true);
             }}
           >
             Novo Insumo
           </Button>
         </div>
       </div>
-
-      {/* Alertas */}
-      {insumos.some(i => isVencido(i.data_validade) || isProximoVencer(i.data_validade)) && (
-        <div className="bg-yellow-50 border-l-4 border-yellow-500 p-4">
-          <div className="flex">
-            <AlertTriangle className="h-5 w-5 text-yellow-400" />
-            <div className="ml-3">
-              <h3 className="text-sm font-medium text-yellow-800">
-                Atenção aos Vencimentos
-              </h3>
-              <div className="mt-2 text-sm text-yellow-700">
-                <p>
-                  Existem produtos vencidos ou próximos do vencimento.
-                  Por favor, verifique a lista abaixo.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Filtros */}
       <div className="bg-white rounded-lg shadow-sm p-4">
@@ -330,16 +298,7 @@ const Estoque: React.FC = () => {
                   <div className="flex items-center space-x-2">
                     <button
                       onClick={() => {
-                        setInsumoSelecionado(insumo);
-                        setShowMovimentacaoModal(true);
-                      }}
-                      className="p-1 text-gray-400 hover:text-gray-600"
-                    >
-                      <Package2 size={18} />
-                    </button>
-                    <button
-                      onClick={() => {
-                        setInsumoSelecionado(insumo);
+                        setSelectedInsumo(insumo);
                         setFormData({
                           nome: insumo.nome,
                           descricao: insumo.descricao || '',
@@ -349,11 +308,20 @@ const Estoque: React.FC = () => {
                           data_validade: insumo.data_validade || '',
                           preco_unitario: insumo.preco_unitario || 0
                         });
-                        setShowNovoInsumoModal(true);
+                        setShowModal(true);
                       }}
                       className="p-1 text-gray-400 hover:text-gray-600"
                     >
                       <Edit2 size={18} />
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSelectedInsumo(insumo);
+                        setShowDeleteModal(true);
+                      }}
+                      className="p-1 text-gray-400 hover:text-gray-600"
+                    >
+                      <Trash2 size={18} />
                     </button>
                   </div>
                 </div>
@@ -400,33 +368,6 @@ const Estoque: React.FC = () => {
                       </span>
                     </div>
                   )}
-                </div>
-
-                <div className="mt-4 flex justify-end space-x-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    icon={<ArrowUpCircle size={16} />}
-                    onClick={() => {
-                      setInsumoSelecionado(insumo);
-                      setMovimentacao({ ...movimentacao, tipo: 'entrada' });
-                      setShowMovimentacaoModal(true);
-                    }}
-                  >
-                    Entrada
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    icon={<ArrowDownCircle size={16} />}
-                    onClick={() => {
-                      setInsumoSelecionado(insumo);
-                      setMovimentacao({ ...movimentacao, tipo: 'saida' });
-                      setShowMovimentacaoModal(true);
-                    }}
-                  >
-                    Saída
-                  </Button>
                 </div>
               </div>
             </div>
@@ -513,35 +454,9 @@ const Estoque: React.FC = () => {
                     <Button
                       variant="ghost"
                       size="sm"
-                      icon={<ArrowUpCircle size={16} />}
-                      onClick={() => {
-                        setInsumoSelecionado(insumo);
-                        setMovimentacao({ ...movimentacao, tipo: 'entrada' });
-                        setShowMovimentacaoModal(true);
-                      }}
-                      className="mr-2"
-                    >
-                      Entrada
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      icon={<ArrowDownCircle size={16} />}
-                      onClick={() => {
-                        setInsumoSelecionado(insumo);
-                        setMovimentacao({ ...movimentacao, tipo: 'saida' });
-                        setShowMovimentacaoModal(true);
-                      }}
-                      className="mr-2"
-                    >
-                      Saída
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
                       icon={<Edit2 size={16} />}
                       onClick={() => {
-                        setInsumoSelecionado(insumo);
+                        setSelectedInsumo(insumo);
                         setFormData({
                           nome: insumo.nome,
                           descricao: insumo.descricao || '',
@@ -551,10 +466,23 @@ const Estoque: React.FC = () => {
                           data_validade: insumo.data_validade || '',
                           preco_unitario: insumo.preco_unitario || 0
                         });
-                        setShowNovoInsumoModal(true);
+                        setShowModal(true);
                       }}
+                      className="mr-2"
                     >
                       Editar
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-red-600 hover:text-red-700"
+                      icon={<Trash2 size={16} />}
+                      onClick={() => {
+                        setSelectedInsumo(insumo);
+                        setShowDeleteModal(true);
+                      }}
+                    >
+                      Excluir
                     </Button>
                   </td>
                 </tr>
@@ -565,7 +493,7 @@ const Estoque: React.FC = () => {
       )}
 
       {/* Modal de Novo/Editar Insumo */}
-      {showNovoInsumoModal && (
+      {showModal && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
             <div className="fixed inset-0 transition-opacity" aria-hidden="true">
@@ -576,7 +504,7 @@ const Estoque: React.FC = () => {
               <form onSubmit={handleSubmit}>
                 <div className="px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                   <h3 className="text-lg font-medium text-gray-900 mb-4">
-                    {insumoSelecionado ? 'Editar Insumo' : 'Novo Insumo'}
+                    {selectedInsumo ? 'Editar Insumo' : 'Novo Insumo'}
                   </h3>
 
                   <div className="space-y-4">
@@ -679,14 +607,14 @@ const Estoque: React.FC = () => {
                     isLoading={loading}
                     className="w-full sm:w-auto sm:ml-3"
                   >
-                    {insumoSelecionado ? 'Atualizar' : 'Cadastrar'}
+                    {selectedInsumo ? 'Atualizar' : 'Cadastrar'}
                   </Button>
                   <Button
                     type="button"
                     variant="ghost"
                     onClick={() => {
-                      setShowNovoInsumoModal(false);
-                      setInsumoSelecionado(null);
+                      setShowModal(false);
+                      setSelectedInsumo(null);
                       resetForm();
                     }}
                     className="w-full sm:w-auto mt-3 sm:mt-0"
@@ -700,8 +628,8 @@ const Estoque: React.FC = () => {
         </div>
       )}
 
-      {/* Modal de Movimentação */}
-      {showMovimentacaoModal && insumoSelecionado && (
+      {/* Modal de Confirmação de Exclusão */}
+      {showDeleteModal && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
             <div className="fixed inset-0 transition-opacity" aria-hidden="true">
@@ -709,96 +637,37 @@ const Estoque: React.FC = () => {
             </div>
 
             <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-              <div className="px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">
-                  {movimentacao.tipo === 'entrada' ? 'Entrada' : 'Saída'} de Estoque
-                </h3>
-
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Produto
-                    </label>
-                    <input
-                      type="text"
-                      value={insumoSelecionado.nome}
-                      disabled
-                      className="mt-1 block w-full rounded-md border-gray-300 bg-gray-50"
-                    />
+              <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div className="sm:flex sm:items-start">
+                  <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
+                    <AlertTriangle className="h-6 w-6 text-red-600" />
                   </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Quantidade ({insumoSelecionado.unidade_medida})
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={movimentacao.quantidade}
-                      onChange={(e) => setMovimentacao({ ...movimentacao, quantidade: parseFloat(e.target.value) })}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Motivo
-                    </label>
-                    <select
-                      value={movimentacao.motivo}
-                      onChange={(e) => setMovimentacao({ ...movimentacao, motivo: e.target.value })}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                      required
-                    >
-                      <option value="">Selecione um motivo</option>
-                      {movimentacao.tipo === 'entrada' ? (
-                        <>
-                          <option value="compra">Compra</option>
-                          <option value="devolucao">Devolução</option>
-                          <option value="ajuste">Ajuste de Inventário</option>
-                        </>
-                      ) : (
-                        <>
-                          <option value="producao">Produção</option>
-                          <option value="perda">Perda/Quebra</option>
-                          <option value="vencimento">Vencimento</option>
-                          <option value="ajuste">Ajuste de Inventário</option>
-                        </>
-                      )}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Observação
-                    </label>
-                    <textarea
-                      value={movimentacao.observacao}
-                      onChange={(e) => setMovimentacao({ ...movimentacao, observacao: e.target.value })}
-                      rows={3}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                    />
+                  <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                    <h3 className="text-lg font-medium text-gray-900">
+                      Desativar Insumo
+                    </h3>
+                    <div className="mt-2">
+                      <p className="text-sm text-gray-500">
+                        Tem certeza que deseja desativar este insumo? Esta ação pode ser revertida posteriormente.
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
-
               <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
                 <Button
-                  variant="primary"
-                  onClick={handleMovimentacao}
+                  variant="danger"
+                  onClick={handleDelete}
                   isLoading={loading}
                   className="w-full sm:w-auto sm:ml-3"
                 >
-                  Confirmar
+                  Desativar
                 </Button>
                 <Button
                   variant="ghost"
                   onClick={() => {
-                    setShowMovimentacaoModal(false);
-                    setInsumoSelecionado(null);
-                    resetMovimentacao();
+                    setShowDeleteModal(false);
+                    setSelectedInsumo(null);
                   }}
                   className="w-full sm:w-auto mt-3 sm:mt-0"
                 >
