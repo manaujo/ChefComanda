@@ -7,6 +7,7 @@ interface AuthState {
   user: User | null;
   userRole: 'admin' | 'kitchen' | 'waiter' | null;
   loading: boolean;
+  displayName: string | null;
 }
 
 interface AuthContextData extends AuthState {
@@ -40,6 +41,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     user: null,
     userRole: null,
     loading: true,
+    displayName: null,
   });
   
   const navigate = useNavigate();
@@ -57,7 +59,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (session?.user) {
         loadUserData(session.user);
       } else {
-        setState({ user: null, userRole: null, loading: false });
+        setState({ user: null, userRole: null, loading: false, displayName: null });
       }
     });
 
@@ -68,19 +70,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const loadUserData = async (user: User) => {
     try {
-      // Load user role
-      const { data: roleData, error: roleError } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id)
-        .single();
+      // Load user role and profile data
+      const [{ data: roleData, error: roleError }, { data: profileData, error: profileError }] = await Promise.all([
+        supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .single(),
+        supabase
+          .from('profiles')
+          .select('name')
+          .eq('id', user.id)
+          .single()
+      ]);
 
       if (roleError) throw roleError;
+      if (profileError && profileError.code !== 'PGRST116') throw profileError;
 
       setState({
         user,
         userRole: roleData?.role || null,
         loading: false,
+        displayName: profileData?.name || user.user_metadata?.name || null,
       });
 
       // Redirect based on user role
@@ -115,6 +126,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (error) throw error;
       if (!user) throw new Error('Erro ao criar usuário');
+
+      // Create user profile
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert({ id: user.id, name });
+
+      if (profileError) throw profileError;
 
       // Create user role record
       const { error: roleError } = await supabase
@@ -152,7 +170,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
-      setState({ user: null, userRole: null, loading: false });
+      setState({ user: null, userRole: null, loading: false, displayName: null });
       toast.success('Logout realizado com sucesso!');
       navigate('/login');
     } catch (error) {
@@ -175,6 +193,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
 
         if (userError) throw userError;
+
+        // Update profile name
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .upsert({ id: state.user.id, name: data.name });
+
+        if (profileError) throw profileError;
       }
 
       // Update user role if provided
