@@ -76,12 +76,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .from('user_roles')
           .select('role')
           .eq('user_id', user.id)
-          .single(),
+          .maybeSingle(),
         supabase
           .from('profiles')
           .select('name')
           .eq('id', user.id)
-          .single()
+          .maybeSingle()
       ]);
 
       if (roleError) throw roleError;
