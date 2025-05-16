@@ -25,6 +25,7 @@ import PDV from './pages/PDV';
 import CardapioOnline from './pages/CardapioOnline';
 import CardapioOnlineEditor from './pages/CardapioOnlineEditor';
 import CardapioPublico from './pages/CardapioPublico';
+import CMV from './pages/CMV';
 
 // Profile Pages
 import CompanyProfile from './pages/profile/CompanyProfile';
@@ -63,8 +64,7 @@ function App() {
                 <Route index element={<Dashboard />} />
                 <Route path="mesas" element={<PrivateRoute allowedRoles={['admin', 'waiter', 'cashier']}><Mesas /></PrivateRoute>} />
                 <Route path="comandas" element={<PrivateRoute allowedRoles={['admin', 'kitchen', 'waiter', 'cashier']}><Comandas /></PrivateRoute>} />
-                <Route path="cardapio" element={<PrivateRoute allowedRoles={['admin', 'stock']}><Cardapio />
-                </PrivateRoute>} />
+                <Route path="cardapio" element={<PrivateRoute allowedRoles={['admin', 'stock']}><Cardapio /></PrivateRoute>} />
                 <Route path="estoque" element={<PrivateRoute allowedRoles={['admin', 'stock']}><Estoque /></PrivateRoute>} />
                 <Route path="relatorios" element={<PrivateRoute allowedRoles={['admin', 'cashier']}><Relatorios /></PrivateRoute>} />
                 <Route path="ifood" element={<PrivateRoute allowedRoles={['admin', 'kitchen', 'cashier']}><IFoodPedidos /></PrivateRoute>} />
@@ -72,6 +72,7 @@ function App() {
                 <Route path="pdv" element={<PrivateRoute allowedRoles={['admin', 'cashier']}><PDV /></PrivateRoute>} />
                 <Route path="cardapio-online" element={<PrivateRoute allowedRoles={['admin']}><CardapioOnline /></PrivateRoute>} />
                 <Route path="cardapio-online/editor" element={<PrivateRoute allowedRoles={['admin']}><CardapioOnlineEditor /></PrivateRoute>} />
+                <Route path="cmv" element={<PrivateRoute allowedRoles={['admin']}><CMV /></PrivateRoute>} />
                 
                 {/* Profile Routes */}
                 <Route path="profile">
