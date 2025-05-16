@@ -3,12 +3,12 @@ import { Outlet, Link, useLocation } from 'react-router-dom';
 import {
   Menu, ChefHat, LayoutDashboard, Users, ShoppingBag,
   ClipboardList, PieChart, Settings, Coffee, QrCode,
-  CreditCard, Moon, Sun, Globe
+  CreditCard, Moon, Sun, Globe, PenSquare // ✅ Ícone adicionado
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import ProfileDropdown from '../components/profile/ProfileDropdown';
-import NotificationDropdown from '../components/NotificationDropdown'; // ✅ Caminho corrigido
+import NotificationDropdown from '../components/NotificationDropdown';
 
 const DashboardLayout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -28,6 +28,7 @@ const DashboardLayout: React.FC = () => {
     { name: 'Pedidos iFood', path: '/ifood', icon: <ShoppingBag size={20} />, roles: ['admin', 'kitchen'] },
     { name: 'Relatórios', path: '/relatorios', icon: <PieChart size={20} />, roles: ['admin', 'cashier'] },
     { name: 'Cardápio Online', path: '/cardapio-online', icon: <QrCode size={20} />, roles: ['admin'] },
+    { name: 'Editor de Cardápio', path: '/cardapio-online/editor', icon: <PenSquare size={20} />, roles: ['admin'] }, // ✅ Novo item
     { name: 'Cardápio Online (Público)', path: '/cardapio/1', icon: <Globe size={20} />, roles: ['admin'] },
   ];
 
