@@ -60,15 +60,15 @@ const Comandas: React.FC = () => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pendente':
-        return 'border-yellow-500 bg-yellow-50';
+        return 'border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20';
       case 'preparando':
-        return 'border-blue-500 bg-blue-50';
+        return 'border-blue-500 bg-blue-50 dark:bg-blue-900/20';
       case 'pronto':
-        return 'border-green-500 bg-green-50';
+        return 'border-green-500 bg-green-50 dark:bg-green-900/20';
       case 'entregue':
-        return 'border-gray-500 bg-gray-50';
+        return 'border-gray-500 bg-gray-50 dark:bg-gray-900/20';
       default:
-        return 'border-gray-200 bg-white';
+        return 'border-gray-200 bg-white dark:bg-gray-800';
     }
   };
 
@@ -82,27 +82,27 @@ const Comandas: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
+      <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
               <button
                 onClick={() => navigate(-1)}
-                className="mr-4 text-gray-500 hover:text-gray-700 transition-colors"
+                className="mr-4 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
               >
                 <ArrowLeft size={24} />
               </button>
               <div>
-                <h1 className="text-xl font-semibold text-gray-900">Comandas</h1>
-                <p className="text-sm text-gray-500">Gerenciamento de comandas e pedidos</p>
+                <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Comandas</h1>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Gerenciamento de comandas e pedidos</p>
               </div>
             </div>
             <div className="flex items-center space-x-3">
-              <div className="flex items-center bg-white rounded-md shadow-sm px-3 py-2 text-sm">
-                <Calendar size={16} className="text-gray-400 mr-2" />
-                <span>Hoje</span>
+              <div className="flex items-center bg-white dark:bg-gray-700 rounded-md shadow-sm px-3 py-2 text-sm">
+                <Calendar size={16} className="text-gray-400 dark:text-gray-500 mr-2" />
+                <span className="text-gray-700 dark:text-gray-300">Hoje</span>
               </div>
             </div>
           </div>
@@ -111,15 +111,15 @@ const Comandas: React.FC = () => {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Filtros */}
-        <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 mb-6">
           <div className="flex items-center mb-3">
-            <Filter size={16} className="text-gray-500 mr-2" />
-            <h3 className="text-sm font-medium">Filtros</h3>
+            <Filter size={16} className="text-gray-500 dark:text-gray-400 mr-2" />
+            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Filtros</h3>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="text-sm text-gray-700 block mb-2">Status</label>
+              <label className="text-sm text-gray-700 dark:text-gray-300 block mb-2">Status</label>
               <div className="flex flex-wrap gap-2">
                 <Button
                   variant={filtroStatus === 'todos' ? 'primary' : 'ghost'}
@@ -153,7 +153,7 @@ const Comandas: React.FC = () => {
             </div>
             
             <div>
-              <label className="text-sm text-gray-700 block mb-2">Mesa</label>
+              <label className="text-sm text-gray-700 dark:text-gray-300 block mb-2">Mesa</label>
               <div className="flex flex-wrap gap-2">
                 <Button
                   variant={filtroMesa === null ? 'primary' : 'ghost'}
@@ -182,8 +182,8 @@ const Comandas: React.FC = () => {
         {/* Lista de Comandas */}
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
           {mesasFiltradasIds.length === 0 ? (
-            <div className="col-span-full bg-white rounded-lg shadow-sm p-8 text-center">
-              <p className="text-gray-500">Nenhuma comanda encontrada com os filtros aplicados</p>
+            <div className="col-span-full bg-white dark:bg-gray-800 rounded-lg shadow-sm p-8 text-center">
+              <p className="text-gray-500 dark:text-gray-400">Nenhuma comanda encontrada com os filtros aplicados</p>
             </div>
           ) : (
             mesasFiltradasIds.map(mesaId => {
@@ -216,10 +216,10 @@ const Comandas: React.FC = () => {
                   <div className="px-6 py-4">
                     <div className="flex justify-between items-start">
                       <div>
-                        <h3 className="font-medium text-lg">
+                        <h3 className="font-medium text-lg text-gray-900 dark:text-white">
                           Mesa {mesa.numero}
                         </h3>
-                        <div className="flex items-center mt-1 text-sm text-gray-500">
+                        <div className="flex items-center mt-1 text-sm text-gray-500 dark:text-gray-400">
                           <Clock size={14} className="mr-1" />
                           <span>{new Date(horarioMaisRecente).toLocaleTimeString('pt-BR')}</span>
                           <span className="mx-2">•</span>
@@ -227,8 +227,8 @@ const Comandas: React.FC = () => {
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="text-gray-500 text-sm">Total</p>
-                        <p className="font-medium text-lg">
+                        <p className="text-gray-500 dark:text-gray-400 text-sm">Total</p>
+                        <p className="font-medium text-lg text-gray-900 dark:text-white">
                           {formatarDinheiro(valorTotal)}
                         </p>
                       </div>
@@ -242,9 +242,13 @@ const Comandas: React.FC = () => {
                         >
                           <div className="flex justify-between items-start">
                             <div>
-                              <p className="font-medium">{item.quantidade}x {item.nome}</p>
+                              <p className="font-medium text-gray-900 dark:text-white">
+                                {item.quantidade}x {item.nome}
+                              </p>
                               {item.observacao && (
-                                <p className="text-sm text-gray-600 mt-1">{item.observacao}</p>
+                                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                  {item.observacao}
+                                </p>
                               )}
                             </div>
                             <div className="flex items-center space-x-2">
@@ -303,7 +307,7 @@ const Comandas: React.FC = () => {
         {showBackToTop && (
           <button
             onClick={scrollToTop}
-            className="fixed bottom-8 right-8 bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
+            className="fixed bottom-8 right-8 bg-blue-600 dark:bg-blue-500 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors flex items-center space-x-2"
           >
             <ArrowUp size={20} />
             <span>Voltar</span>
