@@ -80,10 +80,29 @@ type Venda = {
 };
 
 type CaixaMovimentacao = {
-  id: number;
+  id: string;
+  caixaId: string;
   tipo: 'entrada' | 'saida';
   valor: number;
-  descricao: string;
   formaPagamento?: string;
-  data: string;
+  motivo: string;
+  observacao?: string;
+  usuarioId: string;
+  createdAt: string;
+};
+
+type Caixa = {
+  id: string;
+  restauranteId: string;
+  usuarioId: string;
+  valorInicial: number;
+  valorFinal?: number;
+  valorSistema?: number;
+  diferenca?: number;
+  status: 'aberto' | 'fechado';
+  dataAbertura: string;
+  dataFechamento?: string;
+  observacao?: string;
+  createdAt: string;
+  updatedAt: string;
 };
