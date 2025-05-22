@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Users, UserPlus, Edit2, Trash2, Search, AlertTriangle } from 'lucide-react';
+import { 
+  Users, UserPlus, Edit2, Trash2, Search, AlertTriangle,
+  ClipboardList
+} from 'lucide-react';
 import Button from '../../components/ui/Button';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../services/supabase';
 import toast from 'react-hot-toast';
+import AuditLogs from '../../components/employee/AuditLogs';
 
 interface Employee {
   id: string;
@@ -14,6 +18,7 @@ interface Employee {
 }
 
 const EmployeeManagement: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<'employees' | 'logs'>('employees');
   const { user } = useAuth();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(false);
@@ -105,17 +110,14 @@ const EmployeeManagement: React.FC = () => {
 
       if (companyError) throw companyError;
       
-      // Check if company profile exists
       if (!companyData) {
         toast.error('Por favor, complete seu perfil empresarial antes de cadastrar funcionários', {
           duration: 5000
         });
-        // Navigate to company profile page
         window.location.href = '/profile/company';
         return;
       }
 
-      // Create auth user for employee
       const { error: authError } = await supabase.auth.signUp({
         email: `${formData.cpf.replace(/\D/g, '')}@internal.chefcomanda.com`,
         password: formData.password,
@@ -140,13 +142,34 @@ const EmployeeManagement: React.FC = () => {
 
       if (employeeError) throw employeeError;
 
-      toast.success('Funcionário cadastrado com sucesso!');
+      await supabase.from('audit_logs').insert({
+        user_id: user?.id,
+        action_type: selectedEmployee ? 'update' : 'create',
+        entity_type: 'employee',
+        entity_id: selectedEmployee?.id,
+        details: {
+          name: formData.name,
+          role: formData.role,
+          changes: selectedEmployee ? {
+            previous: {
+              name: selectedEmployee.name,
+              role: selectedEmployee.role
+            },
+            new: {
+              name: formData.name,
+              role: formData.role
+            }
+          } : null
+        }
+      });
+
+      toast.success(selectedEmployee ? 'Funcionário atualizado com sucesso!' : 'Funcionário cadastrado com sucesso!');
       setShowModal(false);
       loadEmployees();
       resetForm();
     } catch (error) {
-      console.error('Error creating employee:', error);
-      toast.error(error instanceof Error ? error.message : 'Erro ao cadastrar funcionário');
+      console.error('Error creating/updating employee:', error);
+      toast.error(error instanceof Error ? error.message : 'Erro ao salvar funcionário');
     } finally {
       setLoading(false);
     }
@@ -163,6 +186,17 @@ const EmployeeManagement: React.FC = () => {
         .eq('id', selectedEmployee.id);
 
       if (error) throw error;
+
+      await supabase.from('audit_logs').insert({
+        user_id: user?.id,
+        action_type: 'delete',
+        entity_type: 'employee',
+        entity_id: selectedEmployee.id,
+        details: {
+          name: selectedEmployee.name,
+          role: selectedEmployee.role
+        }
+      });
 
       toast.success('Funcionário desativado com sucesso!');
       setShowDeleteModal(false);
@@ -209,129 +243,164 @@ const EmployeeManagement: React.FC = () => {
                 </p>
               </div>
             </div>
-            <Button
-              variant="primary"
-              icon={<UserPlus size={16} />}
-              onClick={() => {
-                resetForm();
-                setShowModal(true);
-              }}
-            >
-              Novo Funcionário
-            </Button>
-          </div>
-
-          {/* Search Bar */}
-          <div className="mb-6">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-              <input
-                type="text"
-                placeholder="Buscar por nome ou CPF..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 w-full rounded-lg border border-gray-300 py-2 px-4 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-              <thead className="bg-gray-50 dark:bg-gray-700">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Nome
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    CPF
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Função
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Ações
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                {filteredEmployees.map((employee) => (
-                  <tr key={employee.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900 dark:text-white">
-                        {employee.name}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-500 dark:text-gray-400">
-                        {employee.cpf}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
-                        {employee.role}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        employee.active
-                          ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
-                          : 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
-                      }`}>
-                        {employee.active ? 'Ativo' : 'Inativo'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        icon={<Edit2 size={16} />}
-                        className="mr-2"
-                        onClick={() => {
-                          setSelectedEmployee(employee);
-                          setFormData({
-                            ...formData,
-                            name: employee.name,
-                            cpf: employee.cpf,
-                            role: employee.role
-                          });
-                          setShowModal(true);
-                        }}
-                      >
-                        Editar
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        icon={<Trash2 size={16} />}
-                        className="text-red-600 dark:text-red-400"
-                        onClick={() => {
-                          setSelectedEmployee(employee);
-                          setShowDeleteModal(true);
-                        }}
-                      >
-                        Excluir
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
-            {filteredEmployees.length === 0 && (
-              <div className="text-center py-8">
-                <p className="text-gray-500 dark:text-gray-400">
-                  Nenhum funcionário encontrado
-                </p>
-              </div>
+            {activeTab === 'employees' && (
+              <Button
+                variant="primary"
+                icon={<UserPlus size={16} />}
+                onClick={() => {
+                  resetForm();
+                  setShowModal(true);
+                }}
+              >
+                Novo Funcionário
+              </Button>
             )}
           </div>
+
+          <div className="border-b border-gray-200 mb-6">
+            <nav className="-mb-px flex space-x-8">
+              <button
+                onClick={() => setActiveTab('employees')}
+                className={`
+                  whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm
+                  ${activeTab === 'employees'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}
+                `}
+              >
+                <Users size={16} className="inline-block mr-2" />
+                Funcionários
+              </button>
+              <button
+                onClick={() => setActiveTab('logs')}
+                className={`
+                  whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm
+                  ${activeTab === 'logs'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}
+                `}
+              >
+                <ClipboardList size={16} className="inline-block mr-2" />
+                Logs e Auditoria
+              </button>
+            </nav>
+          </div>
+
+          {activeTab === 'employees' ? (
+            <div>
+              <div className="mb-6">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                  <input
+                    type="text"
+                    placeholder="Buscar por nome ou CPF..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 w-full rounded-lg border border-gray-300 py-2 px-4 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                  <thead className="bg-gray-50 dark:bg-gray-700">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                        Nome
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                        CPF
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                        Função
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                        Status
+                      </th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                        Ações
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                    {filteredEmployees.map((employee) => (
+                      <tr key={employee.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-gray-900 dark:text-white">
+                            {employee.name}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-500 dark:text-gray-400">
+                            {employee.cpf}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
+                            {employee.role}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                            employee.active
+                              ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
+                              : 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
+                          }`}>
+                            {employee.active ? 'Ativo' : 'Inativo'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            icon={<Edit2 size={16} />}
+                            className="mr-2"
+                            onClick={() => {
+                              setSelectedEmployee(employee);
+                              setFormData({
+                                ...formData,
+                                name: employee.name,
+                                cpf: employee.cpf,
+                                role: employee.role
+                              });
+                              setShowModal(true);
+                            }}
+                          >
+                            Editar
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            icon={<Trash2 size={16} />}
+                            className="text-red-600 dark:text-red-400"
+                            onClick={() => {
+                              setSelectedEmployee(employee);
+                              setShowDeleteModal(true);
+                            }}
+                          >
+                            Excluir
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+
+                {filteredEmployees.length === 0 && (
+                  <div className="text-center py-8">
+                    <p className="text-gray-500 dark:text-gray-400">
+                      Nenhum funcionário encontrado
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            <AuditLogs />
+          )}
         </div>
       </div>
 
-      {/* Modal de Novo/Editar Funcionário */}
       {showModal && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
@@ -452,7 +521,6 @@ const EmployeeManagement: React.FC = () => {
         </div>
       )}
 
-      {/* Modal de Confirmação de Exclusão */}
       {showDeleteModal && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
