@@ -3,7 +3,8 @@ import { Link, useLocation, Outlet } from 'react-router-dom';
 import {
   Menu, ChefHat, LayoutDashboard, Users, ShoppingBag,
   ClipboardList, PieChart, Settings, Coffee, QrCode,
-  CreditCard, Moon, Sun, Globe, PenSquare, Calculator
+  CreditCard, Moon, Sun, Globe, PenSquare, Calculator,
+  HelpCircle
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -31,6 +32,7 @@ const DashboardLayout: React.FC = () => {
     { name: 'Cardápio Online', path: '/cardapio-online', icon: <QrCode size={20} />, roles: ['admin'] },
     { name: 'Editor de Cardápio', path: '/cardapio-online/editor', icon: <PenSquare size={20} />, roles: ['admin'] },
     { name: 'Cardápio Online (Público)', path: '/cardapio/1', icon: <Globe size={20} />, roles: ['admin'] },
+    { name: 'Central de Ajuda', path: '/ajuda', icon: <HelpCircle size={20} />, roles: ['admin', 'kitchen', 'waiter', 'cashier'] },
   ];
 
   useEffect(() => {
