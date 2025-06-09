@@ -145,7 +145,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       navigate('/auth/verify-email');
     } catch (error) {
       console.error('Error signing up:', error);
-      toast.error('Erro ao criar conta');
+      if (error instanceof Error && error.message.includes('Failed to fetch')) {
+        toast.error('Erro de conexão. Verifique sua internet e tente novamente.');
+      } else {
+        toast.error('Erro ao criar conta');
+      }
       throw error;
     }
   };
@@ -161,7 +165,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       toast.success('Login realizado com sucesso!');
     } catch (error) {
       console.error('Error signing in:', error);
-      toast.error('E-mail ou senha incorretos');
+      if (error instanceof Error && error.message.includes('Failed to fetch')) {
+        toast.error('Erro de conexão. Verifique sua internet e tente novamente.');
+      } else {
+        toast.error('E-mail ou senha incorretos');
+      }
       throw error;
     }
   };
@@ -175,7 +183,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       navigate('/login');
     } catch (error) {
       console.error('Error signing out:', error);
-      toast.error('Erro ao fazer logout');
+      if (error instanceof Error && error.message.includes('Failed to fetch')) {
+        toast.error('Erro de conexão. Verifique sua internet e tente novamente.');
+      } else {
+        toast.error('Erro ao fazer logout');
+      }
       throw error;
     }
   };
@@ -216,7 +228,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await loadUserData(state.user);
     } catch (error) {
       console.error('Error updating profile:', error);
-      toast.error('Erro ao atualizar perfil');
+      if (error instanceof Error && error.message.includes('Failed to fetch')) {
+        toast.error('Erro de conexão. Verifique sua internet e tente novamente.');
+      } else {
+        toast.error('Erro ao atualizar perfil');
+      }
       throw error;
     }
   };

@@ -40,7 +40,11 @@ const Login: React.FC = () => {
       await signIn(identifier, senha);
     } catch (err) {
       console.error(err);
-      setError('E-mail/CPF ou senha incorretos');
+      if (err instanceof Error && err.message.includes('Failed to fetch')) {
+        setError('Erro de conexão. Verifique sua internet e tente novamente.');
+      } else {
+        setError('E-mail/CPF ou senha incorretos');
+      }
     } finally {
       setLoading(false);
     }
