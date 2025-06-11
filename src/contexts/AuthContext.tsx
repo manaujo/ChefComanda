@@ -1,11 +1,12 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { createClient, SupabaseClient, User } from '@supabase/supabase-js';
+import { DatabaseService } from '../services/database';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 
 interface AuthState {
   user: User | null;
-  userRole: 'admin' | 'kitchen' | 'waiter' | null;
+  userRole: 'admin' | 'kitchen' | 'waiter' | 'cashier' | 'stock' | null;
   loading: boolean;
   displayName: string | null;
 }
@@ -20,13 +21,13 @@ interface AuthContextData extends AuthState {
 interface SignUpData {
   email: string;
   password: string;
-  role: 'admin' | 'kitchen' | 'waiter';
+  role: 'admin' | 'kitchen' | 'waiter' | 'cashier' | 'stock';
   name: string;
 }
 
 interface UpdateProfileData {
   name?: string;
-  role?: 'admin' | 'kitchen' | 'waiter';
+  role?: 'admin' | 'kitchen' | 'waiter' | 'cashier' | 'stock';
 }
 
 const AuthContext = createContext<AuthContextData>({} as AuthContextData);
@@ -51,8 +52,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         loadUserData(session.user);
+      } else {
+        setState(prev => ({ ...prev, loading: false }));
       }
-      setState(prev => ({ ...prev, loading: false }));
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -84,33 +86,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .maybeSingle()
       ]);
 
-      if (roleError) throw roleError;
+      if (roleError && roleError.code !== 'PGRST116') throw roleError;
       if (profileError && profileError.code !== 'PGRST116') throw profileError;
 
       setState({
         user,
-        userRole: roleData?.role || null,
+        userRole: roleData?.role || 'admin', // Default to admin if no role found
         loading: false,
         displayName: profileData?.name || user.user_metadata?.name || null,
       });
 
       // Redirect based on user role
-      if (roleData?.role) {
-        switch (roleData.role) {
-          case 'admin':
-            navigate('/');
-            break;
-          case 'kitchen':
-            navigate('/comandas');
-            break;
-          case 'waiter':
-            navigate('/mesas');
-            break;
-        }
+      const role = roleData?.role || 'admin';
+      switch (role) {
+        case 'admin':
+          navigate('/');
+          break;
+        case 'kitchen':
+          navigate('/comandas');
+          break;
+        case 'waiter':
+          navigate('/mesas');
+          break;
+        case 'cashier':
+          navigate('/caixa');
+          break;
+        case 'stock':
+          navigate('/estoque');
+          break;
+        default:
+          navigate('/');
       }
     } catch (error) {
       console.error('Error loading user data:', error);
       toast.error('Erro ao carregar dados do usuário');
+      setState(prev => ({ ...prev, loading: false }));
     }
   };
 
@@ -141,6 +151,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (roleError) throw roleError;
 
+      // Create audit log
+      await DatabaseService.createAuditLog({
+        user_id: user.id,
+        action_type: 'create',
+        entity_type: 'user',
+        entity_id: user.id,
+        details: { name, role }
+      });
+
       toast.success('Conta criada com sucesso! Verifique seu e-mail.');
       navigate('/auth/verify-email');
     } catch (error) {
@@ -162,13 +181,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       if (error) throw error;
+      
       toast.success('Login realizado com sucesso!');
     } catch (error) {
       console.error('Error signing in:', error);
       if (error instanceof Error && error.message.includes('Failed to fetch')) {
         toast.error('Erro de conexão. Verifique sua internet e tente novamente.');
-      } else {
+      } else if (error instanceof Error && error.message.includes('Invalid login credentials')) {
         toast.error('E-mail ou senha incorretos');
+      } else {
+        toast.error('Erro ao fazer login');
       }
       throw error;
     }
@@ -178,6 +200,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
+      
       setState({ user: null, userRole: null, loading: false, displayName: null });
       toast.success('Logout realizado com sucesso!');
       navigate('/login');
@@ -223,6 +246,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (roleError) throw roleError;
       }
+
+      // Create audit log
+      await DatabaseService.createAuditLog({
+        user_id: state.user.id,
+        action_type: 'update',
+        entity_type: 'user',
+        entity_id: state.user.id,
+        details: data
+      });
 
       toast.success('Perfil atualizado com sucesso!');
       await loadUserData(state.user);

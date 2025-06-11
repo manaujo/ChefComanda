@@ -1,236 +1,405 @@
-import React, { createContext, useContext, useState } from 'react';
-import { dadosMesas, dadosProdutos, dadosProdutosPopulares, dadosPedidos, dadosItensComanda, dadosAlertasEstoque } from '../data/mockData';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useAuth } from './AuthContext';
+import { DatabaseService } from '../services/database';
+import { Database } from '../types/database';
 import toast from 'react-hot-toast';
 
+type Tables = Database['public']['Tables'];
+type Mesa = Tables['mesas']['Row'];
+type Produto = Tables['produtos']['Row'];
+type Comanda = Tables['comandas']['Row'];
+type ItemComanda = Tables['itens_comanda']['Row'];
+
 interface RestauranteContextData {
+  restaurante: Tables['restaurantes']['Row'] | null;
   mesas: Mesa[];
   produtos: Produto[];
-  categorias: string[];
-  produtosPopulares: ProdutoPopular[];
-  pedidos: Pedido[];
+  comandas: Comanda[];
   itensComanda: ItemComanda[];
-  alertasEstoque: AlertaEstoque[];
+  loading: boolean;
   
-  adicionarMesa: (dados: { numero: number; capacidade: number }) => void;
-  ocuparMesa: (mesaId: number) => void;
-  liberarMesa: (mesaId: number) => void;
-  solicitarPagamento: (mesaId: number) => void;
-  excluirMesa: (mesaId: number) => void;
-  finalizarPagamento: (mesaId: number, formaPagamento: string) => Promise<void>;
+  // Mesa actions
+  adicionarMesa: (dados: { numero: number; capacidade: number; garcom?: string }) => Promise<void>;
+  ocuparMesa: (mesaId: string) => Promise<void>;
+  liberarMesa: (mesaId: string) => Promise<void>;
+  excluirMesa: (mesaId: string) => Promise<void>;
   
-  adicionarItemComanda: (dados: { mesaId: number; produtoId: number; nome: string; categoria: string; quantidade: number; preco: number; observacao?: string }) => void;
-  removerItemComanda: (itemId: number) => void;
-  atualizarStatusItem: (itemId: number, novoStatus: 'preparando' | 'pronto') => void;
-  imprimirComanda: (mesaId: number) => void;
+  // Produto actions
+  adicionarProduto: (produto: Omit<Tables['produtos']['Insert'], 'restaurante_id'>) => Promise<void>;
+  atualizarProduto: (id: string, updates: Partial<Tables['produtos']['Update']>) => Promise<void>;
+  excluirProduto: (id: string) => Promise<void>;
+  
+  // Comanda actions
+  criarComanda: (mesaId: string) => Promise<string>;
+  adicionarItemComanda: (dados: {
+    comandaId: string;
+    produtoId: string;
+    quantidade: number;
+    observacao?: string;
+  }) => Promise<void>;
+  atualizarStatusItem: (itemId: string, status: ItemComanda['status']) => Promise<void>;
+  removerItemComanda: (itemId: string) => Promise<void>;
+  finalizarComanda: (comandaId: string, formaPagamento: string) => Promise<void>;
+  
+  // Data refresh
+  refreshData: () => Promise<void>;
 }
 
 const RestauranteContext = createContext<RestauranteContextData>({} as RestauranteContextData);
 
-export const useRestaurante = () => useContext(RestauranteContext);
+export const useRestaurante = () => {
+  const context = useContext(RestauranteContext);
+  if (!context) {
+    throw new Error('useRestaurante must be used within a RestauranteProvider');
+  }
+  return context;
+};
 
 export const RestauranteProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [mesas, setMesas] = useState<Mesa[]>(dadosMesas);
-  const [produtos, setProdutos] = useState<Produto[]>(dadosProdutos);
-  const [produtosPopulares] = useState<ProdutoPopular[]>(dadosProdutosPopulares);
-  const [pedidos] = useState<Pedido[]>(dadosPedidos);
-  const [itensComanda, setItensComanda] = useState<ItemComanda[]>(dadosItensComanda);
-  const [alertasEstoque] = useState<AlertaEstoque[]>(dadosAlertasEstoque);
-  
-  const categorias = Array.from(new Set(produtos.map(produto => produto.categoria)));
-  
-  const adicionarMesa = ({ numero, capacidade }: { numero: number; capacidade: number }) => {
-    if (mesas.some(mesa => mesa.numero === numero)) {
-      toast.error(`Mesa ${numero} já existe!`);
-      return;
+  const { user } = useAuth();
+  const [restaurante, setRestaurante] = useState<Tables['restaurantes']['Row'] | null>(null);
+  const [mesas, setMesas] = useState<Mesa[]>([]);
+  const [produtos, setProdutos] = useState<Produto[]>([]);
+  const [comandas, setComandasState] = useState<Comanda[]>([]);
+  const [itensComanda, setItensComanda] = useState<ItemComanda[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      loadRestauranteData();
     }
+  }, [user]);
+
+  const loadRestauranteData = async () => {
+    if (!user) return;
     
-    const novaMesa: Mesa = {
-      id: Math.max(0, ...mesas.map(m => m.id)) + 1,
-      numero,
-      capacidade,
-      status: 'livre',
-      valorTotal: 0,
-    };
-    
-    setMesas([...mesas, novaMesa]);
-    toast.success(`Mesa ${numero} adicionada com sucesso!`);
-  };
-  
-  const ocuparMesa = (mesaId: number) => {
-    setMesas(mesas.map(mesa => 
-      mesa.id === mesaId
-        ? { 
-            ...mesa, 
-            status: 'ocupada',
-            horarioAbertura: new Date().toISOString(),
-            garcom: 'Carlos Garçom'
-          }
-        : mesa
-    ));
-    
-    toast.success(`Mesa ocupada com sucesso!`);
-  };
-  
-  const liberarMesa = (mesaId: number) => {
-    setMesas(mesas.map(mesa => 
-      mesa.id === mesaId
-        ? { 
-            ...mesa, 
-            status: 'livre',
-            horarioAbertura: undefined,
-            garcom: undefined,
-            valorTotal: 0
-          }
-        : mesa
-    ));
-    
-    setItensComanda(itensComanda.filter(item => item.mesaId !== mesaId));
-    
-    toast.success(`Mesa liberada com sucesso!`);
-  };
-  
-  const solicitarPagamento = (mesaId: number) => {
-    setMesas(mesas.map(mesa => 
-      mesa.id === mesaId
-        ? { ...mesa, status: 'aguardando' }
-        : mesa
-    ));
-    
-    toast.success(`Pagamento solicitado para a mesa!`);
-  };
-  
-  const adicionarItemComanda = async ({ 
-    mesaId, 
-    produtoId, 
-    nome, 
-    categoria, 
-    quantidade, 
-    preco, 
-    observacao = '' 
-  }: { 
-    mesaId: number; 
-    produtoId: number; 
-    nome: string; 
-    categoria: string; 
-    quantidade: number; 
-    preco: number; 
-    observacao?: string 
-  }) => {
+    setLoading(true);
     try {
-      const novoItem: ItemComanda = {
-        id: Math.max(0, ...itensComanda.map(i => i.id)) + 1,
-        mesaId,
-        produtoId,
-        nome,
-        categoria,
-        quantidade,
-        preco,
-        observacao,
-        status: 'pendente',
-        horario: new Date().toISOString(),
-      };
+      // Load or create restaurant
+      let restauranteData = await DatabaseService.getRestaurante(user.id);
       
-      const produto = produtos.find(p => p.id === produtoId);
-      if (produto) {
-        if (produto.estoque < quantidade) {
-          toast.error(`Estoque insuficiente para ${produto.nome}`);
-          return;
-        }
-        
-        const produtosAtualizados = produtos.map(p => 
-          p.id === produtoId 
-            ? { ...p, estoque: p.estoque - quantidade }
-            : p
-        );
-        setProdutos(produtosAtualizados);
+      if (!restauranteData) {
+        // Create default restaurant if none exists
+        restauranteData = await DatabaseService.createRestaurante({
+          user_id: user.id,
+          nome: 'Meu Restaurante',
+          telefone: '(00) 00000-0000'
+        });
       }
       
-      setItensComanda([...itensComanda, novoItem]);
+      setRestaurante(restauranteData);
       
-      const valorItemTotal = quantidade * preco;
-      setMesas(mesas.map(mesa => 
-        mesa.id === mesaId
-          ? { ...mesa, valorTotal: (mesa.valorTotal || 0) + valorItemTotal }
-          : mesa
-      ));
-      
-      toast.success(`Item adicionado à comanda!`);
+      // Load all restaurant data
+      await Promise.all([
+        loadMesas(restauranteData.id),
+        loadProdutos(restauranteData.id),
+        loadComandas(restauranteData.id)
+      ]);
     } catch (error) {
-      console.error('Erro ao adicionar item:', error);
+      console.error('Error loading restaurant data:', error);
+      toast.error('Erro ao carregar dados do restaurante');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadMesas = async (restauranteId: string) => {
+    try {
+      const data = await DatabaseService.getMesas(restauranteId);
+      setMesas(data || []);
+    } catch (error) {
+      console.error('Error loading mesas:', error);
+    }
+  };
+
+  const loadProdutos = async (restauranteId: string) => {
+    try {
+      const data = await DatabaseService.getProdutos(restauranteId);
+      setProdutos(data || []);
+    } catch (error) {
+      console.error('Error loading produtos:', error);
+    }
+  };
+
+  const loadComandas = async (restauranteId: string) => {
+    try {
+      const data = await DatabaseService.getComandas(restauranteId);
+      setComandasState(data || []);
+      
+      // Extract items from comandas
+      const allItems: ItemComanda[] = [];
+      data?.forEach(comanda => {
+        if (comanda.itens) {
+          allItems.push(...comanda.itens);
+        }
+      });
+      setItensComanda(allItems);
+    } catch (error) {
+      console.error('Error loading comandas:', error);
+    }
+  };
+
+  const refreshData = async () => {
+    if (restaurante) {
+      await Promise.all([
+        loadMesas(restaurante.id),
+        loadProdutos(restaurante.id),
+        loadComandas(restaurante.id)
+      ]);
+    }
+  };
+
+  // Mesa actions
+  const adicionarMesa = async (dados: { numero: number; capacidade: number; garcom?: string }) => {
+    if (!restaurante) return;
+    
+    try {
+      await DatabaseService.createMesa({
+        restaurante_id: restaurante.id,
+        numero: dados.numero,
+        capacidade: dados.capacidade,
+        garcom: dados.garcom || null
+      });
+      
+      await loadMesas(restaurante.id);
+      toast.success('Mesa adicionada com sucesso!');
+    } catch (error) {
+      console.error('Error adding mesa:', error);
+      toast.error('Erro ao adicionar mesa');
+    }
+  };
+
+  const ocuparMesa = async (mesaId: string) => {
+    try {
+      await DatabaseService.updateMesa(mesaId, {
+        status: 'ocupada',
+        horario_abertura: new Date().toISOString()
+      });
+      
+      if (restaurante) {
+        await loadMesas(restaurante.id);
+      }
+      toast.success('Mesa ocupada com sucesso!');
+    } catch (error) {
+      console.error('Error occupying mesa:', error);
+      toast.error('Erro ao ocupar mesa');
+    }
+  };
+
+  const liberarMesa = async (mesaId: string) => {
+    try {
+      await DatabaseService.updateMesa(mesaId, {
+        status: 'livre',
+        horario_abertura: null,
+        garcom: null,
+        valor_total: 0
+      });
+      
+      if (restaurante) {
+        await loadMesas(restaurante.id);
+      }
+      toast.success('Mesa liberada com sucesso!');
+    } catch (error) {
+      console.error('Error freeing mesa:', error);
+      toast.error('Erro ao liberar mesa');
+    }
+  };
+
+  const excluirMesa = async (mesaId: string) => {
+    try {
+      await DatabaseService.deleteMesa(mesaId);
+      
+      if (restaurante) {
+        await loadMesas(restaurante.id);
+      }
+      toast.success('Mesa excluída com sucesso!');
+    } catch (error) {
+      console.error('Error deleting mesa:', error);
+      toast.error('Erro ao excluir mesa');
+    }
+  };
+
+  // Produto actions
+  const adicionarProduto = async (produto: Omit<Tables['produtos']['Insert'], 'restaurante_id'>) => {
+    if (!restaurante) return;
+    
+    try {
+      await DatabaseService.createProduto({
+        ...produto,
+        restaurante_id: restaurante.id
+      });
+      
+      await loadProdutos(restaurante.id);
+      toast.success('Produto adicionado com sucesso!');
+    } catch (error) {
+      console.error('Error adding produto:', error);
+      toast.error('Erro ao adicionar produto');
+    }
+  };
+
+  const atualizarProduto = async (id: string, updates: Partial<Tables['produtos']['Update']>) => {
+    try {
+      await DatabaseService.updateProduto(id, updates);
+      
+      if (restaurante) {
+        await loadProdutos(restaurante.id);
+      }
+      toast.success('Produto atualizado com sucesso!');
+    } catch (error) {
+      console.error('Error updating produto:', error);
+      toast.error('Erro ao atualizar produto');
+    }
+  };
+
+  const excluirProduto = async (id: string) => {
+    try {
+      await DatabaseService.deleteProduto(id);
+      
+      if (restaurante) {
+        await loadProdutos(restaurante.id);
+      }
+      toast.success('Produto excluído com sucesso!');
+    } catch (error) {
+      console.error('Error deleting produto:', error);
+      toast.error('Erro ao excluir produto');
+    }
+  };
+
+  // Comanda actions
+  const criarComanda = async (mesaId: string): Promise<string> => {
+    try {
+      const comanda = await DatabaseService.createComanda({
+        mesa_id: mesaId
+      });
+      
+      if (restaurante) {
+        await loadComandas(restaurante.id);
+      }
+      
+      return comanda.id;
+    } catch (error) {
+      console.error('Error creating comanda:', error);
+      toast.error('Erro ao criar comanda');
+      throw error;
+    }
+  };
+
+  const adicionarItemComanda = async (dados: {
+    comandaId: string;
+    produtoId: string;
+    quantidade: number;
+    observacao?: string;
+  }) => {
+    try {
+      const produto = produtos.find(p => p.id === dados.produtoId);
+      if (!produto) {
+        throw new Error('Produto não encontrado');
+      }
+
+      await DatabaseService.createItemComanda({
+        comanda_id: dados.comandaId,
+        produto_id: dados.produtoId,
+        quantidade: dados.quantidade,
+        preco_unitario: produto.preco,
+        observacao: dados.observacao || null
+      });
+      
+      if (restaurante) {
+        await loadComandas(restaurante.id);
+      }
+      toast.success('Item adicionado à comanda!');
+    } catch (error) {
+      console.error('Error adding item to comanda:', error);
       toast.error('Erro ao adicionar item à comanda');
     }
   };
-  
-  const removerItemComanda = (itemId: number) => {
-    const item = itensComanda.find(i => i.id === itemId);
+
+  const atualizarStatusItem = async (itemId: string, status: ItemComanda['status']) => {
+    try {
+      await DatabaseService.updateItemComanda(itemId, { status });
+      
+      if (restaurante) {
+        await loadComandas(restaurante.id);
+      }
+      toast.success(`Status atualizado para ${status}!`);
+    } catch (error) {
+      console.error('Error updating item status:', error);
+      toast.error('Erro ao atualizar status do item');
+    }
+  };
+
+  const removerItemComanda = async (itemId: string) => {
+    try {
+      await DatabaseService.deleteItemComanda(itemId);
+      
+      if (restaurante) {
+        await loadComandas(restaurante.id);
+      }
+      toast.success('Item removido da comanda!');
+    } catch (error) {
+      console.error('Error removing item from comanda:', error);
+      toast.error('Erro ao remover item da comanda');
+    }
+  };
+
+  const finalizarComanda = async (comandaId: string, formaPagamento: string) => {
+    if (!restaurante || !user) return;
     
-    if (!item) return;
-    
-    const valorItemTotal = item.quantidade * item.preco;
-    setMesas(mesas.map(mesa => 
-      mesa.id === item.mesaId
-        ? { ...mesa, valorTotal: Math.max(0, (mesa.valorTotal || 0) - valorItemTotal) }
-        : mesa
-    ));
-    
-    setItensComanda(itensComanda.filter(i => i.id !== itemId));
-    
-    toast.success(`Item removido da comanda!`);
+    try {
+      const comanda = comandas.find(c => c.id === comandaId);
+      if (!comanda) {
+        throw new Error('Comanda não encontrada');
+      }
+
+      // Update comanda status
+      await DatabaseService.updateComanda(comandaId, {
+        status: 'fechada'
+      });
+
+      // Create sale record
+      await DatabaseService.createVenda({
+        restaurante_id: restaurante.id,
+        comanda_id: comandaId,
+        mesa_id: comanda.mesa_id,
+        valor_total: comanda.valor_total,
+        forma_pagamento: formaPagamento,
+        usuario_id: user.id
+      });
+
+      // Update mesa status
+      await DatabaseService.updateMesa(comanda.mesa_id, {
+        status: 'aguardando'
+      });
+
+      await refreshData();
+      toast.success('Comanda finalizada com sucesso!');
+    } catch (error) {
+      console.error('Error finalizing comanda:', error);
+      toast.error('Erro ao finalizar comanda');
+    }
   };
 
-  const atualizarStatusItem = (itemId: number, novoStatus: 'preparando' | 'pronto') => {
-    setItensComanda(itensComanda.map(item =>
-      item.id === itemId
-        ? { ...item, status: novoStatus }
-        : item
-    ));
-
-    toast.success(`Status do item atualizado para ${novoStatus}!`);
-  };
-  
-  const imprimirComanda = (mesaId: number) => {
-    toast.success(`Comanda enviada para impressão!`);
-  };
-
-  const excluirMesa = (mesaId: number) => {
-    setMesas(mesas.filter(mesa => mesa.id !== mesaId));
-    setItensComanda(itensComanda.filter(item => item.mesaId !== mesaId));
-  };
-
-  const finalizarPagamento = async (mesaId: number, formaPagamento: string) => {
-    const mesa = mesas.find(m => m.id === mesaId);
-    if (!mesa) return;
-
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    setMesas(mesas.map(m => 
-      m.id === mesaId ? { ...m, status: 'aguardando' } : m
-    ));
-
-    console.log(`Adicionando ${mesa.valorTotal} ao caixa (${formaPagamento})`);
-  };
-  
   return (
     <RestauranteContext.Provider value={{
+      restaurante,
       mesas,
       produtos,
-      categorias,
-      produtosPopulares,
-      pedidos,
+      comandas,
       itensComanda,
-      alertasEstoque,
-      
+      loading,
       adicionarMesa,
       ocuparMesa,
       liberarMesa,
-      solicitarPagamento,
       excluirMesa,
-      finalizarPagamento,
-      
+      adicionarProduto,
+      atualizarProduto,
+      excluirProduto,
+      criarComanda,
       adicionarItemComanda,
-      removerItemComanda,
       atualizarStatusItem,
-      imprimirComanda,
+      removerItemComanda,
+      finalizarComanda,
+      refreshData
     }}>
       {children}
     </RestauranteContext.Provider>

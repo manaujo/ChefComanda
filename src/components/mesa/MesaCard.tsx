@@ -7,6 +7,9 @@ import ComandaModal from '../comanda/ComandaModal';
 import AdicionarItemModal from '../comanda/AdicionarItemModal';
 import PagamentoModal from './PagamentoModal';
 import toast from 'react-hot-toast';
+import { Database } from '../../types/database';
+
+type Mesa = Database['public']['Tables']['mesas']['Row'];
 
 interface MesaCardProps {
   mesa: Mesa;
@@ -18,7 +21,7 @@ const MesaCard: React.FC<MesaCardProps> = ({ mesa }) => {
   const [pagamentoModalAberto, setPagamentoModalAberto] = useState(false);
   const [menuAberto, setMenuAberto] = useState(false);
   
-  const { ocuparMesa, liberarMesa, imprimirComanda, excluirMesa } = useRestaurante();
+  const { ocuparMesa, liberarMesa, excluirMesa, criarComanda, comandas } = useRestaurante();
 
   const statusClasses = {
     livre: 'border-l-4 border-green-500 bg-green-50',
@@ -36,33 +39,42 @@ const MesaCard: React.FC<MesaCardProps> = ({ mesa }) => {
     setMenuAberto(!menuAberto);
   };
 
-  const handleAcao = (acao: string) => {
+  const handleAcao = async (acao: string) => {
     setMenuAberto(false);
     
-    switch (acao) {
-      case 'ocupar':
-        ocuparMesa(mesa.id);
-        toast.success('Mesa ocupada com sucesso!');
-        break;
-      case 'comanda':
-        setComandaModalAberta(true);
-        break;
-      case 'adicionar':
-        setAdicionarItemModalAberto(true);
-        break;
-      case 'imprimir':
-        imprimirComanda(mesa.id);
-        toast.success('Comanda enviada para impressão!');
-        break;
-      case 'pagamento':
-        setPagamentoModalAberto(true);
-        break;
-      case 'excluir':
-        excluirMesa(mesa.id);
-        toast.success('Mesa excluída com sucesso!');
-        break;
-      default:
-        break;
+    try {
+      switch (acao) {
+        case 'ocupar':
+          await ocuparMesa(mesa.id);
+          break;
+        case 'comanda':
+          setComandaModalAberta(true);
+          break;
+        case 'adicionar':
+          // Check if there's an open comanda for this mesa
+          const comandaAberta = comandas.find(c => c.mesa_id === mesa.id && c.status === 'aberta');
+          if (!comandaAberta) {
+            // Create new comanda
+            await criarComanda(mesa.id);
+          }
+          setAdicionarItemModalAberto(true);
+          break;
+        case 'imprimir':
+          toast.success('Comanda enviada para impressão!');
+          break;
+        case 'pagamento':
+          setPagamentoModalAberto(true);
+          break;
+        case 'excluir':
+          if (window.confirm('Tem certeza que deseja excluir esta mesa?')) {
+            await excluirMesa(mesa.id);
+          }
+          break;
+        default:
+          break;
+      }
+    } catch (error) {
+      console.error('Error handling action:', error);
     }
   };
 
@@ -134,7 +146,7 @@ const MesaCard: React.FC<MesaCardProps> = ({ mesa }) => {
                         onClick={() => handleAcao('excluir')}
                         className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
                       >
-                        Excluir Mesa
+                        Liberar Mesa
                       </button>
                     )}
                   </div>
@@ -145,22 +157,24 @@ const MesaCard: React.FC<MesaCardProps> = ({ mesa }) => {
 
           {mesa.status !== 'livre' && (
             <div className="mt-4 space-y-2">
-              <div className="flex items-center text-sm text-gray-600">
-                <Clock size={16} className="mr-2" />
-                <span>
-                  {mesa.horarioAbertura ? formatarTempo(mesa.horarioAbertura) : 'Sem registro'}
-                </span>
-              </div>
+              {mesa.horario_abertura && (
+                <div className="flex items-center text-sm text-gray-600">
+                  <Clock size={16} className="mr-2" />
+                  <span>
+                    {formatarTempo(mesa.horario_abertura)}
+                  </span>
+                </div>
+              )}
               
               <div className="flex items-center text-sm text-gray-600">
                 <Users size={16} className="mr-2" />
                 <span>{mesa.capacidade} pessoas</span>
               </div>
               
-              {mesa.valorTotal > 0 && (
+              {mesa.valor_total > 0 && (
                 <div className="flex items-center text-sm font-medium">
                   <CreditCard size={16} className="mr-2" />
-                  <span>{formatarDinheiro(mesa.valorTotal)}</span>
+                  <span>{formatarDinheiro(mesa.valor_total)}</span>
                 </div>
               )}
             </div>
@@ -217,13 +231,12 @@ const MesaCard: React.FC<MesaCardProps> = ({ mesa }) => {
             
             {mesa.status === 'aguardando' && (
               <Button 
-                variant="danger" 
+                variant="success" 
                 size="sm" 
                 fullWidth
-                icon={<Trash2 size={16} />}
                 onClick={() => handleAcao('excluir')}
               >
-                Excluir Mesa
+                Liberar Mesa
               </Button>
             )}
           </div>

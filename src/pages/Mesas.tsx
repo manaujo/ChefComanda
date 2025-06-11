@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PlusCircle, Filter, RefreshCcw } from 'lucide-react';
 import Button from '../components/ui/Button';
 import MesaCard from '../components/mesa/MesaCard';
@@ -7,11 +7,15 @@ import { useRestaurante } from '../contexts/RestauranteContext';
 import toast from 'react-hot-toast';
 
 const Mesas: React.FC = () => {
-  const { mesas } = useRestaurante();
+  const { mesas, refreshData } = useRestaurante();
   const [filtro, setFiltro] = useState<string>('todas');
   const [modalAberto, setModalAberto] = useState(false);
   
-  // Aplicar filtro
+  useEffect(() => {
+    refreshData();
+  }, []);
+  
+  // Apply filter
   const mesasFiltradas = filtro === 'todas' 
     ? mesas 
     : mesas.filter(mesa => mesa.status === filtro);
@@ -23,8 +27,14 @@ const Mesas: React.FC = () => {
     aguardando: mesas.filter(mesa => mesa.status === 'aguardando').length,
   };
 
-  const handleRefresh = () => {
-    toast.success('Mesas atualizadas!');
+  const handleRefresh = async () => {
+    try {
+      await refreshData();
+      toast.success('Mesas atualizadas!');
+    } catch (error) {
+      console.error('Error refreshing data:', error);
+      toast.error('Erro ao atualizar mesas');
+    }
   };
 
   return (
@@ -54,7 +64,7 @@ const Mesas: React.FC = () => {
         </div>
       </div>
 
-      {/* Filtros */}
+      {/* Filters */}
       <div className="bg-white rounded-lg shadow-sm p-4">
         <div className="flex items-center mb-2">
           <Filter size={16} className="text-gray-500 mr-2" />
@@ -92,14 +102,20 @@ const Mesas: React.FC = () => {
         </div>
       </div>
 
-      {/* Lista de Mesas */}
+      {/* Tables List */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {mesasFiltradas.map((mesa) => (
           <MesaCard key={mesa.id} mesa={mesa} />
         ))}
+        
+        {mesasFiltradas.length === 0 && (
+          <div className="col-span-full text-center py-8">
+            <p className="text-gray-500">Nenhuma mesa encontrada</p>
+          </div>
+        )}
       </div>
 
-      {/* Modal de Nova Mesa */}
+      {/* New Table Modal */}
       <NovoMesaModal 
         isOpen={modalAberto} 
         onClose={() => setModalAberto(false)} 

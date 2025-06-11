@@ -13,6 +13,7 @@ const NovoMesaModal: React.FC<NovoMesaModalProps> = ({ isOpen, onClose }) => {
   const [capacidade, setCapacidade] = useState<string>('4');
   const [garcom, setGarcom] = useState<string>('');
   const [error, setError] = useState<string>('');
+  const [loading, setLoading] = useState(false);
   
   const { adicionarMesa } = useRestaurante();
 
@@ -22,41 +23,49 @@ const NovoMesaModal: React.FC<NovoMesaModalProps> = ({ isOpen, onClose }) => {
     { id: 3, nome: 'Pedro Oliveira' }
   ];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setLoading(true);
     
-    // Validações
-    if (!numero || !capacidade || !garcom) {
-      setError('Preencha todos os campos');
-      return;
+    try {
+      // Validations
+      if (!numero || !capacidade) {
+        setError('Preencha todos os campos obrigatórios');
+        return;
+      }
+      
+      const numeroInt = parseInt(numero);
+      const capacidadeInt = parseInt(capacidade);
+      
+      if (isNaN(numeroInt) || numeroInt <= 0) {
+        setError('Número da mesa inválido');
+        return;
+      }
+      
+      if (isNaN(capacidadeInt) || capacidadeInt <= 0) {
+        setError('Capacidade inválida');
+        return;
+      }
+      
+      // Add table
+      await adicionarMesa({
+        numero: numeroInt,
+        capacidade: capacidadeInt,
+        garcom: garcom || undefined
+      });
+      
+      // Clear and close modal
+      setNumero('');
+      setCapacidade('4');
+      setGarcom('');
+      onClose();
+    } catch (error) {
+      console.error('Error adding mesa:', error);
+      setError('Erro ao adicionar mesa');
+    } finally {
+      setLoading(false);
     }
-    
-    const numeroInt = parseInt(numero);
-    const capacidadeInt = parseInt(capacidade);
-    
-    if (isNaN(numeroInt) || numeroInt <= 0) {
-      setError('Número da mesa inválido');
-      return;
-    }
-    
-    if (isNaN(capacidadeInt) || capacidadeInt <= 0) {
-      setError('Capacidade inválida');
-      return;
-    }
-    
-    // Adicionar mesa
-    adicionarMesa({
-      numero: numeroInt,
-      capacidade: capacidadeInt,
-      garcom
-    });
-    
-    // Limpar e fechar modal
-    setNumero('');
-    setCapacidade('4');
-    setGarcom('');
-    onClose();
   };
 
   if (!isOpen) return null;
@@ -101,6 +110,7 @@ const NovoMesaModal: React.FC<NovoMesaModalProps> = ({ isOpen, onClose }) => {
                   className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                   placeholder="Ex: 1"
                   min="1"
+                  required
                 />
               </div>
               
@@ -124,7 +134,7 @@ const NovoMesaModal: React.FC<NovoMesaModalProps> = ({ isOpen, onClose }) => {
 
               <div className="mb-4">
                 <label htmlFor="garcom" className="block text-sm font-medium text-gray-700">
-                  Garçom Responsável
+                  Garçom Responsável (Opcional)
                 </label>
                 <select
                   id="garcom"
@@ -144,12 +154,14 @@ const NovoMesaModal: React.FC<NovoMesaModalProps> = ({ isOpen, onClose }) => {
                   type="button" 
                   variant="ghost" 
                   onClick={onClose}
+                  disabled={loading}
                 >
                   Cancelar
                 </Button>
                 <Button 
                   type="submit" 
                   variant="primary"
+                  isLoading={loading}
                 >
                   Adicionar Mesa
                 </Button>

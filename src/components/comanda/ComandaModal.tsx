@@ -1,31 +1,38 @@
 import React from 'react';
 import { X, Clock, Trash2 } from 'lucide-react';
 import Button from '../ui/Button';
-import ComandaItem from './ComandaItem';
 import { useRestaurante } from '../../contexts/RestauranteContext';
 import { formatarDinheiro } from '../../utils/formatters';
 import toast from 'react-hot-toast';
+import { Database } from '../../types/database';
+
+type Mesa = Database['public']['Tables']['mesas']['Row'];
 
 interface ComandaModalProps {
   isOpen: boolean;
   onClose: () => void;
-  mesaId: number;
+  mesaId: string;
 }
 
 const ComandaModal: React.FC<ComandaModalProps> = ({ isOpen, onClose, mesaId }) => {
-  const { mesas, itensComanda, removerItemComanda } = useRestaurante();
+  const { mesas, comandas, itensComanda, removerItemComanda } = useRestaurante();
   
   const mesa = mesas.find(m => m.id === mesaId);
-  const itensDaMesa = itensComanda.filter(item => item.mesaId === mesaId);
+  const comanda = comandas.find(c => c.mesa_id === mesaId && c.status === 'aberta');
+  const itens = itensComanda.filter(item => comanda && item.comanda_id === comanda.id);
   
-  const valorTotal = itensDaMesa.reduce((total, item) => {
-    return total + (item.preco * item.quantidade);
+  const valorTotal = itens.reduce((total, item) => {
+    return total + (item.preco_unitario * item.quantidade);
   }, 0);
 
-  const handleRemoveItem = (itemId: number) => {
+  const handleRemoveItem = async (itemId: string) => {
     if (window.confirm('Tem certeza que deseja remover este item?')) {
-      removerItemComanda(itemId);
-      toast.success('Item removido com sucesso!');
+      try {
+        await removerItemComanda(itemId);
+        toast.success('Item removido com sucesso!');
+      } catch (error) {
+        console.error('Error removing item:', error);
+      }
     }
   };
   
@@ -60,30 +67,30 @@ const ComandaModal: React.FC<ComandaModalProps> = ({ isOpen, onClose, mesaId }) 
                   {mesa.garcom ? `Garçom: ${mesa.garcom}` : 'Garçom não atribuído'}
                 </p>
                 <p className="text-sm text-gray-500">
-                  Horário de abertura: {mesa.horarioAbertura ? new Date(mesa.horarioAbertura).toLocaleTimeString('pt-BR') : 'N/A'}
+                  Horário de abertura: {mesa.horario_abertura ? new Date(mesa.horario_abertura).toLocaleTimeString('pt-BR') : 'N/A'}
                 </p>
               </div>
             </div>
             
-            {/* Lista de Itens */}
-            {itensDaMesa.length === 0 ? (
+            {/* Items List */}
+            {itens.length === 0 ? (
               <div className="py-6 text-center text-gray-500">
                 <p>Nenhum item adicionado à comanda</p>
               </div>
             ) : (
               <div className="divide-y divide-gray-200">
-                {itensDaMesa.map((item) => (
+                {itens.map((item) => (
                   <div key={item.id} className="py-4 flex justify-between items-start">
                     <div className="flex-1">
                       <div className="flex items-start">
                         <span className="font-medium">{item.quantidade}x</span>
                         <div className="ml-3">
-                          <h4 className="font-medium">{item.nome}</h4>
+                          <h4 className="font-medium">{item.produto?.nome || 'Produto não encontrado'}</h4>
                           {item.observacao && (
                             <p className="text-sm text-gray-500">{item.observacao}</p>
                           )}
                           <div className="mt-1 text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded inline-block">
-                            {item.categoria}
+                            {item.produto?.categoria || 'Categoria'}
                           </div>
                           <div className={`mt-1 text-xs px-2 py-1 rounded inline-block ml-2 ${
                             item.status === 'pendente' ? 'bg-yellow-100 text-yellow-800' :
@@ -99,8 +106,8 @@ const ComandaModal: React.FC<ComandaModalProps> = ({ isOpen, onClose, mesaId }) 
                     
                     <div className="flex items-center space-x-4">
                       <div className="text-right">
-                        <p className="text-gray-500 text-sm">{formatarDinheiro(item.preco)} un</p>
-                        <p className="font-medium">{formatarDinheiro(item.preco * item.quantidade)}</p>
+                        <p className="text-gray-500 text-sm">{formatarDinheiro(item.preco_unitario)} un</p>
+                        <p className="font-medium">{formatarDinheiro(item.preco_unitario * item.quantidade)}</p>
                       </div>
                       <button
                         onClick={() => handleRemoveItem(item.id)}

@@ -3,11 +3,14 @@ import { X, Search } from 'lucide-react';
 import Button from '../ui/Button';
 import { useRestaurante } from '../../contexts/RestauranteContext';
 import { formatarDinheiro } from '../../utils/formatters';
+import { Database } from '../../types/database';
+
+type Produto = Database['public']['Tables']['produtos']['Row'];
 
 interface AdicionarItemModalProps {
   isOpen: boolean;
   onClose: () => void;
-  mesaId: number;
+  mesaId: string;
 }
 
 const AdicionarItemModal: React.FC<AdicionarItemModalProps> = ({ isOpen, onClose, mesaId }) => {
@@ -17,33 +20,44 @@ const AdicionarItemModal: React.FC<AdicionarItemModalProps> = ({ isOpen, onClose
   const [quantidade, setQuantidade] = useState(1);
   const [observacao, setObservacao] = useState('');
   
-  const { produtos, categorias, adicionarItemComanda } = useRestaurante();
+  const { produtos, comandas, criarComanda, adicionarItemComanda } = useRestaurante();
   
-  // Filtrar produtos
+  // Get unique categories
+  const categorias = Array.from(new Set(produtos.map(produto => produto.categoria)));
+  
+  // Filter products
   const produtosFiltrados = produtos.filter(produto => {
     const matchBusca = produto.nome.toLowerCase().includes(busca.toLowerCase());
     const matchCategoria = categoriaSelecionada === 'todos' || produto.categoria === categoriaSelecionada;
-    return matchBusca && matchCategoria;
+    return matchBusca && matchCategoria && produto.disponivel;
   });
   
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!produtoSelecionado) return;
     
-    adicionarItemComanda({
-      mesaId,
-      produtoId: produtoSelecionado.id,
-      nome: produtoSelecionado.nome,
-      categoria: produtoSelecionado.categoria,
-      quantidade,
-      preco: produtoSelecionado.preco,
-      observacao,
-    });
-    
-    // Resetar formulário
-    setProdutoSelecionado(null);
-    setQuantidade(1);
-    setObservacao('');
-    onClose();
+    try {
+      // Find or create comanda for this mesa
+      let comandaId = comandas.find(c => c.mesa_id === mesaId && c.status === 'aberta')?.id;
+      
+      if (!comandaId) {
+        comandaId = await criarComanda(mesaId);
+      }
+      
+      await adicionarItemComanda({
+        comandaId,
+        produtoId: produtoSelecionado.id,
+        quantidade,
+        observacao: observacao || undefined,
+      });
+      
+      // Reset form
+      setProdutoSelecionado(null);
+      setQuantidade(1);
+      setObservacao('');
+      onClose();
+    } catch (error) {
+      console.error('Error adding item:', error);
+    }
   };
   
   if (!isOpen) return null;
@@ -71,7 +85,7 @@ const AdicionarItemModal: React.FC<AdicionarItemModalProps> = ({ isOpen, onClose
           </div>
           
           <div className="bg-white px-6 py-4">
-            {/* Barra de busca e filtros */}
+            {/* Search and filters */}
             <div className="flex flex-col md:flex-row md:items-center gap-4 mb-6">
               <div className="relative flex-1">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -103,7 +117,7 @@ const AdicionarItemModal: React.FC<AdicionarItemModalProps> = ({ isOpen, onClose
             </div>
             
             {produtoSelecionado ? (
-              // Formulário de detalhes do item
+              // Item details form
               <div className="space-y-4">
                 <div className="bg-blue-50 p-4 rounded-md flex justify-between items-center">
                   <div>
@@ -180,7 +194,7 @@ const AdicionarItemModal: React.FC<AdicionarItemModalProps> = ({ isOpen, onClose
                 </div>
               </div>
             ) : (
-              // Lista de produtos
+              // Product list
               <div className="max-h-96 overflow-y-auto">
                 {produtosFiltrados.length === 0 ? (
                   <div className="py-6 text-center text-gray-500">
@@ -198,15 +212,9 @@ const AdicionarItemModal: React.FC<AdicionarItemModalProps> = ({ isOpen, onClose
                           <div>
                             <h3 className="font-medium">{produto.nome}</h3>
                             <p className="text-sm text-gray-500">{produto.categoria}</p>
-                            {produto.disponivel ? (
-                              <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full mt-1 inline-block">
-                                Disponível
-                              </span>
-                            ) : (
-                              <span className="text-xs bg-red-100 text-red-800 px-2 py-0.5 rounded-full mt-1 inline-block">
-                                Indisponível
-                              </span>
-                            )}
+                            <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full mt-1 inline-block">
+                              Disponível
+                            </span>
                           </div>
                           <div>
                             <p className="font-medium">{formatarDinheiro(produto.preco)}</p>
