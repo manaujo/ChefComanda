@@ -10,12 +10,17 @@ import { useTheme } from '../contexts/ThemeContext';
 import { formatarDinheiro } from '../utils/formatters';
 import Button from '../components/ui/Button';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { dadosPedidos, dadosAlertasEstoque } from '../data/mockData';
 
 const Dashboard: React.FC = () => {
-  const { mesas, pedidos, produtosPopulares, alertasEstoque } = useRestaurante();
+  const { mesas, produtosPopulares } = useRestaurante();
   const { displayName } = useAuth();
   const { theme } = useTheme();
   const [periodoSelecionado] = useState('7dias');
+  
+  // Use mock data for pedidos and alertasEstoque
+  const pedidos = dadosPedidos;
+  const alertasEstoque = dadosAlertasEstoque;
   
   const mesasOcupadas = mesas.filter(mesa => mesa.status === 'ocupada');
   const mesasAguardandoPagamento = mesas.filter(mesa => mesa.status === 'aguardando');
