@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Menu, X, Search, Filter, Clock, Users, CreditCard, Receipt, ArrowLeft, 
-  ArrowUpCircle, Music, Percent, AlertTriangle, Coffee, ShoppingBag, Store
+  ArrowUpCircle, Music, Percent, AlertTriangle, Coffee, ShoppingBag, Store, Plus
 } from 'lucide-react';
 import Button from '../components/ui/Button';
 import { useRestaurante } from '../contexts/RestauranteContext';
@@ -182,7 +182,7 @@ const PDV: React.FC = () => {
 
   const { subtotal, descontoValor, subtotalComDesconto, taxaServico, couvert, total } = calcularTotais();
 
-  const adicionarItem = (produto: Produto) => {
+  const adicionarItem = (produto: any) => {
     setLoading(true);
     setTimeout(() => {
       const novoItem = {
@@ -976,7 +976,7 @@ const PDV: React.FC = () => {
                   >
                     Todas
                   </button>
-                  {categorias.map(categoria => (
+                  {(categorias || []).map(categoria => (
                     <button
                       key={categoria}
                       onClick={() => setCategoriaSelecionada(categoria)}
