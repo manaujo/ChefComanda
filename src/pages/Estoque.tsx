@@ -59,7 +59,7 @@ const Estoque: React.FC = () => {
       const { data: restaurante } = await supabase
         .from('restaurantes')
         .select('id')
-        .single();
+        .maybeSingle();
 
       if (!restaurante) {
         toast.error('Restaurante não encontrado');
@@ -94,7 +94,7 @@ const Estoque: React.FC = () => {
       const { data: restaurante } = await supabase
         .from('restaurantes')
         .select('id')
-        .single();
+        .maybeSingle();
 
       if (!restaurante) {
         throw new Error('Restaurante não encontrado');
