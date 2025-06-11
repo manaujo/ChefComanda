@@ -18,14 +18,18 @@ interface ProdutoFormData {
 }
 
 const Produtos: React.FC = () => {
-  const { produtos, categorias, setProdutos } = useRestaurante();
+  const { produtos, adicionarProduto, atualizarProduto, excluirProduto } = useRestaurante();
+  
+  // Derive categories from products
+  const categorias = Array.from(new Set(produtos?.map(produto => produto.categoria) || []));
+  
   const [busca, setBusca] = useState('');
   const [categoriaSelecionada, setCategoriaSelecionada] = useState('todas');
   const [statusFiltro, setStatusFiltro] = useState<'todos' | 'ativos' | 'inativos'>('todos');
   const [visualizacao, setVisualizacao] = useState<'cards' | 'tabela'>('cards');
   const [showModal, setShowModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [produtoSelecionado, setProdutoSelecionado] = useState<Produto | null>(null);
+  const [produtoSelecionado, setProdutoSelecionado] = useState<any | null>(null);
   const [formData, setFormData] = useState<ProdutoFormData>({
     nome: '',
     categoria: '',
@@ -38,10 +42,10 @@ const Produtos: React.FC = () => {
   const itemsPerPage = 12;
 
   // Filtrar produtos
-  const produtosFiltrados = produtos
+  const produtosFiltrados = (produtos || [])
     .filter(produto => {
       const matchBusca = produto.nome.toLowerCase().includes(busca.toLowerCase()) ||
-                        produto.descricao.toLowerCase().includes(busca.toLowerCase());
+                        (produto.descricao || '').toLowerCase().includes(busca.toLowerCase());
       const matchCategoria = categoriaSelecionada === 'todas' || produto.categoria === categoriaSelecionada;
       const matchStatus = statusFiltro === 'todos' || 
                          (statusFiltro === 'ativos' && produto.disponivel) ||
@@ -71,27 +75,23 @@ const Produtos: React.FC = () => {
         throw new Error('Preencha todos os campos obrigatórios');
       }
 
-      // Simulate saving product
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Add to products list
-      const newProduct = {
-        id: Math.max(0, ...produtos.map(p => p.id)) + 1,
-        nome: formData.nome,
-        categoria: formData.categoria,
-        preco: formData.preco,
-        descricao: formData.descricao || '',
-        disponivel: formData.disponivel,
-        estoque: 0,
-        estoqueMinimo: 5
-      };
-      
-      setProdutos([...produtos, newProduct]);
-      
-      toast.success(produtoSelecionado 
-        ? 'Produto atualizado com sucesso!' 
-        : 'Produto adicionado com sucesso!'
-      );
+      if (produtoSelecionado) {
+        await atualizarProduto(produtoSelecionado.id, {
+          nome: formData.nome,
+          categoria: formData.categoria,
+          preco: formData.preco,
+          descricao: formData.descricao || '',
+          disponivel: formData.disponivel
+        });
+      } else {
+        await adicionarProduto({
+          nome: formData.nome,
+          categoria: formData.categoria,
+          preco: formData.preco,
+          descricao: formData.descricao || '',
+          disponivel: formData.disponivel
+        });
+      }
       
       setShowModal(false);
       resetForm();
@@ -108,10 +108,7 @@ const Produtos: React.FC = () => {
     
     setLoading(true);
     try {
-      // Simulação de exclusão
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      toast.success('Produto excluído com sucesso!');
+      await excluirProduto(produtoSelecionado.id);
       setShowDeleteModal(false);
       setProdutoSelecionado(null);
     } catch (error) {
@@ -133,13 +130,13 @@ const Produtos: React.FC = () => {
     setProdutoSelecionado(null);
   };
 
-  const editProduto = (produto: Produto) => {
+  const editProduto = (produto: any) => {
     setProdutoSelecionado(produto);
     setFormData({
       nome: produto.nome,
       categoria: produto.categoria,
       preco: produto.preco,
-      descricao: produto.descricao,
+      descricao: produto.descricao || '',
       disponivel: produto.disponivel
     });
     setShowModal(true);
@@ -506,6 +503,11 @@ const Produtos: React.FC = () => {
                         {categoria}
                       </option>
                     ))}
+                    <option value="Bebidas">Bebidas</option>
+                    <option value="Pratos Principais">Pratos Principais</option>
+                    <option value="Sobremesas">Sobremesas</option>
+                    <option value="Entradas">Entradas</option>
+                    <option value="Lanches">Lanches</option>
                   </select>
                 </div>
 
