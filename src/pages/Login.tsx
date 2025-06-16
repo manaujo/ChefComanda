@@ -1,24 +1,49 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { User, Lock, Eye, EyeOff } from 'lucide-react';
+import { User, Lock, Eye, EyeOff, Building2 } from 'lucide-react';
 import Button from '../components/ui/Button';
 import { useAuth } from '../contexts/AuthContext';
 
 const Login: React.FC = () => {
+  const [loginType, setLoginType] = useState<'admin' | 'employee'>('admin');
   const [identifier, setIdentifier] = useState('');
   const [senha, setSenha] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   
-  const { signIn } = useAuth();
+  const { signIn, signInEmployee } = useAuth();
   const navigate = useNavigate();
 
   const validateIdentifier = (value: string) => {
-    // Validar CPF (000.000.000-00) ou email
-    const cpfRegex = /^\d{3}\.\d{3}\.\d{3}-\d{2}$/;
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return cpfRegex.test(value) || emailRegex.test(value);
+    if (loginType === 'admin') {
+      // Validar CPF (000.000.000-00) ou email
+      const cpfRegex = /^\d{3}\.\d{3}\.\d{3}-\d{2}$/;
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      return cpfRegex.test(value) || emailRegex.test(value);
+    } else {
+      // Para funcionários, apenas CPF
+      const cpfRegex = /^\d{3}\.\d{3}\.\d{3}-\d{2}$/;
+      return cpfRegex.test(value);
+    }
+  };
+
+  const formatCPF = (value: string) => {
+    const digits = value.replace(/\D/g, '');
+    return digits
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d{1,2})/, '$1-$2')
+      .slice(0, 14);
+  };
+
+  const handleIdentifierChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    if (loginType === 'employee' || (loginType === 'admin' && !value.includes('@'))) {
+      setIdentifier(formatCPF(value));
+    } else {
+      setIdentifier(value);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -31,19 +56,24 @@ const Login: React.FC = () => {
     }
 
     if (!validateIdentifier(identifier)) {
-      setError('Digite um e-mail ou CPF válido');
+      setError(loginType === 'admin' ? 'Digite um e-mail ou CPF válido' : 'Digite um CPF válido');
       return;
     }
     
     try {
       setLoading(true);
-      await signIn(identifier, senha);
+      
+      if (loginType === 'employee') {
+        await signInEmployee(identifier, senha);
+      } else {
+        await signIn(identifier, senha);
+      }
     } catch (err) {
       console.error(err);
       if (err instanceof Error && err.message.includes('Failed to fetch')) {
         setError('Erro de conexão. Verifique sua internet e tente novamente.');
       } else {
-        setError('E-mail/CPF ou senha incorretos');
+        setError(loginType === 'admin' ? 'E-mail/CPF ou senha incorretos' : 'CPF ou senha incorretos');
       }
     } finally {
       setLoading(false);
@@ -52,6 +82,34 @@ const Login: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Login Type Selector */}
+      <div className="flex rounded-lg bg-gray-100 dark:bg-gray-700 p-1">
+        <button
+          type="button"
+          onClick={() => setLoginType('admin')}
+          className={`flex-1 flex items-center justify-center py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+            loginType === 'admin'
+              ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm'
+              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+          }`}
+        >
+          <Building2 size={16} className="mr-2" />
+          Administrador
+        </button>
+        <button
+          type="button"
+          onClick={() => setLoginType('employee')}
+          className={`flex-1 flex items-center justify-center py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+            loginType === 'employee'
+              ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm'
+              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+          }`}
+        >
+          <User size={16} className="mr-2" />
+          Funcionário
+        </button>
+      </div>
+
       <form className="space-y-6" onSubmit={handleSubmit}>
         {error && (
           <div className="bg-red-50 dark:bg-red-900/50 border-l-4 border-red-500 p-4 rounded">
@@ -61,7 +119,7 @@ const Login: React.FC = () => {
         
         <div>
           <label htmlFor="identifier" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-            E-mail ou CPF
+            {loginType === 'admin' ? 'E-mail ou CPF' : 'CPF'}
           </label>
           <div className="mt-1 relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -71,9 +129,9 @@ const Login: React.FC = () => {
               id="identifier"
               type="text"
               value={identifier}
-              onChange={(e) => setIdentifier(e.target.value)}
+              onChange={handleIdentifierChange}
               className="pl-10 block w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-colors dark:text-white"
-              placeholder="email ou cpf"
+              placeholder={loginType === 'admin' ? 'email ou 000.000.000-00' : '000.000.000-00'}
             />
           </div>
         </div>
@@ -108,24 +166,26 @@ const Login: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex items-center justify-between">
-          <div className="flex items-center">
-            <input
-              id="lembrar"
-              type="checkbox"
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded transition-colors dark:border-gray-600 dark:bg-gray-700"
-            />
-            <label htmlFor="lembrar" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
-              Lembrar-me
-            </label>
-          </div>
+        {loginType === 'admin' && (
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <input
+                id="lembrar"
+                type="checkbox"
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded transition-colors dark:border-gray-600 dark:bg-gray-700"
+              />
+              <label htmlFor="lembrar" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                Lembrar-me
+              </label>
+            </div>
 
-          <div className="text-sm">
-            <Link to="/auth/forgot-password" className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300 transition-colors">
-              Esqueceu sua senha?
-            </Link>
+            <div className="text-sm">
+              <Link to="/auth/forgot-password" className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300 transition-colors">
+                Esqueceu sua senha?
+              </Link>
+            </div>
           </div>
-        </div>
+        )}
 
         <Button
           type="submit"
@@ -138,14 +198,24 @@ const Login: React.FC = () => {
           Entrar
         </Button>
 
-        <div className="text-center">
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            Não tem uma conta?{' '}
-            <Link to="/signup" className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300 transition-colors">
-              Registre-se
-            </Link>
-          </p>
-        </div>
+        {loginType === 'admin' && (
+          <div className="text-center">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Não tem uma conta?{' '}
+              <Link to="/signup" className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300 transition-colors">
+                Registre-se
+              </Link>
+            </p>
+          </div>
+        )}
+
+        {loginType === 'employee' && (
+          <div className="text-center">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Funcionário? Entre com seu CPF e senha fornecidos pelo administrador.
+            </p>
+          </div>
+        )}
       </form>
     </div>
   );

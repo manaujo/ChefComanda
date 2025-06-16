@@ -9,11 +9,14 @@ interface AuthState {
   userRole: 'admin' | 'kitchen' | 'waiter' | 'cashier' | 'stock' | null;
   loading: boolean;
   displayName: string | null;
+  isEmployee: boolean;
+  employeeData: any | null;
 }
 
 interface AuthContextData extends AuthState {
   signUp: (data: SignUpData) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
+  signInEmployee: (cpf: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   updateProfile: (data: UpdateProfileData) => Promise<void>;
 }
@@ -43,6 +46,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     userRole: null,
     loading: true,
     displayName: null,
+    isEmployee: false,
+    employeeData: null,
   });
   
   const navigate = useNavigate();
@@ -53,7 +58,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (session?.user) {
         loadUserData(session.user);
       } else {
-        setState(prev => ({ ...prev, loading: false }));
+        // Check for employee session
+        checkEmployeeSession();
       }
     });
 
@@ -61,7 +67,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (session?.user) {
         loadUserData(session.user);
       } else {
-        setState({ user: null, userRole: null, loading: false, displayName: null });
+        setState({ 
+          user: null, 
+          userRole: null, 
+          loading: false, 
+          displayName: null,
+          isEmployee: false,
+          employeeData: null
+        });
       }
     });
 
@@ -69,6 +82,49 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       subscription.unsubscribe();
     };
   }, []);
+
+  const checkEmployeeSession = async () => {
+    try {
+      const employeeToken = localStorage.getItem('employee_token');
+      if (employeeToken) {
+        const { data, error } = await supabase
+          .from('employee_sessions')
+          .select(`
+            employee_id,
+            expires_at,
+            employees!inner(
+              id,
+              name,
+              role,
+              company_id,
+              company_profiles!inner(name)
+            )
+          `)
+          .eq('token', employeeToken)
+          .gt('expires_at', new Date().toISOString())
+          .single();
+
+        if (error) throw error;
+
+        if (data) {
+          setState({
+            user: null,
+            userRole: data.employees.role as any,
+            loading: false,
+            displayName: data.employees.name,
+            isEmployee: true,
+            employeeData: data.employees,
+          });
+          return;
+        }
+      }
+    } catch (error) {
+      console.error('Error checking employee session:', error);
+      localStorage.removeItem('employee_token');
+    }
+    
+    setState(prev => ({ ...prev, loading: false }));
+  };
 
   const loadUserData = async (user: User) => {
     try {
@@ -91,36 +147,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       setState({
         user,
-        userRole: roleData?.role || 'admin', // Default to admin if no role found
+        userRole: roleData?.role || 'admin',
         loading: false,
         displayName: profileData?.name || user.user_metadata?.name || null,
+        isEmployee: false,
+        employeeData: null,
       });
 
       // Redirect based on user role
       const role = roleData?.role || 'admin';
-      switch (role) {
-        case 'admin':
-          navigate('/');
-          break;
-        case 'kitchen':
-          navigate('/comandas');
-          break;
-        case 'waiter':
-          navigate('/mesas');
-          break;
-        case 'cashier':
-          navigate('/caixa');
-          break;
-        case 'stock':
-          navigate('/estoque');
-          break;
-        default:
-          navigate('/');
-      }
+      redirectByRole(role);
     } catch (error) {
       console.error('Error loading user data:', error);
       toast.error('Erro ao carregar dados do usuário');
       setState(prev => ({ ...prev, loading: false }));
+    }
+  };
+
+  const redirectByRole = (role: string) => {
+    switch (role) {
+      case 'admin':
+        navigate('/');
+        break;
+      case 'kitchen':
+        navigate('/comandas');
+        break;
+      case 'waiter':
+        navigate('/mesas');
+        break;
+      case 'cashier':
+        navigate('/caixa');
+        break;
+      case 'stock':
+        navigate('/estoque');
+        break;
+      default:
+        navigate('/');
     }
   };
 
@@ -196,12 +258,89 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const signInEmployee = async (cpf: string, password: string) => {
+    try {
+      const { data, error } = await supabase.rpc('authenticate_employee', {
+        p_cpf: cpf,
+        p_password: password
+      });
+
+      if (error) throw error;
+      if (!data || data.length === 0) {
+        throw new Error('CPF ou senha incorretos');
+      }
+
+      const employee = data[0];
+
+      // Create session token
+      const token = crypto.randomUUID();
+      const expiresAt = new Date();
+      expiresAt.setHours(expiresAt.getHours() + 8); // 8 hours session
+
+      const { error: sessionError } = await supabase
+        .from('employee_sessions')
+        .insert({
+          employee_id: employee.employee_id,
+          token,
+          expires_at: expiresAt.toISOString()
+        });
+
+      if (sessionError) throw sessionError;
+
+      // Store token in localStorage
+      localStorage.setItem('employee_token', token);
+
+      // Update last login
+      await supabase
+        .from('employee_auth')
+        .update({ last_login: new Date().toISOString() })
+        .eq('employee_id', employee.employee_id);
+
+      // Set state
+      setState({
+        user: null,
+        userRole: employee.role,
+        loading: false,
+        displayName: employee.name,
+        isEmployee: true,
+        employeeData: employee,
+      });
+
+      toast.success('Login realizado com sucesso!');
+      redirectByRole(employee.role);
+    } catch (error) {
+      console.error('Error signing in employee:', error);
+      toast.error(error instanceof Error ? error.message : 'Erro ao fazer login');
+      throw error;
+    }
+  };
+
   const signOut = async () => {
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
+      if (state.isEmployee) {
+        // Remove employee session
+        const token = localStorage.getItem('employee_token');
+        if (token) {
+          await supabase
+            .from('employee_sessions')
+            .delete()
+            .eq('token', token);
+          localStorage.removeItem('employee_token');
+        }
+      } else {
+        // Regular user logout
+        const { error } = await supabase.auth.signOut();
+        if (error) throw error;
+      }
       
-      setState({ user: null, userRole: null, loading: false, displayName: null });
+      setState({ 
+        user: null, 
+        userRole: null, 
+        loading: false, 
+        displayName: null,
+        isEmployee: false,
+        employeeData: null
+      });
       toast.success('Logout realizado com sucesso!');
       navigate('/login');
     } catch (error) {
@@ -275,6 +414,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         ...state,
         signUp,
         signIn,
+        signInEmployee,
         signOut,
         updateProfile,
       }}

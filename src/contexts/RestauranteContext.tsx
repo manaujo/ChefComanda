@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { DatabaseService } from '../services/database';
+import RealtimeService from '../services/RealtimeService';
+import NotificationService from '../services/NotificationService';
 import { Database } from '../types/database';
 import toast from 'react-hot-toast';
 
@@ -41,6 +43,9 @@ interface RestauranteContextData {
   removerItemComanda: (itemId: string) => Promise<void>;
   finalizarComanda: (comandaId: string, formaPagamento: string) => Promise<void>;
   
+  // Payment actions
+  finalizarPagamento: (mesaId: string, formaPagamento: string) => Promise<void>;
+  
   // Data refresh
   refreshData: () => Promise<void>;
 }
@@ -56,7 +61,7 @@ export const useRestaurante = () => {
 };
 
 export const RestauranteProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user } = useAuth();
+  const { user, isEmployee, employeeData } = useAuth();
   const [restaurante, setRestaurante] = useState<Tables['restaurantes']['Row'] | null>(null);
   const [mesas, setMesas] = useState<Mesa[]>([]);
   const [produtos, setProdutos] = useState<Produto[]>([]);
@@ -65,10 +70,12 @@ export const RestauranteProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (user) {
+    if (user && !isEmployee) {
       loadRestauranteData();
+    } else if (isEmployee && employeeData) {
+      loadEmployeeRestauranteData();
     }
-  }, [user]);
+  }, [user, isEmployee, employeeData]);
 
   const loadRestauranteData = async () => {
     if (!user) return;
@@ -95,12 +102,100 @@ export const RestauranteProvider: React.FC<{ children: React.ReactNode }> = ({ c
         loadProdutos(restauranteData.id),
         loadComandas(restauranteData.id)
       ]);
+
+      // Setup real-time subscriptions
+      setupRealtimeSubscriptions(restauranteData.id);
     } catch (error) {
       console.error('Error loading restaurant data:', error);
       toast.error('Erro ao carregar dados do restaurante');
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadEmployeeRestauranteData = async () => {
+    if (!employeeData?.company_id) return;
+    
+    setLoading(true);
+    try {
+      // Get restaurant data from company
+      const { data: restauranteData, error } = await DatabaseService.supabase
+        .from('restaurantes')
+        .select('*')
+        .eq('user_id', employeeData.company_id)
+        .single();
+
+      if (error) throw error;
+      
+      setRestaurante(restauranteData);
+      
+      // Load restaurant data based on employee role
+      await Promise.all([
+        loadMesas(restauranteData.id),
+        loadProdutos(restauranteData.id),
+        loadComandas(restauranteData.id)
+      ]);
+
+      // Setup real-time subscriptions
+      setupRealtimeSubscriptions(restauranteData.id);
+    } catch (error) {
+      console.error('Error loading employee restaurant data:', error);
+      toast.error('Erro ao carregar dados do restaurante');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const setupRealtimeSubscriptions = (restauranteId: string) => {
+    // Subscribe to table changes
+    RealtimeService.subscribeToTableChanges(restauranteId, (payload) => {
+      if (payload.eventType === 'INSERT') {
+        setMesas(prev => [...prev, payload.new]);
+      } else if (payload.eventType === 'UPDATE') {
+        setMesas(prev => prev.map(mesa => 
+          mesa.id === payload.new.id ? payload.new : mesa
+        ));
+      } else if (payload.eventType === 'DELETE') {
+        setMesas(prev => prev.filter(mesa => mesa.id !== payload.old.id));
+      }
+    });
+
+    // Subscribe to order changes
+    RealtimeService.subscribeToOrderChanges(restauranteId, (payload) => {
+      if (payload.table === 'comandas') {
+        if (payload.eventType === 'INSERT') {
+          setComandasState(prev => [...prev, payload.new]);
+          // Send notification for new orders
+          if (payload.new.status === 'aberta') {
+            NotificationService.sendNewOrderNotification(
+              restauranteId,
+              payload.new.mesa_numero || 0,
+              []
+            );
+          }
+        } else if (payload.eventType === 'UPDATE') {
+          setComandasState(prev => prev.map(comanda => 
+            comanda.id === payload.new.id ? payload.new : comanda
+          ));
+        }
+      } else if (payload.table === 'itens_comanda') {
+        if (payload.eventType === 'INSERT') {
+          setItensComanda(prev => [...prev, payload.new]);
+        } else if (payload.eventType === 'UPDATE') {
+          setItensComanda(prev => prev.map(item => 
+            item.id === payload.new.id ? payload.new : item
+          ));
+        } else if (payload.eventType === 'DELETE') {
+          setItensComanda(prev => prev.filter(item => item.id !== payload.old.id));
+        }
+      }
+    });
+
+    // Subscribe to inventory changes
+    RealtimeService.subscribeToInventoryChanges(restauranteId, (payload) => {
+      // Handle inventory updates and low stock alerts
+      console.log('Inventory change:', payload);
+    });
   };
 
   const loadMesas = async (restauranteId: string) => {
@@ -161,7 +256,6 @@ export const RestauranteProvider: React.FC<{ children: React.ReactNode }> = ({ c
         garcom: dados.garcom || null
       });
       
-      await loadMesas(restaurante.id);
       toast.success('Mesa adicionada com sucesso!');
     } catch (error) {
       console.error('Error adding mesa:', error);
@@ -176,9 +270,6 @@ export const RestauranteProvider: React.FC<{ children: React.ReactNode }> = ({ c
         horario_abertura: new Date().toISOString()
       });
       
-      if (restaurante) {
-        await loadMesas(restaurante.id);
-      }
       toast.success('Mesa ocupada com sucesso!');
     } catch (error) {
       console.error('Error occupying mesa:', error);
@@ -195,9 +286,6 @@ export const RestauranteProvider: React.FC<{ children: React.ReactNode }> = ({ c
         valor_total: 0
       });
       
-      if (restaurante) {
-        await loadMesas(restaurante.id);
-      }
       toast.success('Mesa liberada com sucesso!');
     } catch (error) {
       console.error('Error freeing mesa:', error);
@@ -208,10 +296,6 @@ export const RestauranteProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const excluirMesa = async (mesaId: string) => {
     try {
       await DatabaseService.deleteMesa(mesaId);
-      
-      if (restaurante) {
-        await loadMesas(restaurante.id);
-      }
       toast.success('Mesa excluída com sucesso!');
     } catch (error) {
       console.error('Error deleting mesa:', error);
@@ -229,7 +313,6 @@ export const RestauranteProvider: React.FC<{ children: React.ReactNode }> = ({ c
         restaurante_id: restaurante.id
       });
       
-      await loadProdutos(restaurante.id);
       toast.success('Produto adicionado com sucesso!');
     } catch (error) {
       console.error('Error adding produto:', error);
@@ -240,10 +323,6 @@ export const RestauranteProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const atualizarProduto = async (id: string, updates: Partial<Tables['produtos']['Update']>) => {
     try {
       await DatabaseService.updateProduto(id, updates);
-      
-      if (restaurante) {
-        await loadProdutos(restaurante.id);
-      }
       toast.success('Produto atualizado com sucesso!');
     } catch (error) {
       console.error('Error updating produto:', error);
@@ -254,10 +333,6 @@ export const RestauranteProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const excluirProduto = async (id: string) => {
     try {
       await DatabaseService.deleteProduto(id);
-      
-      if (restaurante) {
-        await loadProdutos(restaurante.id);
-      }
       toast.success('Produto excluído com sucesso!');
     } catch (error) {
       console.error('Error deleting produto:', error);
@@ -271,10 +346,6 @@ export const RestauranteProvider: React.FC<{ children: React.ReactNode }> = ({ c
       const comanda = await DatabaseService.createComanda({
         mesa_id: mesaId
       });
-      
-      if (restaurante) {
-        await loadComandas(restaurante.id);
-      }
       
       return comanda.id;
     } catch (error) {
@@ -304,9 +375,6 @@ export const RestauranteProvider: React.FC<{ children: React.ReactNode }> = ({ c
         observacao: dados.observacao || null
       });
       
-      if (restaurante) {
-        await loadComandas(restaurante.id);
-      }
       toast.success('Item adicionado à comanda!');
     } catch (error) {
       console.error('Error adding item to comanda:', error);
@@ -317,10 +385,6 @@ export const RestauranteProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const atualizarStatusItem = async (itemId: string, status: ItemComanda['status']) => {
     try {
       await DatabaseService.updateItemComanda(itemId, { status });
-      
-      if (restaurante) {
-        await loadComandas(restaurante.id);
-      }
       toast.success(`Status atualizado para ${status}!`);
     } catch (error) {
       console.error('Error updating item status:', error);
@@ -331,10 +395,6 @@ export const RestauranteProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const removerItemComanda = async (itemId: string) => {
     try {
       await DatabaseService.deleteItemComanda(itemId);
-      
-      if (restaurante) {
-        await loadComandas(restaurante.id);
-      }
       toast.success('Item removido da comanda!');
     } catch (error) {
       console.error('Error removing item from comanda:', error);
@@ -371,11 +431,39 @@ export const RestauranteProvider: React.FC<{ children: React.ReactNode }> = ({ c
         status: 'aguardando'
       });
 
-      await refreshData();
       toast.success('Comanda finalizada com sucesso!');
     } catch (error) {
       console.error('Error finalizing comanda:', error);
       toast.error('Erro ao finalizar comanda');
+    }
+  };
+
+  const finalizarPagamento = async (mesaId: string, formaPagamento: string) => {
+    try {
+      // Update mesa status to free
+      await DatabaseService.updateMesa(mesaId, {
+        status: 'livre',
+        horario_abertura: null,
+        garcom: null,
+        valor_total: 0
+      });
+
+      // Send payment notification
+      if (user) {
+        const mesa = mesas.find(m => m.id === mesaId);
+        if (mesa) {
+          await NotificationService.sendPaymentNotification(
+            user.id,
+            mesa.valor_total,
+            formaPagamento
+          );
+        }
+      }
+
+      toast.success('Pagamento finalizado com sucesso!');
+    } catch (error) {
+      console.error('Error finalizing payment:', error);
+      toast.error('Erro ao finalizar pagamento');
     }
   };
 
@@ -399,6 +487,7 @@ export const RestauranteProvider: React.FC<{ children: React.ReactNode }> = ({ c
       atualizarStatusItem,
       removerItemComanda,
       finalizarComanda,
+      finalizarPagamento,
       refreshData
     }}>
       {children}
