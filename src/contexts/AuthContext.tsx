@@ -192,6 +192,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signUp = async ({ email, password, role, name, cpf }: SignUpData) => {
     try {
+      // Check if CPF already exists in profiles table
+      const { data: existingProfile, error: checkError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('cpf', cpf)
+        .maybeSingle();
+
+      if (checkError && checkError.code !== 'PGRST116') {
+        throw checkError;
+      }
+
+      if (existingProfile) {
+        throw new Error('CPF já cadastrado. Por favor, utilize outro CPF ou faça login.');
+      }
+
       const { data: { user }, error } = await supabase.auth.signUp({
         email,
         password,
@@ -209,7 +224,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .insert({ 
           id: user.id, 
           name,
-          cpf: user.user_metadata?.cpf || cpf
+          cpf: cpf
         });
 
       if (profileError) throw profileError;
@@ -234,8 +249,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       navigate('/auth/verify-email');
     } catch (error) {
       console.error('Error signing up:', error);
-      if (error instanceof Error && error.message.includes('Failed to fetch')) {
-        toast.error('Erro de conexão. Verifique sua internet e tente novamente.');
+      if (error instanceof Error) {
+        if (error.message.includes('Failed to fetch')) {
+          toast.error('Erro de conexão. Verifique sua internet e tente novamente.');
+        } else if (error.message.includes('CPF já cadastrado')) {
+          toast.error(error.message);
+        } else if (error.message.includes('User already registered')) {
+          toast.error('E-mail já cadastrado. Por favor, utilize outro e-mail ou faça login.');
+        } else {
+          toast.error('Erro ao criar conta');
+        }
       } else {
         toast.error('Erro ao criar conta');
       }
