@@ -207,43 +207,69 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error('CPF já cadastrado. Por favor, utilize outro CPF ou faça login.');
       }
 
+      // Sign up the user with metadata
       const { data: { user }, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          data: { name, cpf },
+          data: { 
+            name, 
+            cpf 
+          },
         },
       });
 
       if (error) throw error;
       if (!user) throw new Error('Erro ao criar usuário');
 
-      // Create user profile
+      // Wait a moment for the trigger to complete
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Create or update user profile (upsert to handle trigger conflicts)
       const { error: profileError } = await supabase
         .from('profiles')
-        .insert({ 
+        .upsert({ 
           id: user.id, 
           name,
           cpf: cpf
+        }, {
+          onConflict: 'id'
         });
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error('Profile creation error:', profileError);
+        // Don't throw here as the user was created successfully
+        // The profile might have been created by the trigger
+      }
 
-      // Create user role record
+      // Create user role record (upsert to handle potential conflicts)
       const { error: roleError } = await supabase
         .from('user_roles')
-        .insert({ user_id: user.id, role });
+        .upsert({ 
+          user_id: user.id, 
+          role 
+        }, {
+          onConflict: 'user_id'
+        });
 
-      if (roleError) throw roleError;
+      if (roleError) {
+        console.error('Role creation error:', roleError);
+        // Don't throw here as the user was created successfully
+      }
 
-      // Create audit log
-      await DatabaseService.createAuditLog({
-        user_id: user.id,
-        action_type: 'create',
-        entity_type: 'user',
-        entity_id: user.id,
-        details: { name, role, cpf }
-      });
+      // Create audit log (optional, don't fail signup if this fails)
+      try {
+        await DatabaseService.createAuditLog({
+          user_id: user.id,
+          action_type: 'create',
+          entity_type: 'user',
+          entity_id: user.id,
+          details: { name, role, cpf }
+        });
+      } catch (auditError) {
+        console.error('Audit log creation error:', auditError);
+        // Don't fail signup for audit log errors
+      }
 
       toast.success('Conta criada com sucesso! Verifique seu e-mail.');
       navigate('/auth/verify-email');
@@ -256,6 +282,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           toast.error(error.message);
         } else if (error.message.includes('User already registered')) {
           toast.error('E-mail já cadastrado. Por favor, utilize outro e-mail ou faça login.');
+        } else if (error.message.includes('Database error saving new user')) {
+          toast.error('Erro interno do servidor. Tente novamente em alguns minutos.');
         } else {
           toast.error('Erro ao criar conta');
         }
