@@ -321,16 +321,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Remove employee session
         const token = localStorage.getItem('employee_token');
         if (token) {
-          await supabase
-            .from('employee_sessions')
-            .delete()
-            .eq('token', token);
+          try {
+            await supabase
+              .from('employee_sessions')
+              .delete()
+              .eq('token', token);
+          } catch (error) {
+            console.error('Error removing employee session:', error);
+            // Continue with logout even if session removal fails
+          }
           localStorage.removeItem('employee_token');
         }
       } else if (state.user) {
         // Only attempt to sign out if there's an active Supabase user session
-        const { error } = await supabase.auth.signOut();
-        if (error) throw error;
+        try {
+          const { error } = await supabase.auth.signOut();
+          if (error) {
+            // If the error is about missing session, treat it as successful logout
+            if (error.message.includes('Auth session missing') || 
+                error.message.includes('session_not_found') ||
+                error.message.includes('Session from session_id claim in JWT does not exist')) {
+              console.log('Session already expired, proceeding with local logout');
+            } else {
+              throw error;
+            }
+          }
+        } catch (error) {
+          // If it's a session-related error, proceed with local logout
+          if (error instanceof Error && 
+              (error.message.includes('Auth session missing') || 
+               error.message.includes('session_not_found') ||
+               error.message.includes('Session from session_id claim in JWT does not exist') ||
+               error.message.includes('Failed to fetch'))) {
+            console.log('Session error during logout, proceeding with local logout:', error.message);
+          } else {
+            throw error;
+          }
+        }
       }
       
       setState({ 

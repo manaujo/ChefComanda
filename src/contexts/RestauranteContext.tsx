@@ -107,7 +107,11 @@ export const RestauranteProvider: React.FC<{ children: React.ReactNode }> = ({ c
       setupRealtimeSubscriptions(restauranteData.id);
     } catch (error) {
       console.error('Error loading restaurant data:', error);
-      toast.error('Erro ao carregar dados do restaurante');
+      if (error instanceof Error && error.message.includes('Failed to fetch')) {
+        toast.error('Erro de conexão. Verifique sua internet e tente novamente.');
+      } else {
+        toast.error('Erro ao carregar dados do restaurante');
+      }
     } finally {
       setLoading(false);
     }
@@ -140,7 +144,11 @@ export const RestauranteProvider: React.FC<{ children: React.ReactNode }> = ({ c
       setupRealtimeSubscriptions(restauranteData.id);
     } catch (error) {
       console.error('Error loading employee restaurant data:', error);
-      toast.error('Erro ao carregar dados do restaurante');
+      if (error instanceof Error && error.message.includes('Failed to fetch')) {
+        toast.error('Erro de conexão. Verifique sua internet e tente novamente.');
+      } else {
+        toast.error('Erro ao carregar dados do restaurante');
+      }
     } finally {
       setLoading(false);
     }
@@ -236,6 +244,10 @@ export const RestauranteProvider: React.FC<{ children: React.ReactNode }> = ({ c
       setMesas(data || []);
     } catch (error) {
       console.error('Error loading mesas:', error);
+      if (error instanceof Error && error.message.includes('Failed to fetch')) {
+        // Don't show toast for fetch errors as they're likely auth-related
+        console.log('Failed to fetch mesas, likely due to auth session issues');
+      }
     }
   };
 
@@ -245,6 +257,10 @@ export const RestauranteProvider: React.FC<{ children: React.ReactNode }> = ({ c
       setProdutos(data || []);
     } catch (error) {
       console.error('Error loading produtos:', error);
+      if (error instanceof Error && error.message.includes('Failed to fetch')) {
+        // Don't show toast for fetch errors as they're likely auth-related
+        console.log('Failed to fetch produtos, likely due to auth session issues');
+      }
     }
   };
 
@@ -281,6 +297,10 @@ export const RestauranteProvider: React.FC<{ children: React.ReactNode }> = ({ c
       setItensComanda(allItems);
     } catch (error) {
       console.error('Error loading comandas:', error);
+      if (error instanceof Error && error.message.includes('Failed to fetch')) {
+        // Don't show toast for fetch errors as they're likely auth-related
+        console.log('Failed to fetch comandas, likely due to auth session issues');
+      }
     }
   };
 
