@@ -1,8 +1,9 @@
 /**
  * Formata um valor numérico para moeda brasileira (BRL)
  */
-export const formatarDinheiro = (valor: number): string => {
-  return valor.toLocaleString('pt-BR', {
+export const formatarDinheiro = (valor: number | undefined | null): string => {
+  const valorSeguro = valor ?? 0;
+  return valorSeguro.toLocaleString('pt-BR', {
     style: 'currency',
     currency: 'BRL'
   });
