@@ -233,6 +233,11 @@ const CMV: React.FC = () => {
     toast.success('Produto adicionado com sucesso!');
   };
 
+  const handleDeleteProduto = (id: number) => {
+    setProdutos(produtos.filter(p => p.id !== id));
+    toast.success('Produto removido com sucesso!');
+  };
+
   const exportarDados = (formato: 'excel' | 'pdf') => {
     toast.success(`Relatório exportado em ${formato.toUpperCase()}`);
   };
@@ -385,6 +390,9 @@ const CMV: React.FC = () => {
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Margem
                     </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Ações
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -418,6 +426,16 @@ const CMV: React.FC = () => {
                         }`}>
                           {produto.margemLucro.toFixed(2)}%
                         </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-red-600 hover:text-red-700"
+                          onClick={() => handleDeleteProduto(produto.id)}
+                        >
+                          Excluir
+                        </Button>
                       </td>
                     </tr>
                   ))}

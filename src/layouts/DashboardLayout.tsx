@@ -16,24 +16,33 @@ const DashboardLayout: React.FC = () => {
   const [sidebarHover, setSidebarHover] = useState(false);
   const location = useLocation();
   const { theme, toggleTheme } = useTheme();
+  const { userRole } = useAuth();
   const isPDV = location.pathname === '/pdv';
   const isComandas = location.pathname === '/comandas';
 
-  const navItems = [
-    { name: 'Dashboard', path: '/', icon: <LayoutDashboard size={20} />, roles: ['admin', 'cashier'] },
-    { name: 'Mesas', path: '/mesas', icon: <Coffee size={20} />, roles: ['admin', 'waiter'] },
-    { name: 'Comandas', path: '/comandas', icon: <ClipboardList size={20} />, roles: ['admin', 'kitchen', 'waiter'] },
-    { name: 'PDV', path: '/pdv', icon: <CreditCard size={20} />, roles: ['admin', 'cashier'] },
-    { name: 'Cardápio', path: '/cardapio', icon: <ShoppingBag size={20} />, roles: ['admin', 'stock'] },
-    { name: 'Estoque', path: '/estoque', icon: <ShoppingBag size={20} />, roles: ['admin', 'stock'] },
-    { name: 'Pedidos iFood', path: '/ifood', icon: <ShoppingBag size={20} />, roles: ['admin', 'kitchen'] },
-    { name: 'Relatórios', path: '/relatorios', icon: <PieChart size={20} />, roles: ['admin', 'cashier'] },
-    { name: 'CMV', path: '/cmv', icon: <Calculator size={20} />, roles: ['admin'] },
-    { name: 'Cardápio Online', path: '/cardapio-online', icon: <QrCode size={20} />, roles: ['admin'] },
-    { name: 'Editor de Cardápio', path: '/cardapio-online/editor', icon: <PenSquare size={20} />, roles: ['admin'] },
-    { name: 'Cardápio Online (Público)', path: '/cardapio/1', icon: <Globe size={20} />, roles: ['admin'] },
-    { name: 'Central de Ajuda', path: '/ajuda', icon: <HelpCircle size={20} />, roles: ['admin', 'kitchen', 'waiter', 'cashier'] },
-  ];
+  // Definir quais itens de menu cada função pode acessar
+  const getRoleNavItems = () => {
+    const allNavItems = [
+      { name: 'Dashboard', path: '/', icon: <LayoutDashboard size={20} />, roles: ['admin', 'cashier'] },
+      { name: 'Mesas', path: '/mesas', icon: <Coffee size={20} />, roles: ['admin', 'waiter'] },
+      { name: 'Comandas', path: '/comandas', icon: <ClipboardList size={20} />, roles: ['admin', 'kitchen', 'waiter'] },
+      { name: 'PDV', path: '/pdv', icon: <CreditCard size={20} />, roles: ['admin', 'cashier'] },
+      { name: 'Cardápio', path: '/cardapio', icon: <ShoppingBag size={20} />, roles: ['admin', 'stock'] },
+      { name: 'Estoque', path: '/estoque', icon: <ShoppingBag size={20} />, roles: ['admin', 'stock'] },
+      { name: 'Pedidos iFood', path: '/ifood', icon: <ShoppingBag size={20} />, roles: ['admin', 'kitchen'] },
+      { name: 'Relatórios', path: '/relatorios', icon: <PieChart size={20} />, roles: ['admin', 'cashier'] },
+      { name: 'CMV', path: '/cmv', icon: <Calculator size={20} />, roles: ['admin'] },
+      { name: 'Cardápio Online', path: '/cardapio-online', icon: <QrCode size={20} />, roles: ['admin'] },
+      { name: 'Editor de Cardápio', path: '/cardapio-online/editor', icon: <PenSquare size={20} />, roles: ['admin'] },
+      { name: 'Cardápio Online (Público)', path: '/cardapio/1', icon: <Globe size={20} />, roles: ['admin'] },
+      { name: 'Central de Ajuda', path: '/ajuda', icon: <HelpCircle size={20} />, roles: ['admin', 'kitchen', 'waiter', 'cashier', 'stock'] },
+    ];
+
+    // Filtrar itens com base na função do usuário
+    return allNavItems.filter(item => item.roles.includes(userRole || 'admin'));
+  };
+
+  const navItems = getRoleNavItems();
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {

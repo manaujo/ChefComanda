@@ -22,7 +22,7 @@ const PagamentoModal: React.FC<PagamentoModalProps> = ({ isOpen, onClose, mesa }
   });
   const [itensComanda, setItensComanda] = useState<ComandaItemData[]>([]);
   
-  const { finalizarPagamento, itensComanda: allItensComanda } = useRestaurante();
+  const { finalizarPagamento, itensComanda: allItensComanda, refreshData } = useRestaurante();
 
   useEffect(() => {
     if (isOpen && mesa) {
@@ -59,6 +59,7 @@ const PagamentoModal: React.FC<PagamentoModalProps> = ({ isOpen, onClose, mesa }
     setLoading(true);
     try {
       await finalizarPagamento(mesa.id, formaPagamento);
+      await refreshData(); // Refresh data to update UI
       toast.success('Pagamento finalizado com sucesso!');
       onClose();
     } catch (error) {

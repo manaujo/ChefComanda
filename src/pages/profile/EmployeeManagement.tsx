@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Users, UserPlus, Edit2, Trash2, Search, AlertTriangle,
-  ClipboardList, Key, Eye, EyeOff
+  Key, Eye, EyeOff
 } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../services/supabase';
 import toast from 'react-hot-toast';
-import AuditLogs from '../../components/employee/AuditLogs';
 
 interface Employee {
   id: string;
@@ -19,8 +18,25 @@ interface Employee {
   has_auth: boolean;
 }
 
+// Mapeamento de funções em inglês para português
+const roleMappings: Record<string, string> = {
+  'waiter': 'Garçom',
+  'kitchen': 'Cozinha',
+  'cashier': 'Caixa',
+  'stock': 'Estoque',
+  'admin': 'Administrador'
+};
+
+// Mapeamento inverso (português para inglês)
+const roleReverseMapping: Record<string, string> = {
+  'Garçom': 'waiter',
+  'Cozinha': 'kitchen',
+  'Caixa': 'cashier',
+  'Estoque': 'stock',
+  'Administrador': 'admin'
+};
+
 const EmployeeManagement: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'employees' | 'logs'>('employees');
   const { user } = useAuth();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(false);
@@ -249,7 +265,7 @@ const EmployeeManagement: React.FC = () => {
     try {
       const { error } = await supabase
         .from('employees')
-        .update({ active: false })
+        .delete()
         .eq('id', selectedEmployee.id);
 
       if (error) throw error;
@@ -265,13 +281,13 @@ const EmployeeManagement: React.FC = () => {
         }
       });
 
-      toast.success('Funcionário desativado com sucesso!');
+      toast.success('Funcionário excluído com sucesso!');
       setShowDeleteModal(false);
       setSelectedEmployee(null);
       loadEmployees();
     } catch (error) {
-      console.error('Error deactivating employee:', error);
-      toast.error('Erro ao desativar funcionário');
+      console.error('Error deleting employee:', error);
+      toast.error('Erro ao excluir funcionário');
     } finally {
       setLoading(false);
     }
@@ -292,6 +308,11 @@ const EmployeeManagement: React.FC = () => {
     employee.cpf.includes(searchTerm)
   );
 
+  // Função para traduzir o role para português na exibição
+  const getLocalizedRole = (role: string) => {
+    return roleMappings[role] || role;
+  };
+
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
@@ -310,192 +331,155 @@ const EmployeeManagement: React.FC = () => {
                 </p>
               </div>
             </div>
-            {activeTab === 'employees' && (
-              <Button
-                variant="primary"
-                icon={<UserPlus size={16} />}
-                onClick={() => {
-                  resetForm();
-                  setSelectedEmployee(null);
-                  setShowModal(true);
-                }}
-              >
-                Novo Funcionário
-              </Button>
+            <Button
+              variant="primary"
+              icon={<UserPlus size={16} />}
+              onClick={() => {
+                resetForm();
+                setSelectedEmployee(null);
+                setShowModal(true);
+              }}
+            >
+              Novo Funcionário
+            </Button>
+          </div>
+
+          <div className="mb-6">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+              <input
+                type="text"
+                placeholder="Buscar por nome ou CPF..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 w-full rounded-lg border border-gray-300 py-2 px-4 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead className="bg-gray-50 dark:bg-gray-700">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Nome
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    CPF
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Função
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Acesso
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Ações
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                {filteredEmployees.map((employee) => (
+                  <tr key={employee.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900 dark:text-white">
+                        {employee.name}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-500 dark:text-gray-400">
+                        {employee.cpf}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
+                        {getLocalizedRole(employee.role)}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        employee.active
+                          ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
+                          : 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
+                      }`}>
+                        {employee.active ? 'Ativo' : 'Inativo'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        employee.has_auth
+                          ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
+                          : 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200'
+                      }`}>
+                        {employee.has_auth ? 'Configurado' : 'Pendente'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <div className="flex justify-end space-x-2">
+                        {!employee.has_auth && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            icon={<Key size={16} />}
+                            onClick={() => {
+                              setSelectedEmployee(employee);
+                              setFormData({ ...formData, password: '', confirmPassword: '' });
+                              setShowPasswordModal(true);
+                            }}
+                            className="text-green-600 dark:text-green-400"
+                          >
+                            Criar Senha
+                          </Button>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          icon={<Edit2 size={16} />}
+                          className="mr-2"
+                          onClick={() => {
+                            setSelectedEmployee(employee);
+                            setFormData({
+                              name: employee.name,
+                              cpf: employee.cpf,
+                              role: employee.role,
+                              password: '',
+                              confirmPassword: ''
+                            });
+                            setShowModal(true);
+                          }}
+                        >
+                          Editar
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          icon={<Trash2 size={16} />}
+                          className="text-red-600 dark:text-red-400"
+                          onClick={() => {
+                            setSelectedEmployee(employee);
+                            setShowDeleteModal(true);
+                          }}
+                        >
+                          Excluir
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {filteredEmployees.length === 0 && (
+              <div className="text-center py-8">
+                <p className="text-gray-500 dark:text-gray-400">
+                  Nenhum funcionário encontrado
+                </p>
+              </div>
             )}
           </div>
-
-          <div className="border-b border-gray-200 mb-6">
-            <nav className="-mb-px flex space-x-8">
-              <button
-                onClick={() => setActiveTab('employees')}
-                className={`
-                  whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm
-                  ${activeTab === 'employees'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}
-                `}
-              >
-                <Users size={16} className="inline-block mr-2" />
-                Funcionários
-              </button>
-              <button
-                onClick={() => setActiveTab('logs')}
-                className={`
-                  whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm
-                  ${activeTab === 'logs'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}
-                `}
-              >
-                <ClipboardList size={16} className="inline-block mr-2" />
-                Logs e Auditoria
-              </button>
-            </nav>
-          </div>
-
-          {activeTab === 'employees' ? (
-            <div>
-              <div className="mb-6">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-                  <input
-                    type="text"
-                    placeholder="Buscar por nome ou CPF..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 w-full rounded-lg border border-gray-300 py-2 px-4 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-              </div>
-
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                  <thead className="bg-gray-50 dark:bg-gray-700">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                        Nome
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                        CPF
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                        Função
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                        Status
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                        Acesso
-                      </th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                        Ações
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                    {filteredEmployees.map((employee) => (
-                      <tr key={employee.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900 dark:text-white">
-                            {employee.name}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-500 dark:text-gray-400">
-                            {employee.cpf}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
-                            {employee.role}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            employee.active
-                              ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
-                              : 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
-                          }`}>
-                            {employee.active ? 'Ativo' : 'Inativo'}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            employee.has_auth
-                              ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
-                              : 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200'
-                          }`}>
-                            {employee.has_auth ? 'Configurado' : 'Pendente'}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <div className="flex justify-end space-x-2">
-                            {!employee.has_auth && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                icon={<Key size={16} />}
-                                onClick={() => {
-                                  setSelectedEmployee(employee);
-                                  setFormData({ ...formData, password: '', confirmPassword: '' });
-                                  setShowPasswordModal(true);
-                                }}
-                                className="text-green-600 dark:text-green-400"
-                              >
-                                Criar Senha
-                              </Button>
-                            )}
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              icon={<Edit2 size={16} />}
-                              className="mr-2"
-                              onClick={() => {
-                                setSelectedEmployee(employee);
-                                setFormData({
-                                  name: employee.name,
-                                  cpf: employee.cpf,
-                                  role: employee.role,
-                                  password: '',
-                                  confirmPassword: ''
-                                });
-                                setShowModal(true);
-                              }}
-                            >
-                              Editar
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              icon={<Trash2 size={16} />}
-                              className="text-red-600 dark:text-red-400"
-                              onClick={() => {
-                                setSelectedEmployee(employee);
-                                setShowDeleteModal(true);
-                              }}
-                            >
-                              Excluir
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-
-                {filteredEmployees.length === 0 && (
-                  <div className="text-center py-8">
-                    <p className="text-gray-500 dark:text-gray-400">
-                      Nenhum funcionário encontrado
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-          ) : (
-            <AuditLogs />
-          )}
         </div>
       </div>
 
@@ -733,11 +717,11 @@ const EmployeeManagement: React.FC = () => {
                   </div>
                   <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
                     <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                      Desativar Funcionário
+                      Excluir Funcionário
                     </h3>
                     <div className="mt-2">
                       <p className="text-sm text-gray-500 dark:text-gray-400">
-                        Tem certeza que deseja desativar este funcionário? Esta ação pode ser revertida posteriormente.
+                        Tem certeza que deseja excluir este funcionário? Esta ação não pode ser desfeita.
                       </p>
                     </div>
                   </div>
@@ -750,7 +734,7 @@ const EmployeeManagement: React.FC = () => {
                   isLoading={loading}
                   className="w-full sm:w-auto sm:ml-3"
                 >
-                  Desativar
+                  Excluir
                 </Button>
                 <Button
                   variant="ghost"

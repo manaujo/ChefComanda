@@ -737,6 +737,9 @@ export const RestauranteProvider: React.FC<{ children: React.ReactNode }> = ({ c
         }
       }
 
+      // Refresh data to update UI
+      await refreshData();
+
       toast.success('Pagamento finalizado com sucesso!');
     } catch (error) {
       console.error('Error finalizing payment:', error);

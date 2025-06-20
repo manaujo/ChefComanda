@@ -64,6 +64,9 @@ const NovoMesaModal: React.FC<NovoMesaModalProps> = ({ isOpen, onClose }) => {
 
   if (!isOpen) return null;
 
+  // Filtrar apenas funcionários com função de garçom
+  const garcons = funcionarios.filter(func => func.role === 'waiter');
+
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
@@ -137,11 +140,13 @@ const NovoMesaModal: React.FC<NovoMesaModalProps> = ({ isOpen, onClose }) => {
                   className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                 >
                   <option value="">Selecione um garçom</option>
-                  {funcionarios
-                    .filter(func => func.role === 'waiter')
-                    .map(func => (
+                  {garcons.length > 0 ? (
+                    garcons.map(func => (
                       <option key={func.id} value={func.name}>{func.name}</option>
-                    ))}
+                    ))
+                  ) : (
+                    <option value="" disabled>Nenhum garçom cadastrado</option>
+                  )}
                 </select>
               </div>
               
