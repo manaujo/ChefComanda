@@ -159,7 +159,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       redirectByRole(role);
     } catch (error) {
       console.error('Error loading user data:', error);
-      toast.error('Erro ao carregar dados do usuário');
+      // Only show toast for non-network errors
+      if (!(error instanceof Error && error.message.includes('Failed to fetch'))) {
+        toast.error('Erro ao carregar dados do usuário');
+      }
       setState(prev => ({ ...prev, loading: false }));
     }
   };
@@ -335,23 +338,45 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         try {
           const { error } = await supabase.auth.signOut();
           if (error) {
-            // If the error is about missing session, treat it as successful logout
-            if (error.message.includes('Auth session missing') || 
-                error.message.includes('session_not_found') ||
-                error.message.includes('Session from session_id claim in JWT does not exist')) {
-              console.log('Session already expired, proceeding with local logout');
+            // Handle specific session-related errors gracefully
+            const sessionErrors = [
+              'Auth session missing',
+              'session_not_found',
+              'Session from session_id claim in JWT does not exist',
+              'Invalid session'
+            ];
+            
+            const isSessionError = sessionErrors.some(errMsg => 
+              error.message.includes(errMsg) || 
+              (error as any).code === 'session_not_found'
+            );
+            
+            if (isSessionError) {
+              console.log('Session already expired or invalid, proceeding with local logout');
             } else {
               throw error;
             }
           }
         } catch (error) {
-          // If it's a session-related error, proceed with local logout
-          if (error instanceof Error && 
-              (error.message.includes('Auth session missing') || 
-               error.message.includes('session_not_found') ||
-               error.message.includes('Session from session_id claim in JWT does not exist') ||
-               error.message.includes('Failed to fetch'))) {
-            console.log('Session error during logout, proceeding with local logout:', error.message);
+          // If it's a session-related error or network error, proceed with local logout
+          if (error instanceof Error) {
+            const sessionErrors = [
+              'Auth session missing',
+              'session_not_found',
+              'Session from session_id claim in JWT does not exist',
+              'Invalid session',
+              'Failed to fetch'
+            ];
+            
+            const isSessionOrNetworkError = sessionErrors.some(errMsg => 
+              error.message.includes(errMsg)
+            ) || (error as any).code === 'session_not_found';
+            
+            if (isSessionOrNetworkError) {
+              console.log('Session or network error during logout, proceeding with local logout:', error.message);
+            } else {
+              throw error;
+            }
           } else {
             throw error;
           }

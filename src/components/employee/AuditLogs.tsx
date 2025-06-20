@@ -13,15 +13,9 @@ interface AuditLog {
   details?: any;
   ip_address?: string;
   created_at: string;
-  user?: {
-    email: string;
-    user_metadata?: {
-      name?: string;
-    };
-  };
-  user_role?: {
-    role: string;
-  };
+  user_email?: string;
+  user_name?: string;
+  user_role?: string;
 }
 
 const AuditLogs: React.FC = () => {
@@ -46,22 +40,24 @@ const AuditLogs: React.FC = () => {
 
   const loadUsers = async () => {
     try {
+      // Get users from profiles table instead of trying to join with auth.users
       const { data, error } = await supabase
-        .from('user_roles')
-        .select('user_id, users!inner(email, user_metadata)')
-        .eq('role', 'admin');
+        .from('profiles')
+        .select('id, name');
 
       if (error) throw error;
 
-      const formattedUsers = data.map(item => ({
-        id: item.user_id,
-        name: item.users.user_metadata?.name || item.users.email
+      const formattedUsers = data.map(profile => ({
+        id: profile.id,
+        name: profile.name || 'Usuário sem nome'
       }));
 
       setUsers(formattedUsers);
     } catch (error) {
       console.error('Error loading users:', error);
-      toast.error('Erro ao carregar usuários');
+      if (!(error instanceof Error && error.message.includes('Failed to fetch'))) {
+        toast.error('Erro ao carregar usuários');
+      }
     }
   };
 
@@ -70,11 +66,7 @@ const AuditLogs: React.FC = () => {
     try {
       let query = supabase
         .from('audit_logs')
-        .select(`
-          *,
-          user:auth.users(email, user_metadata),
-          user_role:user_roles(role)
-        `, { count: 'exact' });
+        .select('*', { count: 'exact' });
 
       // Apply filters
       if (filters.actionType !== 'all') {
@@ -102,17 +94,53 @@ const AuditLogs: React.FC = () => {
       const from = (page - 1) * itemsPerPage;
       const to = from + itemsPerPage - 1;
       
-      const { data, count, error } = await query
+      const { data: logsData, count, error } = await query
         .order('created_at', { ascending: false })
         .range(from, to);
 
       if (error) throw error;
 
-      setLogs(data || []);
+      // Enrich logs with user data
+      const enrichedLogs = await Promise.all(
+        (logsData || []).map(async (log) => {
+          try {
+            // Get user profile data
+            const { data: profileData } = await supabase
+              .from('profiles')
+              .select('name')
+              .eq('id', log.user_id)
+              .single();
+
+            // Get user role data
+            const { data: roleData } = await supabase
+              .from('user_roles')
+              .select('role')
+              .eq('user_id', log.user_id)
+              .single();
+
+            return {
+              ...log,
+              user_name: profileData?.name || 'Usuário desconhecido',
+              user_role: roleData?.role || 'N/A'
+            };
+          } catch (enrichError) {
+            console.error('Error enriching log:', enrichError);
+            return {
+              ...log,
+              user_name: 'Usuário desconhecido',
+              user_role: 'N/A'
+            };
+          }
+        })
+      );
+
+      setLogs(enrichedLogs);
       setTotalPages(Math.ceil((count || 0) / itemsPerPage));
     } catch (error) {
       console.error('Error loading audit logs:', error);
-      toast.error('Erro ao carregar logs de auditoria');
+      if (!(error instanceof Error && error.message.includes('Failed to fetch'))) {
+        toast.error('Erro ao carregar logs de auditoria');
+      }
     } finally {
       setLoading(false);
     }
@@ -259,10 +287,10 @@ const AuditLogs: React.FC = () => {
                       <User size={16} className="mr-2" />
                       <div>
                         <div className="text-sm font-medium text-gray-900">
-                          {log.user?.user_metadata?.name || log.user?.email}
+                          {log.user_name}
                         </div>
                         <div className="text-sm text-gray-500">
-                          {log.user_role?.role}
+                          {log.user_role}
                         </div>
                       </div>
                     </div>
@@ -277,7 +305,7 @@ const AuditLogs: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-500">
                     {log.details && (
-                      <pre className="whitespace-pre-wrap font-mono text-xs">
+                      <pre className="whitespace-pre-wrap font-mono text-xs max-w-xs overflow-hidden">
                         {JSON.stringify(log.details, null, 2)}
                       </pre>
                     )}
@@ -285,10 +313,18 @@ const AuditLogs: React.FC = () => {
                 </tr>
               ))}
 
-              {logs.length === 0 && (
+              {logs.length === 0 && !loading && (
                 <tr>
                   <td colSpan={4} className="px-6 py-4 text-center text-gray-500">
                     Nenhum log encontrado
+                  </td>
+                </tr>
+              )}
+
+              {loading && (
+                <tr>
+                  <td colSpan={4} className="px-6 py-4 text-center text-gray-500">
+                    Carregando logs...
                   </td>
                 </tr>
               )}
@@ -331,19 +367,32 @@ const AuditLogs: React.FC = () => {
                   >
                     Anterior
                   </Button>
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                    <button
-                      key={p}
-                      onClick={() => setPage(p)}
-                      className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
-                        page === p
-                          ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
-                          : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
-                      }`}
-                    >
-                      {p}
-                    </button>
-                  ))}
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNum;
+                    if (totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (page <= 3) {
+                      pageNum = i + 1;
+                    } else if (page >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i;
+                    } else {
+                      pageNum = page - 2 + i;
+                    }
+                    
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => setPage(pageNum)}
+                        className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                          page === pageNum
+                            ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
+                            : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  })}
                   <Button
                     variant="ghost"
                     onClick={() => setPage(p => Math.min(totalPages, p + 1))}

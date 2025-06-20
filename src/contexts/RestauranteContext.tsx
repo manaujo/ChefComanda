@@ -19,6 +19,7 @@ interface RestauranteContextData {
   comandas: Comanda[];
   itensComanda: ComandaItemData[];
   loading: boolean;
+  connectionStatus: 'connected' | 'disconnected' | 'error';
   
   // Mesa actions
   adicionarMesa: (dados: { numero: number; capacidade: number; garcom?: string }) => Promise<void>;
@@ -68,6 +69,7 @@ export const RestauranteProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const [comandas, setComandasState] = useState<Comanda[]>([]);
   const [itensComanda, setItensComanda] = useState<ComandaItemData[]>([]);
   const [loading, setLoading] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'error'>('disconnected');
 
   useEffect(() => {
     if (user && !isEmployee) {
@@ -77,10 +79,39 @@ export const RestauranteProvider: React.FC<{ children: React.ReactNode }> = ({ c
     }
   }, [user, isEmployee, employeeData]);
 
+  const checkConnection = async () => {
+    try {
+      const { data, error } = await DatabaseService.supabase
+        .from('profiles')
+        .select('id')
+        .limit(1);
+      
+      if (error) throw error;
+      setConnectionStatus('connected');
+      return true;
+    } catch (error) {
+      console.error('Connection check failed:', error);
+      if (error instanceof Error && error.message.includes('Failed to fetch')) {
+        setConnectionStatus('disconnected');
+      } else {
+        setConnectionStatus('error');
+      }
+      return false;
+    }
+  };
+
   const loadRestauranteData = async () => {
     if (!user) return;
     
     setLoading(true);
+    
+    // Check connection first
+    const isConnected = await checkConnection();
+    if (!isConnected) {
+      setLoading(false);
+      return;
+    }
+
     try {
       // Load or create restaurant
       let restauranteData = await DatabaseService.getRestaurante(user.id);
@@ -96,20 +127,24 @@ export const RestauranteProvider: React.FC<{ children: React.ReactNode }> = ({ c
       
       setRestaurante(restauranteData);
       
-      // Load all restaurant data
-      await Promise.all([
+      // Load all restaurant data with error handling
+      await Promise.allSettled([
         loadMesas(restauranteData.id),
         loadProdutos(restauranteData.id),
         loadComandas(restauranteData.id)
       ]);
 
-      // Setup real-time subscriptions
-      setupRealtimeSubscriptions(restauranteData.id);
+      // Setup real-time subscriptions only if connected
+      if (connectionStatus === 'connected') {
+        setupRealtimeSubscriptions(restauranteData.id);
+      }
     } catch (error) {
       console.error('Error loading restaurant data:', error);
       if (error instanceof Error && error.message.includes('Failed to fetch')) {
+        setConnectionStatus('disconnected');
         toast.error('Erro de conexão. Verifique sua internet e tente novamente.');
       } else {
+        setConnectionStatus('error');
         toast.error('Erro ao carregar dados do restaurante');
       }
     } finally {
@@ -121,6 +156,14 @@ export const RestauranteProvider: React.FC<{ children: React.ReactNode }> = ({ c
     if (!employeeData?.company_id) return;
     
     setLoading(true);
+    
+    // Check connection first
+    const isConnected = await checkConnection();
+    if (!isConnected) {
+      setLoading(false);
+      return;
+    }
+
     try {
       // Get restaurant data from company
       const { data: restauranteData, error } = await DatabaseService.supabase
@@ -133,20 +176,24 @@ export const RestauranteProvider: React.FC<{ children: React.ReactNode }> = ({ c
       
       setRestaurante(restauranteData);
       
-      // Load restaurant data based on employee role
-      await Promise.all([
+      // Load restaurant data based on employee role with error handling
+      await Promise.allSettled([
         loadMesas(restauranteData.id),
         loadProdutos(restauranteData.id),
         loadComandas(restauranteData.id)
       ]);
 
-      // Setup real-time subscriptions
-      setupRealtimeSubscriptions(restauranteData.id);
+      // Setup real-time subscriptions only if connected
+      if (connectionStatus === 'connected') {
+        setupRealtimeSubscriptions(restauranteData.id);
+      }
     } catch (error) {
       console.error('Error loading employee restaurant data:', error);
       if (error instanceof Error && error.message.includes('Failed to fetch')) {
+        setConnectionStatus('disconnected');
         toast.error('Erro de conexão. Verifique sua internet e tente novamente.');
       } else {
+        setConnectionStatus('error');
         toast.error('Erro ao carregar dados do restaurante');
       }
     } finally {
@@ -155,62 +202,66 @@ export const RestauranteProvider: React.FC<{ children: React.ReactNode }> = ({ c
   };
 
   const setupRealtimeSubscriptions = (restauranteId: string) => {
-    // Subscribe to table changes
-    RealtimeService.subscribeToTableChanges(restauranteId, (payload) => {
-      if (payload.eventType === 'INSERT') {
-        setMesas(prev => [...prev, payload.new]);
-      } else if (payload.eventType === 'UPDATE') {
-        setMesas(prev => prev.map(mesa => 
-          mesa.id === payload.new.id ? payload.new : mesa
-        ));
-      } else if (payload.eventType === 'DELETE') {
-        setMesas(prev => prev.filter(mesa => mesa.id !== payload.old.id));
-      }
-    });
-
-    // Subscribe to order changes
-    RealtimeService.subscribeToOrderChanges(restauranteId, (payload) => {
-      if (payload.table === 'comandas') {
+    try {
+      // Subscribe to table changes
+      RealtimeService.subscribeToTableChanges(restauranteId, (payload) => {
         if (payload.eventType === 'INSERT') {
-          setComandasState(prev => [...prev, payload.new]);
-          // Send notification for new orders
-          if (payload.new.status === 'aberta') {
-            NotificationService.sendNewOrderNotification(
-              restauranteId,
-              payload.new.mesa_numero || 0,
-              []
-            );
-          }
+          setMesas(prev => [...prev, payload.new]);
         } else if (payload.eventType === 'UPDATE') {
-          setComandasState(prev => prev.map(comanda => 
-            comanda.id === payload.new.id ? payload.new : comanda
+          setMesas(prev => prev.map(mesa => 
+            mesa.id === payload.new.id ? payload.new : mesa
           ));
+        } else if (payload.eventType === 'DELETE') {
+          setMesas(prev => prev.filter(mesa => mesa.id !== payload.old.id));
         }
-      } else if (payload.table === 'itens_comanda') {
-        if (payload.eventType === 'INSERT') {
-          // Transform the new item to ComandaItemData format
-          const transformedItem = transformItemComandaToComandaItemData(payload.new);
-          if (transformedItem) {
-            setItensComanda(prev => [...prev, transformedItem]);
-          }
-        } else if (payload.eventType === 'UPDATE') {
-          const transformedItem = transformItemComandaToComandaItemData(payload.new);
-          if (transformedItem) {
-            setItensComanda(prev => prev.map(item => 
-              item.id === transformedItem.id ? transformedItem : item
+      });
+
+      // Subscribe to order changes
+      RealtimeService.subscribeToOrderChanges(restauranteId, (payload) => {
+        if (payload.table === 'comandas') {
+          if (payload.eventType === 'INSERT') {
+            setComandasState(prev => [...prev, payload.new]);
+            // Send notification for new orders
+            if (payload.new.status === 'aberta') {
+              NotificationService.sendNewOrderNotification(
+                restauranteId,
+                payload.new.mesa_numero || 0,
+                []
+              );
+            }
+          } else if (payload.eventType === 'UPDATE') {
+            setComandasState(prev => prev.map(comanda => 
+              comanda.id === payload.new.id ? payload.new : comanda
             ));
           }
-        } else if (payload.eventType === 'DELETE') {
-          setItensComanda(prev => prev.filter(item => item.id !== payload.old.id));
+        } else if (payload.table === 'itens_comanda') {
+          if (payload.eventType === 'INSERT') {
+            // Transform the new item to ComandaItemData format
+            const transformedItem = transformItemComandaToComandaItemData(payload.new);
+            if (transformedItem) {
+              setItensComanda(prev => [...prev, transformedItem]);
+            }
+          } else if (payload.eventType === 'UPDATE') {
+            const transformedItem = transformItemComandaToComandaItemData(payload.new);
+            if (transformedItem) {
+              setItensComanda(prev => prev.map(item => 
+                item.id === transformedItem.id ? transformedItem : item
+              ));
+            }
+          } else if (payload.eventType === 'DELETE') {
+            setItensComanda(prev => prev.filter(item => item.id !== payload.old.id));
+          }
         }
-      }
-    });
+      });
 
-    // Subscribe to inventory changes
-    RealtimeService.subscribeToInventoryChanges(restauranteId, (payload) => {
-      // Handle inventory updates and low stock alerts
-      console.log('Inventory change:', payload);
-    });
+      // Subscribe to inventory changes
+      RealtimeService.subscribeToInventoryChanges(restauranteId, (payload) => {
+        // Handle inventory updates and low stock alerts
+        console.log('Inventory change:', payload);
+      });
+    } catch (error) {
+      console.error('Error setting up realtime subscriptions:', error);
+    }
   };
 
   const transformItemComandaToComandaItemData = (item: ItemComanda): ComandaItemData | null => {
@@ -244,10 +295,7 @@ export const RestauranteProvider: React.FC<{ children: React.ReactNode }> = ({ c
       setMesas(data || []);
     } catch (error) {
       console.error('Error loading mesas:', error);
-      if (error instanceof Error && error.message.includes('Failed to fetch')) {
-        // Don't show toast for fetch errors as they're likely auth-related
-        console.log('Failed to fetch mesas, likely due to auth session issues');
-      }
+      // Don't show toast for network errors as they're handled at a higher level
     }
   };
 
@@ -257,10 +305,7 @@ export const RestauranteProvider: React.FC<{ children: React.ReactNode }> = ({ c
       setProdutos(data || []);
     } catch (error) {
       console.error('Error loading produtos:', error);
-      if (error instanceof Error && error.message.includes('Failed to fetch')) {
-        // Don't show toast for fetch errors as they're likely auth-related
-        console.log('Failed to fetch produtos, likely due to auth session issues');
-      }
+      // Don't show toast for network errors as they're handled at a higher level
     }
   };
 
@@ -297,16 +342,20 @@ export const RestauranteProvider: React.FC<{ children: React.ReactNode }> = ({ c
       setItensComanda(allItems);
     } catch (error) {
       console.error('Error loading comandas:', error);
-      if (error instanceof Error && error.message.includes('Failed to fetch')) {
-        // Don't show toast for fetch errors as they're likely auth-related
-        console.log('Failed to fetch comandas, likely due to auth session issues');
-      }
+      // Don't show toast for network errors as they're handled at a higher level
     }
   };
 
   const refreshData = async () => {
     if (restaurante) {
-      await Promise.all([
+      // Check connection before refreshing
+      const isConnected = await checkConnection();
+      if (!isConnected) {
+        toast.error('Sem conexão com o servidor');
+        return;
+      }
+
+      await Promise.allSettled([
         loadMesas(restaurante.id),
         loadProdutos(restaurante.id),
         loadComandas(restaurante.id)
@@ -329,7 +378,11 @@ export const RestauranteProvider: React.FC<{ children: React.ReactNode }> = ({ c
       toast.success('Mesa adicionada com sucesso!');
     } catch (error) {
       console.error('Error adding mesa:', error);
-      toast.error('Erro ao adicionar mesa');
+      if (error instanceof Error && error.message.includes('Failed to fetch')) {
+        toast.error('Erro de conexão. Verifique sua internet e tente novamente.');
+      } else {
+        toast.error('Erro ao adicionar mesa');
+      }
     }
   };
 
@@ -343,7 +396,11 @@ export const RestauranteProvider: React.FC<{ children: React.ReactNode }> = ({ c
       toast.success('Mesa ocupada com sucesso!');
     } catch (error) {
       console.error('Error occupying mesa:', error);
-      toast.error('Erro ao ocupar mesa');
+      if (error instanceof Error && error.message.includes('Failed to fetch')) {
+        toast.error('Erro de conexão. Verifique sua internet e tente novamente.');
+      } else {
+        toast.error('Erro ao ocupar mesa');
+      }
     }
   };
 
@@ -359,7 +416,11 @@ export const RestauranteProvider: React.FC<{ children: React.ReactNode }> = ({ c
       toast.success('Mesa liberada com sucesso!');
     } catch (error) {
       console.error('Error freeing mesa:', error);
-      toast.error('Erro ao liberar mesa');
+      if (error instanceof Error && error.message.includes('Failed to fetch')) {
+        toast.error('Erro de conexão. Verifique sua internet e tente novamente.');
+      } else {
+        toast.error('Erro ao liberar mesa');
+      }
     }
   };
 
@@ -369,7 +430,11 @@ export const RestauranteProvider: React.FC<{ children: React.ReactNode }> = ({ c
       toast.success('Mesa excluída com sucesso!');
     } catch (error) {
       console.error('Error deleting mesa:', error);
-      toast.error('Erro ao excluir mesa');
+      if (error instanceof Error && error.message.includes('Failed to fetch')) {
+        toast.error('Erro de conexão. Verifique sua internet e tente novamente.');
+      } else {
+        toast.error('Erro ao excluir mesa');
+      }
     }
   };
 
@@ -386,7 +451,11 @@ export const RestauranteProvider: React.FC<{ children: React.ReactNode }> = ({ c
       toast.success('Produto adicionado com sucesso!');
     } catch (error) {
       console.error('Error adding produto:', error);
-      toast.error('Erro ao adicionar produto');
+      if (error instanceof Error && error.message.includes('Failed to fetch')) {
+        toast.error('Erro de conexão. Verifique sua internet e tente novamente.');
+      } else {
+        toast.error('Erro ao adicionar produto');
+      }
     }
   };
 
@@ -396,7 +465,11 @@ export const RestauranteProvider: React.FC<{ children: React.ReactNode }> = ({ c
       toast.success('Produto atualizado com sucesso!');
     } catch (error) {
       console.error('Error updating produto:', error);
-      toast.error('Erro ao atualizar produto');
+      if (error instanceof Error && error.message.includes('Failed to fetch')) {
+        toast.error('Erro de conexão. Verifique sua internet e tente novamente.');
+      } else {
+        toast.error('Erro ao atualizar produto');
+      }
     }
   };
 
@@ -406,7 +479,11 @@ export const RestauranteProvider: React.FC<{ children: React.ReactNode }> = ({ c
       toast.success('Produto excluído com sucesso!');
     } catch (error) {
       console.error('Error deleting produto:', error);
-      toast.error('Erro ao excluir produto');
+      if (error instanceof Error && error.message.includes('Failed to fetch')) {
+        toast.error('Erro de conexão. Verifique sua internet e tente novamente.');
+      } else {
+        toast.error('Erro ao excluir produto');
+      }
     }
   };
 
@@ -420,7 +497,11 @@ export const RestauranteProvider: React.FC<{ children: React.ReactNode }> = ({ c
       return comanda.id;
     } catch (error) {
       console.error('Error creating comanda:', error);
-      toast.error('Erro ao criar comanda');
+      if (error instanceof Error && error.message.includes('Failed to fetch')) {
+        toast.error('Erro de conexão. Verifique sua internet e tente novamente.');
+      } else {
+        toast.error('Erro ao criar comanda');
+      }
       throw error;
     }
   };
@@ -448,7 +529,11 @@ export const RestauranteProvider: React.FC<{ children: React.ReactNode }> = ({ c
       toast.success('Item adicionado à comanda!');
     } catch (error) {
       console.error('Error adding item to comanda:', error);
-      toast.error('Erro ao adicionar item à comanda');
+      if (error instanceof Error && error.message.includes('Failed to fetch')) {
+        toast.error('Erro de conexão. Verifique sua internet e tente novamente.');
+      } else {
+        toast.error('Erro ao adicionar item à comanda');
+      }
     }
   };
 
@@ -458,7 +543,11 @@ export const RestauranteProvider: React.FC<{ children: React.ReactNode }> = ({ c
       toast.success(`Status atualizado para ${status}!`);
     } catch (error) {
       console.error('Error updating item status:', error);
-      toast.error('Erro ao atualizar status do item');
+      if (error instanceof Error && error.message.includes('Failed to fetch')) {
+        toast.error('Erro de conexão. Verifique sua internet e tente novamente.');
+      } else {
+        toast.error('Erro ao atualizar status do item');
+      }
     }
   };
 
@@ -468,7 +557,11 @@ export const RestauranteProvider: React.FC<{ children: React.ReactNode }> = ({ c
       toast.success('Item removido da comanda!');
     } catch (error) {
       console.error('Error removing item from comanda:', error);
-      toast.error('Erro ao remover item da comanda');
+      if (error instanceof Error && error.message.includes('Failed to fetch')) {
+        toast.error('Erro de conexão. Verifique sua internet e tente novamente.');
+      } else {
+        toast.error('Erro ao remover item da comanda');
+      }
     }
   };
 
@@ -504,7 +597,11 @@ export const RestauranteProvider: React.FC<{ children: React.ReactNode }> = ({ c
       toast.success('Comanda finalizada com sucesso!');
     } catch (error) {
       console.error('Error finalizing comanda:', error);
-      toast.error('Erro ao finalizar comanda');
+      if (error instanceof Error && error.message.includes('Failed to fetch')) {
+        toast.error('Erro de conexão. Verifique sua internet e tente novamente.');
+      } else {
+        toast.error('Erro ao finalizar comanda');
+      }
     }
   };
 
@@ -533,7 +630,11 @@ export const RestauranteProvider: React.FC<{ children: React.ReactNode }> = ({ c
       toast.success('Pagamento finalizado com sucesso!');
     } catch (error) {
       console.error('Error finalizing payment:', error);
-      toast.error('Erro ao finalizar pagamento');
+      if (error instanceof Error && error.message.includes('Failed to fetch')) {
+        toast.error('Erro de conexão. Verifique sua internet e tente novamente.');
+      } else {
+        toast.error('Erro ao finalizar pagamento');
+      }
     }
   };
 
@@ -545,6 +646,7 @@ export const RestauranteProvider: React.FC<{ children: React.ReactNode }> = ({ c
       comandas,
       itensComanda,
       loading,
+      connectionStatus,
       adicionarMesa,
       ocuparMesa,
       liberarMesa,
