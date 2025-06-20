@@ -254,7 +254,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } else {
         toast.error('Erro ao fazer login');
       }
-      throw error;
     }
   };
 
@@ -311,7 +310,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error) {
       console.error('Error signing in employee:', error);
       toast.error(error instanceof Error ? error.message : 'Erro ao fazer login');
-      throw error;
     }
   };
 
