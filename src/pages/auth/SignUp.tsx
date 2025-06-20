@@ -69,6 +69,7 @@ const SignUp: React.FC = () => {
         email: formData.email,
         password: formData.senha,
         name: formData.nome,
+        cpf: formData.cpf,
         role: 'admin'
       });
       navigate('/auth/verify-email');

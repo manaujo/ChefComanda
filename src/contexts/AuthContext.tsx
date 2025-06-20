@@ -26,6 +26,7 @@ interface SignUpData {
   password: string;
   role: 'admin' | 'kitchen' | 'waiter' | 'cashier' | 'stock';
   name: string;
+  cpf: string;
 }
 
 interface UpdateProfileData {
@@ -189,13 +190,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const signUp = async ({ email, password, role, name }: SignUpData) => {
+  const signUp = async ({ email, password, role, name, cpf }: SignUpData) => {
     try {
       const { data: { user }, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          data: { name },
+          data: { name, cpf },
         },
       });
 
@@ -205,7 +206,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Create user profile
       const { error: profileError } = await supabase
         .from('profiles')
-        .insert({ id: user.id, name });
+        .insert({ 
+          id: user.id, 
+          name,
+          cpf: user.user_metadata?.cpf || cpf
+        });
 
       if (profileError) throw profileError;
 
@@ -222,7 +227,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         action_type: 'create',
         entity_type: 'user',
         entity_id: user.id,
-        details: { name, role }
+        details: { name, role, cpf }
       });
 
       toast.success('Conta criada com sucesso! Verifique seu e-mail.');

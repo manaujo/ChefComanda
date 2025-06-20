@@ -320,6 +320,7 @@ export interface Database {
         Row: {
           id: string;
           name: string | null;
+          cpf: string | null;
           avatar_url: string | null;
           notifications_enabled: boolean;
           created_at: string;
@@ -328,6 +329,7 @@ export interface Database {
         Insert: {
           id: string;
           name?: string | null;
+          cpf?: string | null;
           avatar_url?: string | null;
           notifications_enabled?: boolean;
           created_at?: string;
@@ -336,6 +338,7 @@ export interface Database {
         Update: {
           id?: string;
           name?: string | null;
+          cpf?: string | null;
           avatar_url?: string | null;
           notifications_enabled?: boolean;
           created_at?: string;
