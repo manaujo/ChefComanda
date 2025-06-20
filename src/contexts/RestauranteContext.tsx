@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { DatabaseService } from '../services/database';
+import { supabase } from '../services/supabase';
 import RealtimeService from '../services/RealtimeService';
 import NotificationService from '../services/NotificationService';
 import { Database } from '../types/database';
@@ -81,7 +82,7 @@ export const RestauranteProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   const checkConnection = async () => {
     try {
-      const { data, error } = await DatabaseService.supabase
+      const { data, error } = await supabase
         .from('profiles')
         .select('id')
         .limit(1);
@@ -166,7 +167,7 @@ export const RestauranteProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
     try {
       // Get restaurant data from company
-      const { data: restauranteData, error } = await DatabaseService.supabase
+      const { data: restauranteData, error } = await supabase
         .from('restaurantes')
         .select('*')
         .eq('user_id', employeeData.company_id)
