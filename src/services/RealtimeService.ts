@@ -58,10 +58,7 @@ class RealtimeService {
           schema: 'public',
           table: 'comandas'
         },
-        (payload) => {
-          payload.table = 'comandas';
-          callback(payload);
-        }
+        callback
       )
       .on(
         'postgres_changes',
@@ -70,10 +67,7 @@ class RealtimeService {
           schema: 'public',
           table: 'itens_comanda'
         },
-        (payload) => {
-          payload.table = 'itens_comanda';
-          callback(payload);
-        }
+        callback
       )
       .subscribe();
 
@@ -106,12 +100,12 @@ class RealtimeService {
           // Check for low stock and send notifications
           if (payload.eventType === 'UPDATE' && payload.new) {
             const { nome, quantidade, quantidade_minima } = payload.new;
-            if (parseFloat(quantidade) <= parseFloat(quantidade_minima)) {
+            if (quantidade <= quantidade_minima) {
               NotificationService.sendStockAlert(
                 restaurantId,
                 nome,
-                parseFloat(quantidade),
-                parseFloat(quantidade_minima)
+                quantidade,
+                quantidade_minima
               );
             }
           }
@@ -150,33 +144,6 @@ class RealtimeService {
           event: '*',
           schema: 'public',
           table: 'movimentacoes_caixa'
-        },
-        callback
-      )
-      .subscribe();
-
-    this.channels.set(channelName, channel);
-
-    return () => this.unsubscribe(channelName);
-  }
-
-  // Subscribe to sales changes
-  subscribeToSalesChanges(restaurantId: string, callback: (payload: any) => void) {
-    const channelName = `vendas_${restaurantId}`;
-    
-    if (this.channels.has(channelName)) {
-      return () => this.unsubscribe(channelName);
-    }
-
-    const channel = supabase
-      .channel(channelName)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'vendas',
-          filter: `restaurante_id=eq.${restaurantId}`
         },
         callback
       )
