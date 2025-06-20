@@ -96,14 +96,9 @@ const Planos: React.FC = () => {
         .from('subscriptions')
         .select('*')
         .eq('user_id', user?.id)
-        .single();
+        .maybeSingle();
 
       if (error) {
-        if (error.code === 'PGRST116') {
-          // No subscription found - this is okay
-          setCurrentSubscription(null);
-          return;
-        }
         throw error;
       }
       setCurrentSubscription(data);
