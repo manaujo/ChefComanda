@@ -2,12 +2,12 @@ import React from 'react';
 import { formatarDinheiro } from '../../utils/formatters';
 
 interface ComandaItemProps {
-  item: ItemComanda;
+  item: ComandaItemData;
   onRemove: () => void;
 }
 
 const ComandaItem: React.FC<ComandaItemProps> = ({ item }) => {
-  const valorTotal = item.preco * item.quantidade;
+  const valorTotal = item.preco_unitario * item.quantidade;
   
   return (
     <div className="py-4 flex justify-between items-center">
@@ -34,7 +34,7 @@ const ComandaItem: React.FC<ComandaItemProps> = ({ item }) => {
       
       <div className="flex items-center">
         <div className="text-right">
-          <p className="text-gray-500 text-sm">{formatarDinheiro(item.preco)} un</p>
+          <p className="text-gray-500 text-sm">{formatarDinheiro(item.preco_unitario)} un</p>
           <p className="font-medium">{formatarDinheiro(valorTotal)}</p>
         </div>
       </div>

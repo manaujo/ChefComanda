@@ -45,17 +45,20 @@ type Pedido = {
   }[];
 };
 
-type ItemComanda = {
-  id: number;
-  mesaId: number;
-  produtoId: number;
-  nome: string;
-  categoria: string;
+type ComandaItemData = {
+  id: string;
+  mesa_id: string;
+  comanda_id: string;
+  produto_id: string;
   quantidade: number;
-  preco: number;
+  preco_unitario: number;
   observacao?: string;
   status: 'pendente' | 'preparando' | 'pronto' | 'entregue' | 'cancelado';
-  horario: string;
+  created_at: string;
+  // Flattened product details
+  nome: string;
+  categoria: string;
+  preco: number;
 };
 
 type AlertaEstoque = {

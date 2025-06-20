@@ -17,7 +17,7 @@ interface RestauranteContextData {
   mesas: Mesa[];
   produtos: Produto[];
   comandas: Comanda[];
-  itensComanda: ItemComanda[];
+  itensComanda: ComandaItemData[];
   loading: boolean;
   
   // Mesa actions
@@ -39,7 +39,7 @@ interface RestauranteContextData {
     quantidade: number;
     observacao?: string;
   }) => Promise<void>;
-  atualizarStatusItem: (itemId: string, status: ItemComanda['status']) => Promise<void>;
+  atualizarStatusItem: (itemId: string, status: ComandaItemData['status']) => Promise<void>;
   removerItemComanda: (itemId: string) => Promise<void>;
   finalizarComanda: (comandaId: string, formaPagamento: string) => Promise<void>;
   
@@ -66,7 +66,7 @@ export const RestauranteProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const [mesas, setMesas] = useState<Mesa[]>([]);
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [comandas, setComandasState] = useState<Comanda[]>([]);
-  const [itensComanda, setItensComanda] = useState<ItemComanda[]>([]);
+  const [itensComanda, setItensComanda] = useState<ComandaItemData[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -180,11 +180,18 @@ export const RestauranteProvider: React.FC<{ children: React.ReactNode }> = ({ c
         }
       } else if (payload.table === 'itens_comanda') {
         if (payload.eventType === 'INSERT') {
-          setItensComanda(prev => [...prev, payload.new]);
+          // Transform the new item to ComandaItemData format
+          const transformedItem = transformItemComandaToComandaItemData(payload.new);
+          if (transformedItem) {
+            setItensComanda(prev => [...prev, transformedItem]);
+          }
         } else if (payload.eventType === 'UPDATE') {
-          setItensComanda(prev => prev.map(item => 
-            item.id === payload.new.id ? payload.new : item
-          ));
+          const transformedItem = transformItemComandaToComandaItemData(payload.new);
+          if (transformedItem) {
+            setItensComanda(prev => prev.map(item => 
+              item.id === transformedItem.id ? transformedItem : item
+            ));
+          }
         } else if (payload.eventType === 'DELETE') {
           setItensComanda(prev => prev.filter(item => item.id !== payload.old.id));
         }
@@ -196,6 +203,31 @@ export const RestauranteProvider: React.FC<{ children: React.ReactNode }> = ({ c
       // Handle inventory updates and low stock alerts
       console.log('Inventory change:', payload);
     });
+  };
+
+  const transformItemComandaToComandaItemData = (item: ItemComanda): ComandaItemData | null => {
+    // Find the comanda to get mesa_id
+    const comanda = comandas.find(c => c.id === item.comanda_id);
+    if (!comanda) return null;
+
+    // Find the produto to get product details
+    const produto = produtos.find(p => p.id === item.produto_id);
+    if (!produto) return null;
+
+    return {
+      id: item.id,
+      mesa_id: comanda.mesa_id,
+      comanda_id: item.comanda_id,
+      produto_id: item.produto_id,
+      quantidade: item.quantidade,
+      preco_unitario: item.preco_unitario,
+      observacao: item.observacao || undefined,
+      status: item.status,
+      created_at: item.created_at || new Date().toISOString(),
+      nome: produto.nome,
+      categoria: produto.categoria,
+      preco: produto.preco
+    };
   };
 
   const loadMesas = async (restauranteId: string) => {
@@ -221,11 +253,29 @@ export const RestauranteProvider: React.FC<{ children: React.ReactNode }> = ({ c
       const data = await DatabaseService.getComandas(restauranteId);
       setComandasState(data || []);
       
-      // Extract items from comandas
-      const allItems: ItemComanda[] = [];
+      // Transform items to ComandaItemData format
+      const allItems: ComandaItemData[] = [];
       data?.forEach(comanda => {
         if (comanda.itens) {
-          allItems.push(...comanda.itens);
+          comanda.itens.forEach(item => {
+            const produto = produtos.find(p => p.id === item.produto_id);
+            if (produto) {
+              allItems.push({
+                id: item.id,
+                mesa_id: comanda.mesa_id,
+                comanda_id: item.comanda_id,
+                produto_id: item.produto_id,
+                quantidade: item.quantidade,
+                preco_unitario: item.preco_unitario,
+                observacao: item.observacao || undefined,
+                status: item.status,
+                created_at: item.created_at || new Date().toISOString(),
+                nome: produto.nome,
+                categoria: produto.categoria,
+                preco: produto.preco
+              });
+            }
+          });
         }
       });
       setItensComanda(allItems);
@@ -382,7 +432,7 @@ export const RestauranteProvider: React.FC<{ children: React.ReactNode }> = ({ c
     }
   };
 
-  const atualizarStatusItem = async (itemId: string, status: ItemComanda['status']) => {
+  const atualizarStatusItem = async (itemId: string, status: ComandaItemData['status']) => {
     try {
       await DatabaseService.updateItemComanda(itemId, { status });
       toast.success(`Status atualizado para ${status}!`);

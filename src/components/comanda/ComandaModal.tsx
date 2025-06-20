@@ -19,7 +19,7 @@ const ComandaModal: React.FC<ComandaModalProps> = ({ isOpen, onClose, mesaId }) 
   
   const mesa = mesas.find(m => m.id === mesaId);
   const comanda = comandas.find(c => c.mesa_id === mesaId && c.status === 'aberta');
-  const itens = itensComanda.filter(item => comanda && item.comanda_id === comanda.id);
+  const itens = itensComanda.filter(item => item.mesa_id === mesaId);
   
   const valorTotal = itens.reduce((total, item) => {
     return total + (item.preco_unitario * item.quantidade);
@@ -85,12 +85,12 @@ const ComandaModal: React.FC<ComandaModalProps> = ({ isOpen, onClose, mesaId }) 
                       <div className="flex items-start">
                         <span className="font-medium">{item.quantidade}x</span>
                         <div className="ml-3">
-                          <h4 className="font-medium">{item.produto?.nome || 'Produto não encontrado'}</h4>
+                          <h4 className="font-medium">{item.nome}</h4>
                           {item.observacao && (
                             <p className="text-sm text-gray-500">{item.observacao}</p>
                           )}
                           <div className="mt-1 text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded inline-block">
-                            {item.produto?.categoria || 'Categoria'}
+                            {item.categoria}
                           </div>
                           <div className={`mt-1 text-xs px-2 py-1 rounded inline-block ml-2 ${
                             item.status === 'pendente' ? 'bg-yellow-100 text-yellow-800' :

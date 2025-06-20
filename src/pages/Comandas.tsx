@@ -11,9 +11,9 @@ const Comandas: React.FC = () => {
   const navigate = useNavigate();
   const { mesas, itensComanda, atualizarStatusItem } = useRestaurante();
   const [filtroStatus, setFiltroStatus] = useState<string>('todos');
-  const [filtroMesa, setFiltroMesa] = useState<number | null>(null);
+  const [filtroMesa, setFiltroMesa] = useState<string | null>(null);
   const [comandaModalAberta, setComandaModalAberta] = useState(false);
-  const [mesaSelecionada, setMesaSelecionada] = useState<number | null>(null);
+  const [mesaSelecionada, setMesaSelecionada] = useState<string | null>(null);
   const [showBackToTop, setShowBackToTop] = useState(false);
   
   useEffect(() => {
@@ -31,24 +31,27 @@ const Comandas: React.FC = () => {
   
   // Agrupar itens por mesa
   const itensPorMesa = itensComanda.reduce((acc, item) => {
-    const mesaKey = item.mesaId;
+    const mesaKey = item.mesa_id;
     if (!acc[mesaKey]) {
       acc[mesaKey] = [];
     }
     acc[mesaKey].push(item);
     return acc;
-  }, {} as Record<number, ItemComanda[]>);
+  }, {} as Record<string, ComandaItemData[]>);
   
   // Aplicar filtros
   const mesasFiltradasIds = Object.keys(itensPorMesa)
-    .map(Number)
     .filter(mesaId => {
       if (filtroMesa !== null && mesaId !== filtroMesa) {
         return false;
       }
       
       if (filtroStatus !== 'todos') {
-        const temItemComStatus = itensPorMesa[mesaId].some(
+        const itensDoMesa = itensPorMesa[mesaId];
+        if (!itensDoMesa || !Array.isArray(itensDoMesa)) {
+          return false;
+        }
+        const temItemComStatus = itensDoMesa.some(
           item => item.status === filtroStatus
         );
         return temItemComStatus;
@@ -72,11 +75,11 @@ const Comandas: React.FC = () => {
     }
   };
 
-  const handleStatusUpdate = (itemId: number, novoStatus: 'preparando' | 'pronto') => {
+  const handleStatusUpdate = (itemId: string, novoStatus: 'preparando' | 'pronto') => {
     atualizarStatusItem(itemId, novoStatus);
   };
 
-  const abrirComandaModal = (mesaId: number) => {
+  const abrirComandaModal = (mesaId: string) => {
     setMesaSelecionada(mesaId);
     setComandaModalAberta(true);
   };
@@ -190,13 +193,15 @@ const Comandas: React.FC = () => {
               const mesa = mesas.find(m => m.id === mesaId);
               if (!mesa) return null;
               
-              const itens = itensPorMesa[mesaId];
+              const itens = itensPorMesa[mesaId] || [];
+              if (itens.length === 0) return null;
+              
               const horarioMaisRecente = new Date(
-                Math.max(...itens.map(item => new Date(item.horario).getTime()))
+                Math.max(...itens.map(item => new Date(item.created_at).getTime()))
               );
               
               const valorTotal = itens.reduce(
-                (total, item) => total + item.preco * item.quantidade,
+                (total, item) => total + item.preco_unitario * item.quantidade,
                 0
               );
 
