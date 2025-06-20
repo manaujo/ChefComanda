@@ -314,6 +314,23 @@ export const RestauranteProvider: React.FC<{ children: React.ReactNode }> = ({ c
         // Handle inventory updates and low stock alerts
         console.log('Inventory change:', payload);
       });
+
+      // Subscribe to sales changes
+      const salesChannel = supabase
+        .channel('vendas_changes')
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'vendas',
+          filter: `restaurante_id=eq.${restauranteId}`
+        }, (payload) => {
+          // When a new sale is registered, refresh dashboard data
+          if (payload.eventType === 'INSERT') {
+            // Refresh data to update UI with new sales
+            refreshData();
+          }
+        })
+        .subscribe();
     } catch (error) {
       console.error('Error setting up realtime subscriptions:', error);
     }
@@ -701,8 +718,14 @@ export const RestauranteProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
       // Update mesa status
       await DatabaseService.updateMesa(comanda.mesa_id, {
-        status: 'aguardando'
+        status: 'livre',
+        horario_abertura: null,
+        garcom: null,
+        valor_total: 0
       });
+
+      // Refresh data to update UI
+      await refreshData();
 
       toast.success('Comanda finalizada com sucesso!');
     } catch (error) {
@@ -717,6 +740,14 @@ export const RestauranteProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   const finalizarPagamento = async (mesaId: string, formaPagamento: string) => {
     try {
+      // Find the open comanda for this mesa
+      const comanda = comandas.find(c => c.mesa_id === mesaId && c.status === 'aberta');
+      
+      if (comanda) {
+        // Finalize the comanda first
+        await finalizarComanda(comanda.id, formaPagamento);
+      }
+      
       // Update mesa status to free
       await DatabaseService.updateMesa(mesaId, {
         status: 'livre',
