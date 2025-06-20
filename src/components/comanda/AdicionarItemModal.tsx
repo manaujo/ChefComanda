@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Search } from 'lucide-react';
 import Button from '../ui/Button';
 import { useRestaurante } from '../../contexts/RestauranteContext';
 import { formatarDinheiro } from '../../utils/formatters';
 import { Database } from '../../types/database';
+import toast from 'react-hot-toast';
 
 type Produto = Database['public']['Tables']['produtos']['Row'];
 
@@ -19,8 +20,15 @@ const AdicionarItemModal: React.FC<AdicionarItemModalProps> = ({ isOpen, onClose
   const [produtoSelecionado, setProdutoSelecionado] = useState<Produto | null>(null);
   const [quantidade, setQuantidade] = useState(1);
   const [observacao, setObservacao] = useState('');
+  const [loading, setLoading] = useState(false);
   
-  const { produtos, comandas, criarComanda, adicionarItemComanda } = useRestaurante();
+  const { produtos, comandas, criarComanda, adicionarItemComanda, refreshData } = useRestaurante();
+  
+  useEffect(() => {
+    if (isOpen) {
+      refreshData();
+    }
+  }, [isOpen]);
   
   // Get unique categories
   const categorias = Array.from(new Set(produtos.map(produto => produto.categoria)));
@@ -36,6 +44,7 @@ const AdicionarItemModal: React.FC<AdicionarItemModalProps> = ({ isOpen, onClose
     if (!produtoSelecionado) return;
     
     try {
+      setLoading(true);
       // Find or create comanda for this mesa
       let comandaId = comandas.find(c => c.mesa_id === mesaId && c.status === 'aberta')?.id;
       
@@ -54,9 +63,17 @@ const AdicionarItemModal: React.FC<AdicionarItemModalProps> = ({ isOpen, onClose
       setProdutoSelecionado(null);
       setQuantidade(1);
       setObservacao('');
+      
+      // Refresh data to update UI
+      await refreshData();
+      
+      toast.success('Item adicionado com sucesso!');
       onClose();
     } catch (error) {
       console.error('Error adding item:', error);
+      toast.error('Erro ao adicionar item');
+    } finally {
+      setLoading(false);
     }
   };
   
@@ -188,6 +205,7 @@ const AdicionarItemModal: React.FC<AdicionarItemModalProps> = ({ isOpen, onClose
                   <Button
                     variant="primary"
                     onClick={handleSubmit}
+                    isLoading={loading}
                   >
                     Adicionar Item
                   </Button>

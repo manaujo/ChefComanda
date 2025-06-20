@@ -112,6 +112,9 @@ const CaixaRegistradora: React.FC = () => {
       setShowAbrirModal(false);
       setValorInicial('');
       toast.success('Caixa aberto com sucesso!');
+      
+      // Salvar no localStorage para persistir entre navegações
+      localStorage.setItem('caixaAtual', JSON.stringify(caixa));
     } catch (error) {
       console.error('Error opening cash register:', error);
       toast.error(error instanceof Error ? error.message : 'Erro ao abrir caixa');
@@ -195,6 +198,9 @@ const CaixaRegistradora: React.FC = () => {
       setValorFinal('');
       setObservacao('');
       toast.success('Caixa fechado com sucesso!');
+      
+      // Remover do localStorage
+      localStorage.removeItem('caixaAtual');
     } catch (error) {
       console.error('Error closing cash register:', error);
       toast.error(error instanceof Error ? error.message : 'Erro ao fechar caixa');
@@ -202,6 +208,45 @@ const CaixaRegistradora: React.FC = () => {
       setLoading(false);
     }
   };
+
+  // Verificar se há um caixa salvo no localStorage ao carregar a página
+  useEffect(() => {
+    const savedCaixa = localStorage.getItem('caixaAtual');
+    if (savedCaixa) {
+      try {
+        const parsedCaixa = JSON.parse(savedCaixa);
+        // Verificar se o caixa ainda está aberto no banco de dados
+        const checkCaixa = async () => {
+          const { data } = await supabase
+            .from('caixas')
+            .select('*')
+            .eq('id', parsedCaixa.id)
+            .eq('status', 'aberto')
+            .maybeSingle();
+          
+          if (data) {
+            setCaixaAtual(data);
+            // Carregar movimentações
+            const { data: movs } = await supabase
+              .from('movimentacoes_caixa')
+              .select('*')
+              .eq('caixa_id', data.id)
+              .order('created_at', { ascending: true });
+            
+            setMovimentacoes(movs || []);
+          } else {
+            // Caixa não está mais aberto, remover do localStorage
+            localStorage.removeItem('caixaAtual');
+          }
+        };
+        
+        checkCaixa();
+      } catch (error) {
+        console.error('Error parsing saved cash register:', error);
+        localStorage.removeItem('caixaAtual');
+      }
+    }
+  }, []);
 
   const calcularTotais = () => {
     const totais = {
@@ -218,7 +263,7 @@ const CaixaRegistradora: React.FC = () => {
       }
     });
 
-    totais.saldo = (caixaAtual?.valorInicial || 0) + totais.entradas - totais.saidas;
+    totais.saldo = (caixaAtual?.valor_inicial || 0) + totais.entradas - totais.saidas;
     return totais;
   };
 
@@ -315,7 +360,7 @@ const CaixaRegistradora: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-500">Valor Inicial</p>
-                  <p className="text-2xl font-bold mt-1">{formatarDinheiro(caixaAtual.valorInicial)}</p>
+                  <p className="text-2xl font-bold mt-1">{formatarDinheiro(caixaAtual.valor_inicial)}</p>
                   <p className="text-sm text-gray-500 mt-1">Abertura do caixa</p>
                 </div>
                 <div className="p-3 bg-purple-100 rounded-full">
@@ -382,11 +427,11 @@ const CaixaRegistradora: React.FC = () => {
                         )}
                         <div className="flex items-center mt-2 space-x-2">
                           <span className="text-xs bg-white px-2 py-1 rounded">
-                            {new Date(mov.createdAt).toLocaleTimeString()}
+                            {new Date(mov.created_at).toLocaleTimeString()}
                           </span>
-                          {mov.formaPagamento && (
+                          {mov.forma_pagamento && (
                             <span className="text-xs bg-white px-2 py-1 rounded capitalize">
-                              {mov.formaPagamento}
+                              {mov.forma_pagamento}
                             </span>
                           )}
                         </div>

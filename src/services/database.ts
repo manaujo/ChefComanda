@@ -4,6 +4,8 @@ import { Database } from '../types/database';
 type Tables = Database['public']['Tables'];
 
 export class DatabaseService {
+  static supabase = supabase;
+
   // Mesas
   static async getMesas(restauranteId: string) {
     const { data, error } = await supabase

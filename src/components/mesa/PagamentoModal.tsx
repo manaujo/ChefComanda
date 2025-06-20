@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, CreditCard, QrCode, Wallet, Percent, Music, Receipt } from 'lucide-react';
 import Button from '../ui/Button';
 import { useRestaurante } from '../../contexts/RestauranteContext';
@@ -20,21 +20,35 @@ const PagamentoModal: React.FC<PagamentoModalProps> = ({ isOpen, onClose, mesa }
     tipo: 'percentual' as 'percentual' | 'valor',
     valor: 0
   });
+  const [itensComanda, setItensComanda] = useState<ComandaItemData[]>([]);
   
-  const { finalizarPagamento } = useRestaurante();
+  const { finalizarPagamento, itensComanda: allItensComanda } = useRestaurante();
 
-  const valorTaxaServico = taxaServico ? mesa.valorTotal * 0.1 : 0;
+  useEffect(() => {
+    if (isOpen && mesa) {
+      // Filtrar itens da comanda para esta mesa
+      const itensMesa = allItensComanda.filter(item => item.mesa_id === mesa.id);
+      setItensComanda(itensMesa);
+    }
+  }, [isOpen, mesa, allItensComanda]);
+
+  // Calcular valor total dos itens
+  const valorTotalItens = itensComanda.reduce((total, item) => {
+    return total + (item.preco_unitario * item.quantidade);
+  }, 0);
+
+  const valorTaxaServico = taxaServico ? valorTotalItens * 0.1 : 0;
   const valorCouvert = couvertArtistico ? 15 * (mesa.capacidade || 1) : 0;
   
   const calcularDesconto = () => {
     if (desconto.tipo === 'percentual') {
-      return (mesa.valorTotal + valorTaxaServico + valorCouvert) * (desconto.valor / 100);
+      return (valorTotalItens + valorTaxaServico + valorCouvert) * (desconto.valor / 100);
     }
     return desconto.valor;
   };
 
   const valorDesconto = calcularDesconto();
-  const valorTotal = mesa.valorTotal + valorTaxaServico + valorCouvert - valorDesconto;
+  const valorTotal = valorTotalItens + valorTaxaServico + valorCouvert - valorDesconto;
 
   const handlePagamento = async () => {
     if (!formaPagamento) {
@@ -79,13 +93,36 @@ const PagamentoModal: React.FC<PagamentoModalProps> = ({ isOpen, onClose, mesa }
           </div>
 
           <div className="px-6 py-4">
+            {/* Itens da comanda */}
+            <div className="mb-4">
+              <h3 className="text-sm font-medium text-gray-700 mb-2">
+                Itens consumidos
+              </h3>
+              <div className="max-h-40 overflow-y-auto border rounded-md p-2">
+                {itensComanda.length > 0 ? (
+                  <div className="space-y-2">
+                    {itensComanda.map(item => (
+                      <div key={item.id} className="flex justify-between text-sm">
+                        <span>{item.quantidade}x {item.nome}</span>
+                        <span>{formatarDinheiro(item.preco_unitario * item.quantidade)}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-500 text-center py-2">
+                    Nenhum item na comanda
+                  </p>
+                )}
+              </div>
+            </div>
+
             {/* Subtotal */}
             <div className="mb-6">
               <h3 className="text-sm font-medium text-gray-700 mb-2">
                 Consumo
               </h3>
               <p className="text-2xl font-bold text-gray-900">
-                {formatarDinheiro(mesa.valorTotal)}
+                {formatarDinheiro(valorTotalItens)}
               </p>
             </div>
 

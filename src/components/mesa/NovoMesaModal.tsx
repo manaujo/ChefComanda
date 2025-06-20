@@ -15,13 +15,7 @@ const NovoMesaModal: React.FC<NovoMesaModalProps> = ({ isOpen, onClose }) => {
   const [error, setError] = useState<string>('');
   const [loading, setLoading] = useState(false);
   
-  const { adicionarMesa } = useRestaurante();
-
-  const garcons = [
-    { id: 1, nome: 'Carlos Silva' },
-    { id: 2, nome: 'Ana Santos' },
-    { id: 3, nome: 'Pedro Oliveira' }
-  ];
+  const { adicionarMesa, funcionarios } = useRestaurante();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -143,9 +137,11 @@ const NovoMesaModal: React.FC<NovoMesaModalProps> = ({ isOpen, onClose }) => {
                   className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                 >
                   <option value="">Selecione um garçom</option>
-                  {garcons.map(g => (
-                    <option key={g.id} value={g.nome}>{g.nome}</option>
-                  ))}
+                  {funcionarios
+                    .filter(func => func.role === 'waiter')
+                    .map(func => (
+                      <option key={func.id} value={func.name}>{func.name}</option>
+                    ))}
                 </select>
               </div>
               

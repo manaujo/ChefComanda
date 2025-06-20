@@ -21,15 +21,6 @@ interface Insumo {
   ativo: boolean;
 }
 
-interface MovimentacaoEstoque {
-  id: string;
-  insumo_id: string;
-  tipo: 'entrada' | 'saida';
-  quantidade: number;
-  motivo: string;
-  observacao?: string;
-}
-
 const Estoque: React.FC = () => {
   const [insumos, setInsumos] = useState<Insumo[]>([]);
   const [loading, setLoading] = useState(false);
@@ -100,18 +91,50 @@ const Estoque: React.FC = () => {
         throw new Error('Restaurante não encontrado');
       }
 
-      const { error } = await supabase
-        .from('insumos')
-        .insert({
-          ...formData,
-          restaurante_id: restaurante.id
-        });
+      if (selectedInsumo) {
+        // Update existing insumo
+        const { data, error } = await supabase
+          .from('insumos')
+          .update({
+            nome: formData.nome,
+            descricao: formData.descricao,
+            unidade_medida: formData.unidade_medida,
+            quantidade: formData.quantidade,
+            quantidade_minima: formData.quantidade_minima,
+            data_validade: formData.data_validade || null,
+            preco_unitario: formData.preco_unitario || null,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', selectedInsumo.id)
+          .select()
+          .single();
 
-      if (error) throw error;
+        if (error) throw error;
 
-      toast.success('Insumo cadastrado com sucesso!');
+        // Update local state
+        setInsumos(prev => prev.map(insumo => 
+          insumo.id === selectedInsumo.id ? data : insumo
+        ));
+        toast.success('Insumo atualizado com sucesso!');
+      } else {
+        // Create new insumo
+        const { data, error } = await supabase
+          .from('insumos')
+          .insert({
+            ...formData,
+            restaurante_id: restaurante.id
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        // Update local state
+        setInsumos(prev => [...prev, data]);
+        toast.success('Insumo cadastrado com sucesso!');
+      }
+
       setShowModal(false);
-      loadInsumos();
       resetForm();
     } catch (error) {
       console.error('Error saving insumo:', error);
@@ -134,6 +157,20 @@ const Estoque: React.FC = () => {
     setSelectedInsumo(null);
   };
 
+  const handleEdit = (insumo: Insumo) => {
+    setSelectedInsumo(insumo);
+    setFormData({
+      nome: insumo.nome,
+      descricao: insumo.descricao || '',
+      unidade_medida: insumo.unidade_medida,
+      quantidade: insumo.quantidade,
+      quantidade_minima: insumo.quantidade_minima,
+      data_validade: insumo.data_validade || '',
+      preco_unitario: insumo.preco_unitario || 0
+    });
+    setShowModal(true);
+  };
+
   const handleDelete = async () => {
     if (!selectedInsumo) return;
     
@@ -146,10 +183,14 @@ const Estoque: React.FC = () => {
 
       if (error) throw error;
 
+      // Update local state
+      setInsumos(prev => prev.map(insumo => 
+        insumo.id === selectedInsumo.id ? { ...insumo, ativo: false } : insumo
+      ));
+
       toast.success('Insumo desativado com sucesso!');
       setShowDeleteModal(false);
       setSelectedInsumo(null);
-      loadInsumos();
     } catch (error) {
       console.error('Error deactivating insumo:', error);
       toast.error('Erro ao desativar insumo');
@@ -297,19 +338,7 @@ const Estoque: React.FC = () => {
                   </div>
                   <div className="flex items-center space-x-2">
                     <button
-                      onClick={() => {
-                        setSelectedInsumo(insumo);
-                        setFormData({
-                          nome: insumo.nome,
-                          descricao: insumo.descricao || '',
-                          unidade_medida: insumo.unidade_medida,
-                          quantidade: insumo.quantidade,
-                          quantidade_minima: insumo.quantidade_minima,
-                          data_validade: insumo.data_validade || '',
-                          preco_unitario: insumo.preco_unitario || 0
-                        });
-                        setShowModal(true);
-                      }}
+                      onClick={() => handleEdit(insumo)}
                       className="p-1 text-gray-400 hover:text-gray-600"
                     >
                       <Edit2 size={18} />
@@ -455,19 +484,7 @@ const Estoque: React.FC = () => {
                       variant="ghost"
                       size="sm"
                       icon={<Edit2 size={16} />}
-                      onClick={() => {
-                        setSelectedInsumo(insumo);
-                        setFormData({
-                          nome: insumo.nome,
-                          descricao: insumo.descricao || '',
-                          unidade_medida: insumo.unidade_medida,
-                          quantidade: insumo.quantidade,
-                          quantidade_minima: insumo.quantidade_minima,
-                          data_validade: insumo.data_validade || '',
-                          preco_unitario: insumo.preco_unitario || 0
-                        });
-                        setShowModal(true);
-                      }}
+                      onClick={() => handleEdit(insumo)}
                       className="mr-2"
                     >
                       Editar
@@ -553,6 +570,23 @@ const Estoque: React.FC = () => {
 
                       <div>
                         <label className="block text-sm font-medium text-gray-700">
+                          Quantidade Atual
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={formData.quantidade}
+                          onChange={(e) => setFormData({ ...formData, quantidade: parseFloat(e.target.value) })}
+                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">
                           Quantidade Mínima
                         </label>
                         <input
@@ -564,6 +598,25 @@ const Estoque: React.FC = () => {
                           className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500"
                           required
                         />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">
+                          Preço Unitário
+                        </label>
+                        <div className="mt-1 relative rounded-md shadow-sm">
+                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <span className="text-gray-500 sm:text-sm">R$</span>
+                          </div>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={formData.preco_unitario}
+                            onChange={(e) => setFormData({ ...formData, preco_unitario: parseFloat(e.target.value) })}
+                            className="pl-8 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                          />
+                        </div>
                       </div>
                     </div>
 
@@ -577,25 +630,6 @@ const Estoque: React.FC = () => {
                         onChange={(e) => setFormData({ ...formData, data_validade: e.target.value })}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500"
                       />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">
-                        Preço Unitário
-                      </label>
-                      <div className="mt-1 relative rounded-md shadow-sm">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <span className="text-gray-500 sm:text-sm">R$</span>
-                        </div>
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={formData.preco_unitario}
-                          onChange={(e) => setFormData({ ...formData, preco_unitario: parseFloat(e.target.value) })}
-                          className="pl-8 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                        />
-                      </div>
                     </div>
                   </div>
                 </div>

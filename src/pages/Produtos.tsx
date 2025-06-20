@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Plus, Search, Filter, Edit2, Trash2, Upload, Download, 
   FileSpreadsheet, AlertTriangle, MoreVertical, X
@@ -6,6 +6,7 @@ import {
 import Button from '../components/ui/Button';
 import { useRestaurante } from '../contexts/RestauranteContext';
 import { formatarDinheiro } from '../utils/formatters';
+import { supabase } from '../services/supabase';
 import toast from 'react-hot-toast';
 
 interface ProdutoFormData {
@@ -14,11 +15,13 @@ interface ProdutoFormData {
   preco: number;
   descricao?: string;
   disponivel: boolean;
-  imagem?: File;
+  estoque: number;
+  estoque_minimo: number;
+  imagem_url?: string;
 }
 
 const Produtos: React.FC = () => {
-  const { produtos, adicionarProduto, atualizarProduto, excluirProduto } = useRestaurante();
+  const { produtos, adicionarProduto, atualizarProduto, excluirProduto, refreshData } = useRestaurante();
   
   // Derive categories from products
   const categorias = Array.from(new Set(produtos?.map(produto => produto.categoria) || []));
@@ -35,11 +38,18 @@ const Produtos: React.FC = () => {
     categoria: '',
     preco: 0,
     descricao: '',
-    disponivel: true
+    disponivel: true,
+    estoque: 0,
+    estoque_minimo: 5
   });
   const [loading, setLoading] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [page, setPage] = useState(1);
   const itemsPerPage = 12;
+
+  useEffect(() => {
+    refreshData();
+  }, []);
 
   // Filtrar produtos
   const produtosFiltrados = (produtos || [])
@@ -59,9 +69,32 @@ const Produtos: React.FC = () => {
     page * itemsPerPage
   );
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setFormData(prev => ({ ...prev, imagem: e.target.files![0] }));
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || !e.target.files[0]) return;
+
+    const file = e.target.files[0];
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Date.now()}.${fileExt}`;
+
+    try {
+      setUploadingImage(true);
+      const { error: uploadError, data } = await supabase.storage
+        .from('produtos')
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('produtos')
+        .getPublicUrl(fileName);
+
+      setFormData(prev => ({ ...prev, imagem_url: publicUrl }));
+      toast.success('Imagem enviada com sucesso!');
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      toast.error('Erro ao enviar imagem');
+    } finally {
+      setUploadingImage(false);
     }
   };
 
@@ -81,7 +114,10 @@ const Produtos: React.FC = () => {
           categoria: formData.categoria,
           preco: formData.preco,
           descricao: formData.descricao || '',
-          disponivel: formData.disponivel
+          disponivel: formData.disponivel,
+          estoque: formData.estoque,
+          estoque_minimo: formData.estoque_minimo,
+          imagem_url: formData.imagem_url
         });
       } else {
         await adicionarProduto({
@@ -89,12 +125,16 @@ const Produtos: React.FC = () => {
           categoria: formData.categoria,
           preco: formData.preco,
           descricao: formData.descricao || '',
-          disponivel: formData.disponivel
+          disponivel: formData.disponivel,
+          estoque: formData.estoque,
+          estoque_minimo: formData.estoque_minimo,
+          imagem_url: formData.imagem_url
         });
       }
       
       setShowModal(false);
       resetForm();
+      await refreshData();
     } catch (error) {
       console.error('Erro ao salvar produto:', error);
       toast.error(error instanceof Error ? error.message : 'Erro ao salvar produto');
@@ -111,6 +151,7 @@ const Produtos: React.FC = () => {
       await excluirProduto(produtoSelecionado.id);
       setShowDeleteModal(false);
       setProdutoSelecionado(null);
+      await refreshData();
     } catch (error) {
       console.error('Erro ao excluir produto:', error);
       toast.error('Erro ao excluir produto');
@@ -125,7 +166,9 @@ const Produtos: React.FC = () => {
       categoria: '',
       preco: 0,
       descricao: '',
-      disponivel: true
+      disponivel: true,
+      estoque: 0,
+      estoque_minimo: 5
     });
     setProdutoSelecionado(null);
   };
@@ -137,7 +180,10 @@ const Produtos: React.FC = () => {
       categoria: produto.categoria,
       preco: produto.preco,
       descricao: produto.descricao || '',
-      disponivel: produto.disponivel
+      disponivel: produto.disponivel,
+      estoque: produto.estoque || 0,
+      estoque_minimo: produto.estoque_minimo || 5,
+      imagem_url: produto.imagem_url
     });
     setShowModal(true);
   };
@@ -274,9 +320,7 @@ const Produtos: React.FC = () => {
                   <div className="relative">
                     <button
                       className="text-gray-400 hover:text-gray-600"
-                      onClick={() => {
-                        setProdutoSelecionado(produto);
-                      }}
+                      onClick={() => editProduto(produto)}
                     >
                       <MoreVertical size={20} />
                     </button>
@@ -295,6 +339,17 @@ const Produtos: React.FC = () => {
                     <span className="text-sm text-gray-500">Preço</span>
                     <span className="font-medium text-gray-900">
                       {formatarDinheiro(produto.preco)}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-500">Estoque</span>
+                    <span className={`text-sm ${
+                      produto.estoque <= produto.estoque_minimo
+                        ? 'text-red-600 font-medium'
+                        : 'text-gray-900'
+                    }`}>
+                      {produto.estoque} unidades
                     </span>
                   </div>
 
@@ -351,6 +406,9 @@ const Produtos: React.FC = () => {
                   Preço
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Estoque
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
                 </th>
                 <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -378,6 +436,20 @@ const Produtos: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {formatarDinheiro(produto.preco)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className={`text-sm ${
+                      produto.estoque <= produto.estoque_minimo
+                        ? 'text-red-600 font-medium'
+                        : 'text-gray-900'
+                    }`}>
+                      {produto.estoque} unidades
+                      {produto.estoque <= produto.estoque_minimo && (
+                        <span className="ml-2 text-xs bg-red-100 text-red-800 px-2 py-0.5 rounded-full">
+                          Baixo
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
@@ -511,24 +583,52 @@ const Produtos: React.FC = () => {
                   </select>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Preço
-                  </label>
-                  <div className="mt-1 relative rounded-md shadow-sm">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <span className="text-gray-500 sm:text-sm">R$</span>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Preço
+                    </label>
+                    <div className="mt-1 relative rounded-md shadow-sm">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <span className="text-gray-500 sm:text-sm">R$</span>
+                      </div>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={formData.preco}
+                        onChange={(e) => setFormData({ ...formData, preco: parseFloat(e.target.value) })}
+                        className="pl-8 block w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                        required
+                      />
                     </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Estoque Atual
+                    </label>
                     <input
                       type="number"
-                      step="0.01"
                       min="0"
-                      value={formData.preco}
-                      onChange={(e) => setFormData({ ...formData, preco: parseFloat(e.target.value) })}
-                      className="pl-8 block w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                      required
+                      value={formData.estoque}
+                      onChange={(e) => setFormData({ ...formData, estoque: parseInt(e.target.value) })}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                     />
                   </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Estoque Mínimo
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={formData.estoque_minimo}
+                    onChange={(e) => setFormData({ ...formData, estoque_minimo: parseInt(e.target.value) })}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  />
                 </div>
 
                 <div>
@@ -547,30 +647,54 @@ const Produtos: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700">
                     Imagem do Produto
                   </label>
-                  <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
-                    <div className="space-y-1 text-center">
-                      <Upload size={24} className="mx-auto text-gray-400" />
-                      <div className="flex text-sm text-gray-600">
-                        <label
-                          htmlFor="file-upload"
-                          className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500"
+                  <div className="mt-1 flex items-center">
+                    {formData.imagem_url ? (
+                      <div className="relative">
+                        <img
+                          src={formData.imagem_url}
+                          alt="Preview"
+                          className="h-32 w-32 object-cover rounded-lg"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setFormData({ ...formData, imagem_url: '' })}
+                          className="absolute -top-2 -right-2 p-1 bg-red-100 rounded-full text-red-600 hover:bg-red-200"
                         >
-                          <span>Fazer upload de arquivo</span>
-                          <input
-                            id="file-upload"
-                            name="file-upload"
-                            type="file"
-                            className="sr-only"
-                            accept="image/*"
-                            onChange={handleFileChange}
-                          />
-                        </label>
-                        <p className="pl-1">ou arraste e solte</p>
+                          <X size={16} />
+                        </button>
                       </div>
-                      <p className="text-xs text-gray-500">
-                        PNG, JPG até 5MB
-                      </p>
-                    </div>
+                    ) : (
+                      <div className="flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+                        <div className="space-y-1 text-center">
+                          <Upload className="mx-auto h-12 w-12 text-gray-400" />
+                          <div className="flex text-sm text-gray-600">
+                            <label
+                              htmlFor="file-upload"
+                              className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500"
+                            >
+                              <span>Fazer upload</span>
+                              <input
+                                id="file-upload"
+                                name="file-upload"
+                                type="file"
+                                className="sr-only"
+                                accept="image/*"
+                                onChange={handleFileChange}
+                                disabled={uploadingImage}
+                              />
+                            </label>
+                          </div>
+                          <p className="text-xs text-gray-500">
+                            PNG, JPG até 5MB
+                          </p>
+                          {uploadingImage && (
+                            <p className="text-xs text-blue-500">
+                              Enviando imagem...
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
