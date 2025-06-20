@@ -23,7 +23,7 @@ class NotificationService {
   // Send notification to specific user
   async sendNotification(notification: NotificationData) {
     try {
-      const { error } = await supabase
+      const { data: insertedNotification, error } = await supabase
         .from('notifications')
         .insert({
           user_id: notification.userId,
@@ -31,15 +31,22 @@ class NotificationService {
           message: notification.message,
           type: notification.type,
           data: notification.data
-        });
+        })
+        .select()
+        .single();
 
       if (error) throw error;
 
-      // Send real-time notification via Supabase realtime
+      // Send real-time notification via Supabase realtime with the complete notification data
       await supabase.channel('notifications').send({
         type: 'broadcast',
         event: 'new_notification',
-        payload: notification
+        payload: {
+          ...notification,
+          id: insertedNotification.id,
+          read: false,
+          created_at: insertedNotification.created_at
+        }
       });
 
       return true;
@@ -78,6 +85,12 @@ class NotificationService {
 
   // Mark notification as read
   async markAsRead(notificationId: string) {
+    // Add defensive check for undefined notification ID
+    if (!notificationId || notificationId === 'undefined') {
+      console.error('Invalid notification ID:', notificationId);
+      return false;
+    }
+
     try {
       const { error } = await supabase
         .from('notifications')

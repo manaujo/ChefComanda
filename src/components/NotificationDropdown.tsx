@@ -68,6 +68,12 @@ const NotificationDropdown: React.FC = () => {
   };
 
   const markAsRead = async (notificationId: string) => {
+    // Add defensive check for undefined notification ID
+    if (!notificationId || notificationId === 'undefined') {
+      console.error('Cannot mark notification as read: invalid ID');
+      return;
+    }
+
     try {
       await NotificationService.markAsRead(notificationId);
       setNotifications(prev =>
@@ -82,7 +88,7 @@ const NotificationDropdown: React.FC = () => {
 
   const markAllAsRead = async () => {
     try {
-      const unreadNotifications = notifications.filter(n => !n.read);
+      const unreadNotifications = notifications.filter(n => !n.read && n.id && n.id !== 'undefined');
       await Promise.all(
         unreadNotifications.map(n => NotificationService.markAsRead(n.id))
       );
@@ -177,7 +183,7 @@ const NotificationDropdown: React.FC = () => {
                     className={`p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer ${
                       !notification.read ? 'bg-blue-50 dark:bg-blue-900/20' : ''
                     }`}
-                    onClick={() => !notification.read && markAsRead(notification.id)}
+                    onClick={() => !notification.read && notification.id && markAsRead(notification.id)}
                   >
                     <div className="flex items-start space-x-3">
                       <div className="text-lg">

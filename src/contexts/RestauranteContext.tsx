@@ -838,22 +838,27 @@ export const RestauranteProvider: React.FC<{ children: React.ReactNode }> = ({ c
     if (!restaurante) return [];
 
     try {
+      // Fetch all insumos for the restaurant and filter client-side
       const { data, error } = await supabase
         .from('insumos')
         .select('*')
         .eq('restaurante_id', restaurante.id)
-        .filter('quantidade', 'lte', 'quantidade_minima')
         .eq('ativo', true);
 
       if (error) throw error;
 
-      return data.map(insumo => ({
+      // Filter for low stock items client-side
+      const lowStockItems = data.filter(insumo => 
+        parseFloat(insumo.quantidade) <= parseFloat(insumo.quantidade_minima)
+      );
+
+      return lowStockItems.map(insumo => ({
         id: insumo.id,
         produto: insumo.nome,
-        quantidadeAtual: insumo.quantidade,
-        quantidadeMinima: insumo.quantidade_minima,
+        quantidadeAtual: parseFloat(insumo.quantidade),
+        quantidadeMinima: parseFloat(insumo.quantidade_minima),
         unidade: insumo.unidade_medida,
-        status: insumo.quantidade === 0 ? 'crítico' : 'baixo',
+        status: parseFloat(insumo.quantidade) === 0 ? 'crítico' : 'baixo',
         ultimaAtualizacao: insumo.updated_at
       }));
     } catch (error) {
