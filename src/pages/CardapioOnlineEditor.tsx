@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Plus, Search, Filter, Edit2, Trash2, Upload, Eye,
-  EyeOff, ArrowUp, ArrowDown, AlertTriangle
+  EyeOff, ArrowUp, ArrowDown, AlertTriangle, X
 } from 'lucide-react';
 import Button from '../components/ui/Button';
 import { useRestaurante } from '../contexts/RestauranteContext';
