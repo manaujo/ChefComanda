@@ -839,7 +839,7 @@ export const RestauranteProvider: React.FC<{ children: React.ReactNode }> = ({ c
         .from('insumos')
         .select('*')
         .eq('restaurante_id', restaurante.id)
-        .lte('quantidade', supabase.raw('quantidade_minima'))
+        .filter('quantidade', 'lte', 'quantidade_minima')
         .eq('ativo', true);
 
       if (error) throw error;

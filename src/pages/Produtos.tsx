@@ -78,6 +78,17 @@ const Produtos: React.FC = () => {
 
     try {
       setUploadingImage(true);
+      
+      // Check if bucket exists first
+      const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
+      if (bucketsError) throw bucketsError;
+      
+      const bucketExists = buckets.some(bucket => bucket.name === 'produtos');
+      if (!bucketExists) {
+        toast.error('Bucket de armazenamento não configurado. Entre em contato com o suporte.');
+        return;
+      }
+
       const { error: uploadError, data } = await supabase.storage
         .from('produtos')
         .upload(fileName, file);
@@ -92,7 +103,11 @@ const Produtos: React.FC = () => {
       toast.success('Imagem enviada com sucesso!');
     } catch (error) {
       console.error('Error uploading image:', error);
-      toast.error('Erro ao enviar imagem');
+      if (error instanceof Error && error.message.includes('Bucket not found')) {
+        toast.error('Armazenamento de imagens não configurado. Entre em contato com o suporte.');
+      } else {
+        toast.error('Erro ao enviar imagem');
+      }
     } finally {
       setUploadingImage(false);
     }
