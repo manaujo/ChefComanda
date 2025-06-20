@@ -327,15 +327,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             .eq('token', token);
           localStorage.removeItem('employee_token');
         }
-      } else {
-        // Check if there's an active session before attempting to sign out
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (session) {
-          // Only attempt to sign out if there's an active session
-          const { error } = await supabase.auth.signOut();
-          if (error) throw error;
-        }
+      } else if (state.user) {
+        // Only attempt to sign out if there's an active Supabase user session
+        const { error } = await supabase.auth.signOut();
+        if (error) throw error;
       }
       
       setState({ 
