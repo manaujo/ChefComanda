@@ -313,24 +313,29 @@ export const RestauranteProvider: React.FC<{ children: React.ReactNode }> = ({ c
       RealtimeService.subscribeToInventoryChanges(restauranteId, (payload) => {
         // Handle inventory updates and low stock alerts
         console.log('Inventory change:', payload);
+        
+        // Check for low stock and send notifications
+        if (payload.eventType === 'UPDATE' && payload.new) {
+          const { nome, quantidade, quantidade_minima } = payload.new;
+          if (parseFloat(quantidade) <= parseFloat(quantidade_minima)) {
+            NotificationService.sendStockAlert(
+              restauranteId,
+              nome,
+              parseFloat(quantidade),
+              parseFloat(quantidade_minima)
+            );
+          }
+        }
       });
 
       // Subscribe to sales changes
-      const salesChannel = supabase
-        .channel('vendas_changes')
-        .on('postgres_changes', {
-          event: '*',
-          schema: 'public',
-          table: 'vendas',
-          filter: `restaurante_id=eq.${restauranteId}`
-        }, (payload) => {
-          // When a new sale is registered, refresh dashboard data
-          if (payload.eventType === 'INSERT') {
-            // Refresh data to update UI with new sales
-            refreshData();
-          }
-        })
-        .subscribe();
+      RealtimeService.subscribeToSalesChanges(restauranteId, (payload) => {
+        // When a new sale is registered, refresh dashboard data
+        if (payload.eventType === 'INSERT') {
+          // Refresh data to update UI with new sales
+          refreshData();
+        }
+      });
     } catch (error) {
       console.error('Error setting up realtime subscriptions:', error);
     }
@@ -716,7 +721,7 @@ export const RestauranteProvider: React.FC<{ children: React.ReactNode }> = ({ c
         usuario_id: user.id
       });
 
-      // Update mesa status
+      // Update mesa status to free and remove all data
       await DatabaseService.updateMesa(comanda.mesa_id, {
         status: 'livre',
         horario_abertura: null,

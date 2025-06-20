@@ -78,7 +78,7 @@ const Relatorios: React.FC = () => {
       setLoading(false);
     }
   };
-
+  
   const loadVendasPorGarcom = async () => {
     try {
       // Filtrar apenas funcionários com função de garçom

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   CreditCard, DollarSign, QrCode, Search, ShoppingBag, 
-  Plus, Trash2, ArrowRight, Receipt, Clock, Users
+  Plus, Trash2, Receipt, Clock, Users
 } from 'lucide-react';
 import Button from '../components/ui/Button';
 import { useRestaurante } from '../contexts/RestauranteContext';
