@@ -90,6 +90,8 @@ const CompanyProfile: React.FC = () => {
           user_id: user.id,
           ...companyData,
           updated_at: new Date()
+        }, {
+          onConflict: 'user_id'
         });
 
       if (error) throw error;
