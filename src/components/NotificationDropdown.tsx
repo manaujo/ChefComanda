@@ -89,9 +89,13 @@ const NotificationDropdown: React.FC = () => {
   const markAllAsRead = async () => {
     try {
       const unreadNotifications = notifications.filter(n => !n.read && n.id && n.id !== 'undefined');
+      
+      if (unreadNotifications.length === 0) return;
+      
       await Promise.all(
         unreadNotifications.map(n => NotificationService.markAsRead(n.id))
       );
+      
       setNotifications(prev =>
         prev.map(notif => ({ ...notif, read: true }))
       );

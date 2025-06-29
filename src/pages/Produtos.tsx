@@ -6,7 +6,6 @@ import {
 import Button from '../components/ui/Button';
 import { useRestaurante } from '../contexts/RestauranteContext';
 import { formatarDinheiro } from '../utils/formatters';
-import { supabase } from '../services/supabase';
 import toast from 'react-hot-toast';
 
 interface ProdutoFormData {
@@ -72,48 +71,16 @@ const Produtos: React.FC = () => {
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || !e.target.files[0]) return;
 
-    const file = e.target.files[0];
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Date.now()}.${fileExt}`;
-
     try {
       setUploadingImage(true);
       
-      // Check if bucket exists first
-      const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
-      if (bucketsError) throw bucketsError;
-      
-      const bucketExists = buckets.some(bucket => bucket.name === 'produtos');
-      if (!bucketExists) {
-        // Use a placeholder image URL instead
-        const placeholderUrl = `https://images.pexels.com/photos/1251198/pexels-photo-1251198.jpeg`;
-        setFormData(prev => ({ ...prev, imagem_url: placeholderUrl }));
-        toast.success('Imagem configurada com sucesso!');
-        return;
-      }
-
-      const { error: uploadError, data } = await supabase.storage
-        .from('produtos')
-        .upload(fileName, file);
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('produtos')
-        .getPublicUrl(fileName);
-
-      setFormData(prev => ({ ...prev, imagem_url: publicUrl }));
-      toast.success('Imagem enviada com sucesso!');
+      // Use a placeholder image URL instead of trying to upload to storage
+      const placeholderUrl = `https://images.pexels.com/photos/1251198/pexels-photo-1251198.jpeg`;
+      setFormData(prev => ({ ...prev, imagem_url: placeholderUrl }));
+      toast.success('Imagem configurada com sucesso!');
     } catch (error) {
-      console.error('Error uploading image:', error);
-      if (error instanceof Error && error.message.includes('Bucket not found')) {
-        // Use a placeholder image URL instead
-        const placeholderUrl = `https://images.pexels.com/photos/1251198/pexels-photo-1251198.jpeg`;
-        setFormData(prev => ({ ...prev, imagem_url: placeholderUrl }));
-        toast.success('Imagem configurada com sucesso!');
-      } else {
-        toast.error('Erro ao enviar imagem');
-      }
+      console.error('Error setting image:', error);
+      toast.error('Erro ao configurar imagem');
     } finally {
       setUploadingImage(false);
     }

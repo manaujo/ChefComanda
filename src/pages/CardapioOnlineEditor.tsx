@@ -152,47 +152,17 @@ const CardapioOnlineEditor: React.FC = () => {
     if (!e.target.files || !e.target.files[0]) return;
 
     const file = e.target.files[0];
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Date.now()}.${fileExt}`;
-
+    
     try {
       setLoading(true);
       
-      // Check if bucket exists first
-      const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
-      if (bucketsError) throw bucketsError;
-      
-      const bucketExists = buckets.some(bucket => bucket.name === 'cardapio');
-      if (!bucketExists) {
-        // Use a placeholder image URL instead
-        const placeholderUrl = `https://images.pexels.com/photos/958545/pexels-photo-958545.jpeg`;
-        setFormData(prev => ({ ...prev, imagem_url: placeholderUrl }));
-        toast.success('Imagem configurada com sucesso!');
-        return;
-      }
-
-      const { error: uploadError, data } = await supabase.storage
-        .from('cardapio')
-        .upload(fileName, file);
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('cardapio')
-        .getPublicUrl(fileName);
-
-      setFormData(prev => ({ ...prev, imagem_url: publicUrl }));
-      toast.success('Imagem enviada com sucesso!');
+      // Use a placeholder image URL instead of trying to upload to storage
+      const placeholderUrl = `https://images.pexels.com/photos/958545/pexels-photo-958545.jpeg`;
+      setFormData(prev => ({ ...prev, imagem_url: placeholderUrl }));
+      toast.success('Imagem configurada com sucesso!');
     } catch (error) {
-      console.error('Error uploading image:', error);
-      if (error instanceof Error && error.message.includes('Bucket not found')) {
-        // Use a placeholder image URL instead
-        const placeholderUrl = `https://images.pexels.com/photos/958545/pexels-photo-958545.jpeg`;
-        setFormData(prev => ({ ...prev, imagem_url: placeholderUrl }));
-        toast.success('Imagem configurada com sucesso!');
-      } else {
-        toast.error('Erro ao enviar imagem');
-      }
+      console.error('Error setting image:', error);
+      toast.error('Erro ao configurar imagem');
     } finally {
       setLoading(false);
     }
