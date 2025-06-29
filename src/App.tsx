@@ -4,6 +4,7 @@ import { Toaster } from 'react-hot-toast';
 import Planos from './pages/profile/Planos';
 import UserProfile from './pages/profile/UserProfile';
 import Settings from './pages/profile/Settings';
+import Success from './pages/checkout/Success';
 
 // Layouts
 import DashboardLayout from './layouts/DashboardLayout';
@@ -52,6 +53,9 @@ function App() {
               <Route path="/login" element={<AuthLayout><Login /></AuthLayout>} />
               <Route path="/signup" element={<AuthLayout><SignUp /></AuthLayout>} />
               <Route path="/auth/verify-email" element={<AuthLayout><VerifyEmail /></AuthLayout>} />
+              
+              {/* Checkout Routes */}
+              <Route path="/checkout/success" element={<Success />} />
               
               {/* Public Menu Route */}
               <Route path="/cardapio/:restauranteId" element={<CardapioPublico />} />

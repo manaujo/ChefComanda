@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   User, Settings, Building2, Users, LogOut,
-  ChevronDown, Moon, Sun, CreditCard
+  ChevronDown, Moon, Sun, CreditCard, Crown
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -10,7 +10,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 const ProfileDropdown: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const { user, userRole, displayName, signOut } = useAuth();
+  const { user, userRole, displayName, signOut, currentPlan } = useAuth();
   const { theme, toggleTheme } = useTheme();
 
   useEffect(() => {
@@ -36,9 +36,22 @@ const ProfileDropdown: React.FC = () => {
           <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
             {displayName || 'Usuário'}
           </p>
-          <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">
-            {userRole}
-          </p>
+          <div className="flex items-center space-x-1">
+            <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">
+              {userRole}
+            </p>
+            {currentPlan && (
+              <>
+                <span className="text-xs text-gray-400">•</span>
+                <div className="flex items-center">
+                  <Crown size={10} className="text-yellow-500 mr-1" />
+                  <span className="text-xs text-yellow-600 dark:text-yellow-400">
+                    {currentPlan}
+                  </span>
+                </div>
+              </>
+            )}
+          </div>
         </div>
         <ChevronDown size={16} className="text-gray-500 dark:text-gray-400" />
       </button>
@@ -74,14 +87,17 @@ const ProfileDropdown: React.FC = () => {
             <Settings size={16} className="mr-3" />
             Configurações
           </Link>
-          <Link
-            to="/profile/planos"
-            className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-            onClick={() => setIsOpen(false)}
-          >
-            <CreditCard size={16} className="mr-3" />
-            Planos e Assinaturas
-          </Link>
+          
+          {userRole === 'admin' && (
+            <Link
+              to="/profile/planos"
+              className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+              onClick={() => setIsOpen(false)}
+            >
+              <CreditCard size={16} className="mr-3" />
+              Planos e Assinaturas
+            </Link>
+          )}
 
           <button
             onClick={toggleTheme}

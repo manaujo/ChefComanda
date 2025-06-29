@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { createClient, SupabaseClient, User } from '@supabase/supabase-js';
 import { DatabaseService } from '../services/database';
+import StripeService from '../services/StripeService';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 
@@ -11,6 +12,7 @@ interface AuthState {
   displayName: string | null;
   isEmployee: boolean;
   employeeData: any | null;
+  currentPlan: string | null;
 }
 
 interface AuthContextData extends AuthState {
@@ -19,6 +21,7 @@ interface AuthContextData extends AuthState {
   signInEmployee: (cpf: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   updateProfile: (data: UpdateProfileData) => Promise<void>;
+  refreshSubscription: () => Promise<void>;
 }
 
 interface SignUpData {
@@ -49,6 +52,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     displayName: null,
     isEmployee: false,
     employeeData: null,
+    currentPlan: null,
   });
   
   const navigate = useNavigate();
@@ -74,7 +78,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           loading: false, 
           displayName: null,
           isEmployee: false,
-          employeeData: null
+          employeeData: null,
+          currentPlan: null,
         });
       }
     });
@@ -115,6 +120,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             displayName: data.employees.name,
             isEmployee: true,
             employeeData: data.employees,
+            currentPlan: null,
           });
           return;
         }
@@ -146,6 +152,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (roleError && roleError.code !== 'PGRST116') throw roleError;
       if (profileError && profileError.code !== 'PGRST116') throw profileError;
 
+      // Load subscription data
+      let currentPlan = null;
+      try {
+        const subscription = await StripeService.getUserSubscription();
+        if (subscription?.price_id) {
+          const { getProductByPriceId } = await import('../stripe-config');
+          const product = getProductByPriceId(subscription.price_id);
+          currentPlan = product?.name || null;
+        }
+      } catch (error) {
+        console.error('Error loading subscription:', error);
+      }
+
       setState({
         user,
         userRole: roleData?.role || 'admin',
@@ -153,6 +172,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         displayName: profileData?.name || user.user_metadata?.name || null,
         isEmployee: false,
         employeeData: null,
+        currentPlan,
       });
 
       // Redirect based on user role
@@ -187,6 +207,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         break;
       default:
         navigate('/');
+    }
+  };
+
+  const refreshSubscription = async () => {
+    if (!state.user) return;
+    
+    try {
+      const subscription = await StripeService.getUserSubscription();
+      let currentPlan = null;
+      
+      if (subscription?.price_id) {
+        const { getProductByPriceId } = await import('../stripe-config');
+        const product = getProductByPriceId(subscription.price_id);
+        currentPlan = product?.name || null;
+      }
+      
+      setState(prev => ({ ...prev, currentPlan }));
+    } catch (error) {
+      console.error('Error refreshing subscription:', error);
     }
   };
 
@@ -362,6 +401,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         displayName: employee.name,
         isEmployee: true,
         employeeData: employee,
+        currentPlan: null,
       });
 
       toast.success('Login realizado com sucesso!');
@@ -445,7 +485,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loading: false, 
         displayName: null,
         isEmployee: false,
-        employeeData: null
+        employeeData: null,
+        currentPlan: null,
       });
       toast.success('Logout realizado com sucesso!');
       navigate('/login');
@@ -523,6 +564,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         signInEmployee,
         signOut,
         updateProfile,
+        refreshSubscription,
       }}
     >
       {children}
