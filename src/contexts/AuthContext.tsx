@@ -386,7 +386,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } else if (error.message.includes('Database error')) {
           throw new Error('Erro interno do servidor. Tente novamente em alguns minutos ou contate o suporte.');
         } else {
-          throw new Error('Erro ao fazer login');
+          throw error;
         }
       }
 
