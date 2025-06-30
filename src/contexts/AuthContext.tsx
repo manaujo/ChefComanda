@@ -378,13 +378,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (error) {
         console.error('Supabase signin error:', error);
         
-        // Map Supabase errors to user-friendly messages and throw consistently
-        if (error.message.includes('Database error granting user')) {
-          throw new Error('Erro interno do servidor. Tente novamente em alguns minutos ou contate o suporte.');
-        } else if (error.message.includes('Invalid login credentials')) {
+        // Handle specific error cases
+        if (error.message.includes('Invalid login credentials')) {
           throw new Error('E-mail ou senha incorretos');
         } else if (error.message.includes('Failed to fetch')) {
           throw new Error('Erro de conexão. Verifique sua internet e tente novamente.');
+        } else if (error.message.includes('Database error')) {
+          throw new Error('Erro interno do servidor. Tente novamente em alguns minutos ou contate o suporte.');
         } else {
           throw new Error('Erro ao fazer login');
         }
@@ -394,7 +394,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       toast.success('Login realizado com sucesso!');
     } catch (error) {
       console.error('Error signing in:', error);
-      // Re-throw the error so Login.tsx can handle it consistently
       throw error;
     }
   };
