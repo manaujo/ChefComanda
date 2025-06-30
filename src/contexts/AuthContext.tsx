@@ -17,7 +17,7 @@ interface AuthState {
 
 interface AuthContextData extends AuthState {
   signUp: (data: SignUpData) => Promise<void>;
-  signIn: (email: string, password: string) => Promise<void>;
+  signIn: (identifier: string, password: string) => Promise<void>;
   signInEmployee: (cpf: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   updateProfile: (data: UpdateProfileData) => Promise<void>;
@@ -333,8 +333,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (identifier: string, password: string) => {
     try {
+      let email = identifier;
+      
+      // Check if identifier is a CPF (contains dots and dash)
+      const isCPF = /^\d{3}\.\d{3}\.\d{3}-\d{2}$/.test(identifier);
+      
+      if (isCPF) {
+        // Look up email by CPF in profiles table
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select(`
+            id,
+            users!inner(email)
+          `)
+          .eq('cpf', identifier)
+          .maybeSingle();
+
+        if (profileError) {
+          console.error('Error looking up user by CPF:', profileError);
+          throw new Error('CPF não encontrado');
+        }
+
+        if (!profileData) {
+          throw new Error('CPF não encontrado');
+        }
+
+        email = profileData.users.email;
+      }
+
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -345,13 +373,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       toast.success('Login realizado com sucesso!');
     } catch (error) {
       console.error('Error signing in:', error);
-      if (error instanceof Error && error.message.includes('Failed to fetch')) {
-        toast.error('Erro de conexão. Verifique sua internet e tente novamente.');
-      } else if (error instanceof Error && error.message.includes('Invalid login credentials')) {
-        toast.error('E-mail ou senha incorretos');
+      if (error instanceof Error) {
+        if (error.message.includes('Failed to fetch')) {
+          toast.error('Erro de conexão. Verifique sua internet e tente novamente.');
+        } else if (error.message.includes('Invalid login credentials')) {
+          toast.error('E-mail/CPF ou senha incorretos');
+        } else if (error.message.includes('CPF não encontrado')) {
+          toast.error('CPF não encontrado');
+        } else {
+          toast.error('Erro ao fazer login');
+        }
       } else {
         toast.error('Erro ao fazer login');
       }
+      throw error;
     }
   };
 
