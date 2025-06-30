@@ -378,33 +378,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (error) {
         console.error('Supabase signin error:', error);
         
-        // Handle specific database errors
+        // Map Supabase errors to user-friendly messages and throw consistently
         if (error.message.includes('Database error granting user')) {
-          console.error('Database error during signin - this indicates a server-side issue');
-          toast.error('Erro interno do servidor. Tente novamente em alguns minutos ou contate o suporte.');
-          return;
+          throw new Error('Erro interno do servidor. Tente novamente em alguns minutos ou contate o suporte.');
+        } else if (error.message.includes('Invalid login credentials')) {
+          throw new Error('E-mail ou senha incorretos');
+        } else if (error.message.includes('Failed to fetch')) {
+          throw new Error('Erro de conexão. Verifique sua internet e tente novamente.');
+        } else {
+          throw new Error('Erro ao fazer login');
         }
-        
-        throw error;
       }
 
       console.log('Signin successful for user:', data.user?.id);
       toast.success('Login realizado com sucesso!');
     } catch (error) {
       console.error('Error signing in:', error);
-      if (error instanceof Error) {
-        if (error.message.includes('Failed to fetch')) {
-          toast.error('Erro de conexão. Verifique sua internet e tente novamente.');
-        } else if (error.message.includes('Invalid login credentials')) {
-          toast.error('E-mail ou senha incorretos');
-        } else if (error.message.includes('Database error granting user')) {
-          toast.error('Erro interno do servidor. Tente novamente em alguns minutos ou contate o suporte.');
-        } else {
-          toast.error('Erro ao fazer login');
-        }
-      } else {
-        toast.error('Erro ao fazer login');
-      }
+      // Re-throw the error so Login.tsx can handle it consistently
       throw error;
     }
   };

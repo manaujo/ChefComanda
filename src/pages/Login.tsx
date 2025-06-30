@@ -72,15 +72,7 @@ const Login: React.FC = () => {
       console.error('Login error:', err);
       
       if (err instanceof Error) {
-        if (err.message.includes('Failed to fetch')) {
-          setError('Erro de conexão. Verifique sua internet e tente novamente.');
-        } else if (err.message.includes('Database error granting user')) {
-          setError('Erro interno do servidor. Tente novamente em alguns minutos ou contate o suporte.');
-        } else if (err.message.includes('Invalid login credentials')) {
-          setError(loginType === 'admin' ? 'E-mail/CPF ou senha incorretos' : 'CPF ou senha incorretos');
-        } else {
-          setError(loginType === 'admin' ? 'E-mail/CPF ou senha incorretos' : 'CPF ou senha incorretos');
-        }
+        setError(err.message);
       } else {
         setError('Erro inesperado. Tente novamente.');
       }
