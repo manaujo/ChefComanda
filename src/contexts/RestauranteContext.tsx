@@ -848,30 +848,17 @@ export const RestauranteProvider: React.FC<{ children: React.ReactNode }> = ({ c
       if (error) throw error;
 
       // Filter for low stock items client-side
-      const lowStockItems = data.filter(insumo => {
-        // Ensure we're comparing numbers, not strings
-        const quantidade = typeof insumo.quantidade === 'string' 
-          ? parseFloat(insumo.quantidade) 
-          : insumo.quantidade;
-          
-        const quantidadeMinima = typeof insumo.quantidade_minima === 'string'
-          ? parseFloat(insumo.quantidade_minima)
-          : insumo.quantidade_minima;
-          
-        return quantidade <= quantidadeMinima;
-      });
+      const lowStockItems = data.filter(insumo => 
+        parseFloat(String(insumo.quantidade)) <= parseFloat(String(insumo.quantidade_minima))
+      );
 
       return lowStockItems.map(insumo => ({
         id: insumo.id,
         produto: insumo.nome,
-        quantidadeAtual: typeof insumo.quantidade === 'string' 
-          ? parseFloat(insumo.quantidade) 
-          : insumo.quantidade,
-        quantidadeMinima: typeof insumo.quantidade_minima === 'string'
-          ? parseFloat(insumo.quantidade_minima)
-          : insumo.quantidade_minima,
+        quantidadeAtual: parseFloat(String(insumo.quantidade)),
+        quantidadeMinima: parseFloat(String(insumo.quantidade_minima)),
         unidade: insumo.unidade_medida,
-        status: insumo.quantidade === 0 ? 'crítico' : 'baixo',
+        status: parseFloat(String(insumo.quantidade)) === 0 ? 'crítico' : 'baixo',
         ultimaAtualizacao: insumo.updated_at
       }));
     } catch (error) {
