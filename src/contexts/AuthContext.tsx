@@ -111,10 +111,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Effect to handle initial redirect after data is loaded
   useEffect(() => {
+    // Only redirect on initial load, not when returning to the tab
     if (initialLoadComplete && !initialRedirectDone && !state.loading) {
       if (state.user || state.isEmployee) {
-        redirectByRole(state.userRole || 'admin');
-        setInitialRedirectDone(true);
+        // Only redirect if we're on the login or signup page
+        const currentPath = window.location.pathname;
+        if (currentPath === '/login' || currentPath === '/signup' || currentPath === '/') {
+          redirectByRole(state.userRole || 'admin');
+          setInitialRedirectDone(true);
+        }
       }
     }
   }, [initialLoadComplete, initialRedirectDone, state.loading, state.user, state.isEmployee, state.userRole]);

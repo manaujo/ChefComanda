@@ -23,7 +23,6 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
       'X-Client-Info': 'restaurant-management-system'
     },
     fetch: (url, options = {}) => {
-      console.log('Supabase fetch request to:', url);
       return fetch(url, {
         ...options,
         // Add timeout to prevent hanging requests
