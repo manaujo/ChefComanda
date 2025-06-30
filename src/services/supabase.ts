@@ -53,16 +53,16 @@ export const checkSupabaseConnection = async (): Promise<boolean> => {
       .select('id')
       .limit(1);
     
-    if (error) {
-      console.error('Supabase connection check failed with error:', error);
-      return false;
-    }
-    
+    if (error) throw error;
     console.log('Supabase connection check successful');
     return true;
   } catch (error) {
-    console.error('Supabase connection check failed with exception:', error);
-    return false;
+    console.error('Supabase connection check failed:', error);
+    if (error instanceof Error && error.message.includes('Failed to fetch')) {
+      return false;
+    } else {
+      return false;
+    }
   }
 };
 
