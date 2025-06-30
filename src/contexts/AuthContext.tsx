@@ -64,7 +64,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   
   const navigate = useNavigate();
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
-  const [initialRedirectDone, setInitialRedirectDone] = useState(false);
 
   useEffect(() => {
     // Check active sessions and subscribe to auth changes
@@ -108,21 +107,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       subscription.unsubscribe();
     };
   }, []);
-
-  // Effect to handle initial redirect after data is loaded
-  useEffect(() => {
-    // Only redirect on initial load, not when returning to the tab
-    if (initialLoadComplete && !initialRedirectDone && !state.loading) {
-      if (state.user || state.isEmployee) {
-        // Only redirect if we're on the login or signup page
-        const currentPath = window.location.pathname;
-        if (currentPath === '/login' || currentPath === '/signup' || currentPath === '/') {
-          redirectByRole(state.userRole || 'admin');
-          setInitialRedirectDone(true);
-        }
-      }
-    }
-  }, [initialLoadComplete, initialRedirectDone, state.loading, state.user, state.isEmployee, state.userRole]);
 
   const checkEmployeeSession = async () => {
     try {

@@ -23,11 +23,6 @@ class NotificationService {
   // Send notification to specific user
   async sendNotification(notification: NotificationData) {
     try {
-      if (!notification.userId) {
-        console.error('Cannot send notification: missing userId');
-        return false;
-      }
-      
       const { data: insertedNotification, error } = await supabase
         .from('notifications')
         .insert({
@@ -64,12 +59,6 @@ class NotificationService {
   // Send notification to all users in a restaurant
   async sendRestaurantNotification(restaurantId: string, notification: Omit<NotificationData, 'userId'>) {
     try {
-      // Get restaurant ID
-      if (!restaurantId) {
-        console.error('Cannot send restaurant notification: missing restaurantId');
-        return false;
-      }
-      
       // Get all users for this restaurant
       const { data: users, error } = await supabase
         .from('restaurantes')
@@ -77,11 +66,6 @@ class NotificationService {
         .eq('id', restaurantId);
 
       if (error) throw error;
-
-      if (!users || users.length === 0) {
-        console.error('No users found for restaurant:', restaurantId);
-        return false;
-      }
 
       // Send notification to each user
       const promises = users.map(user => 
@@ -123,11 +107,6 @@ class NotificationService {
 
   // Get user notifications
   async getUserNotifications(userId: string, limit = 50) {
-    if (!userId) {
-      console.error('Cannot get notifications: missing userId');
-      return [];
-    }
-    
     try {
       const { data, error } = await supabase
         .from('notifications')
@@ -137,7 +116,7 @@ class NotificationService {
         .limit(limit);
 
       if (error) throw error;
-      return data || [];
+      return data;
     } catch (error) {
       console.error('Error getting notifications:', error);
       return [];
@@ -146,11 +125,6 @@ class NotificationService {
 
   // Subscribe to real-time notifications
   subscribeToNotifications(userId: string, callback: (notification: any) => void) {
-    if (!userId) {
-      console.error('Cannot subscribe to notifications: missing userId');
-      return () => {};
-    }
-    
     const channel = supabase
       .channel('notifications')
       .on('broadcast', { event: 'new_notification' }, (payload) => {
@@ -187,11 +161,6 @@ class NotificationService {
 
   // Payment notifications
   async sendPaymentNotification(userId: string, amount: number, method: string) {
-    if (!userId) {
-      console.error('Cannot send payment notification: missing userId');
-      return false;
-    }
-    
     return this.sendNotification({
       userId,
       title: 'Pagamento Recebido',
