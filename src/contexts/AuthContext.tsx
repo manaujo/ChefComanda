@@ -135,8 +135,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const loadUserData = async (user: User) => {
     try {
-      // Load user role and profile data
-      const [{ data: roleData, error: roleError }, { data: profileData, error: profileError }] = await Promise.all([
+      console.log('Loading user data for:', user.id);
+      
+      // Load user role and profile data with better error handling
+      const [roleResult, profileResult] = await Promise.allSettled([
         supabase
           .from('user_roles')
           .select('role')
@@ -149,10 +151,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .maybeSingle()
       ]);
 
-      if (roleError && roleError.code !== 'PGRST116') throw roleError;
-      if (profileError && profileError.code !== 'PGRST116') throw profileError;
+      let roleData = null;
+      let profileData = null;
 
-      // Load subscription data
+      if (roleResult.status === 'fulfilled') {
+        if (roleResult.value.error && roleResult.value.error.code !== 'PGRST116') {
+          console.error('Role loading error:', roleResult.value.error);
+        } else {
+          roleData = roleResult.value.data;
+        }
+      } else {
+        console.error('Role loading failed:', roleResult.reason);
+      }
+
+      if (profileResult.status === 'fulfilled') {
+        if (profileResult.value.error && profileResult.value.error.code !== 'PGRST116') {
+          console.error('Profile loading error:', profileResult.value.error);
+        } else {
+          profileData = profileResult.value.data;
+        }
+      } else {
+        console.error('Profile loading failed:', profileResult.reason);
+      }
+
+      // Load subscription data with error handling
       let currentPlan = null;
       try {
         const subscription = await StripeService.getUserSubscription();
@@ -165,9 +187,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.error('Error loading subscription:', error);
       }
 
+      const userRole = roleData?.role || 'admin';
+      
       setState({
         user,
-        userRole: roleData?.role || 'admin',
+        userRole,
         loading: false,
         displayName: profileData?.name || user.user_metadata?.name || null,
         isEmployee: false,
@@ -175,9 +199,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         currentPlan,
       });
 
+      console.log('User data loaded successfully, role:', userRole);
+      
       // Redirect based on user role
-      const role = roleData?.role || 'admin';
-      redirectByRole(role);
+      redirectByRole(userRole);
     } catch (error) {
       console.error('Error loading user data:', error);
       // Only show toast for non-network errors
@@ -231,6 +256,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signUp = async ({ email, password, role, name, cpf }: SignUpData) => {
     try {
+      console.log('Starting signup process for:', email);
+      
       // Check if CPF already exists in profiles table
       const { data: existingProfile, error: checkError } = await supabase
         .from('profiles')
@@ -239,6 +266,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .maybeSingle();
 
       if (checkError && checkError.code !== 'PGRST116') {
+        console.error('CPF check error:', checkError);
         throw checkError;
       }
 
@@ -258,8 +286,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase signup error:', error);
+        throw error;
+      }
       if (!user) throw new Error('Erro ao criar usuário');
+
+      console.log('User created successfully:', user.id);
 
       // Wait a moment for the trigger to complete
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -335,23 +368,44 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signIn = async (email: string, password: string) => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      console.log('Starting signin process for:', email);
+      
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      if (error) throw error;
-      
+      if (error) {
+        console.error('Supabase signin error:', error);
+        
+        // Handle specific database errors
+        if (error.message.includes('Database error granting user')) {
+          console.error('Database error during signin - this indicates a server-side issue');
+          toast.error('Erro interno do servidor. Tente novamente em alguns minutos ou contate o suporte.');
+          return;
+        }
+        
+        throw error;
+      }
+
+      console.log('Signin successful for user:', data.user?.id);
       toast.success('Login realizado com sucesso!');
     } catch (error) {
       console.error('Error signing in:', error);
-      if (error instanceof Error && error.message.includes('Failed to fetch')) {
-        toast.error('Erro de conexão. Verifique sua internet e tente novamente.');
-      } else if (error instanceof Error && error.message.includes('Invalid login credentials')) {
-        toast.error('E-mail ou senha incorretos');
+      if (error instanceof Error) {
+        if (error.message.includes('Failed to fetch')) {
+          toast.error('Erro de conexão. Verifique sua internet e tente novamente.');
+        } else if (error.message.includes('Invalid login credentials')) {
+          toast.error('E-mail ou senha incorretos');
+        } else if (error.message.includes('Database error granting user')) {
+          toast.error('Erro interno do servidor. Tente novamente em alguns minutos ou contate o suporte.');
+        } else {
+          toast.error('Erro ao fazer login');
+        }
       } else {
         toast.error('Erro ao fazer login');
       }
+      throw error;
     }
   };
 

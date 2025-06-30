@@ -69,11 +69,20 @@ const Login: React.FC = () => {
         await signIn(identifier, senha);
       }
     } catch (err) {
-      console.error(err);
-      if (err instanceof Error && err.message.includes('Failed to fetch')) {
-        setError('Erro de conexão. Verifique sua internet e tente novamente.');
+      console.error('Login error:', err);
+      
+      if (err instanceof Error) {
+        if (err.message.includes('Failed to fetch')) {
+          setError('Erro de conexão. Verifique sua internet e tente novamente.');
+        } else if (err.message.includes('Database error granting user')) {
+          setError('Erro interno do servidor. Tente novamente em alguns minutos ou contate o suporte.');
+        } else if (err.message.includes('Invalid login credentials')) {
+          setError(loginType === 'admin' ? 'E-mail/CPF ou senha incorretos' : 'CPF ou senha incorretos');
+        } else {
+          setError(loginType === 'admin' ? 'E-mail/CPF ou senha incorretos' : 'CPF ou senha incorretos');
+        }
       } else {
-        setError(loginType === 'admin' ? 'E-mail/CPF ou senha incorretos' : 'CPF ou senha incorretos');
+        setError('Erro inesperado. Tente novamente.');
       }
     } finally {
       setLoading(false);
@@ -114,6 +123,17 @@ const Login: React.FC = () => {
         {error && (
           <div className="bg-red-50 dark:bg-red-900/50 border-l-4 border-red-500 p-4 rounded">
             <p className="text-sm text-red-700 dark:text-red-200">{error}</p>
+            {error.includes('Erro interno do servidor') && (
+              <div className="mt-2 text-xs text-red-600 dark:text-red-300">
+                <p>Este erro indica um problema no servidor. Possíveis causas:</p>
+                <ul className="list-disc list-inside mt-1 space-y-1">
+                  <li>Problemas com triggers ou políticas de segurança no banco de dados</li>
+                  <li>Conflitos de dados ou restrições de integridade</li>
+                  <li>Sobrecarga temporária do servidor</li>
+                </ul>
+                <p className="mt-2">Se o problema persistir, contate o suporte técnico.</p>
+              </div>
+            )}
           </div>
         )}
         
