@@ -16,7 +16,7 @@ const DashboardLayout: React.FC = () => {
   const [sidebarHover, setSidebarHover] = useState(false);
   const location = useLocation();
   const { theme, toggleTheme } = useTheme();
-  const { userRole } = useAuth();
+  const { userRole, isEmployee } = useAuth();
   const isPDV = location.pathname === '/pdv';
   const isComandas = location.pathname === '/comandas';
 
@@ -33,7 +33,7 @@ const DashboardLayout: React.FC = () => {
       { name: 'Relatórios', path: '/relatorios', icon: <PieChart size={20} />, roles: ['admin', 'cashier'] },
       { name: 'CMV', path: '/cmv', icon: <Calculator size={20} />, roles: ['admin'] },
       { name: 'Cardápio Online', path: '/cardapio-online', icon: <QrCode size={20} />, roles: ['admin'] },
-      { name: 'Editor de Cardápio', path: '/cardapio-online/editor', icon: <PenSquare size={20} />, roles: ['admin'] },
+      { name: 'Editor de Cardápio', path: '/cardapio-online/editor', icon: <PenSquare size={20} />, roles: ['admin', 'stock'] },
       { name: 'Cardápio Online (Público)', path: '/cardapio/1', icon: <Globe size={20} />, roles: ['admin'] },
       { name: 'Central de Ajuda', path: '/ajuda', icon: <HelpCircle size={20} />, roles: ['admin', 'kitchen', 'waiter', 'cashier', 'stock'] },
     ];
@@ -83,7 +83,7 @@ const DashboardLayout: React.FC = () => {
                 {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
               </button>
 
-              <NotificationDropdown />
+              {!isEmployee && <NotificationDropdown />}
               <ProfileDropdown />
             </div>
           </div>
@@ -157,7 +157,7 @@ const DashboardLayout: React.FC = () => {
               {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
             </button>
 
-            <NotificationDropdown />
+            {!isEmployee && <NotificationDropdown />}
             <ProfileDropdown />
           </div>
         </div>
