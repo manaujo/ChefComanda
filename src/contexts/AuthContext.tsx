@@ -378,15 +378,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (error) {
         console.error('Supabase signin error:', error);
         
-        // Handle specific error cases
+        // Handle specific error cases with more detailed error mapping
         if (error.message.includes('Invalid login credentials')) {
           throw new Error('E-mail ou senha incorretos');
         } else if (error.message.includes('Failed to fetch')) {
           throw new Error('Erro de conexão. Verifique sua internet e tente novamente.');
+        } else if (error.message.includes('Database error granting user')) {
+          throw new Error('Erro de configuração do banco de dados. Contate o suporte técnico.');
         } else if (error.message.includes('Database error')) {
           throw new Error('Erro interno do servidor. Tente novamente em alguns minutos ou contate o suporte.');
+        } else if (error.message.includes('Email not confirmed')) {
+          throw new Error('E-mail não confirmado. Verifique sua caixa de entrada.');
+        } else if (error.message.includes('Too many requests')) {
+          throw new Error('Muitas tentativas de login. Aguarde alguns minutos antes de tentar novamente.');
         } else {
-          throw error;
+          // For any other auth errors, provide a generic but helpful message
+          throw new Error('Erro de autenticação. Verifique suas credenciais e tente novamente.');
         }
       }
 

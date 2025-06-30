@@ -70,12 +70,23 @@ const Login: React.FC = () => {
       }
     } catch (err) {
       console.error('Error signing in:', err);
-      if (err instanceof Error && err.message.includes('Failed to fetch')) {
-        setError('Erro de conexão. Verifique sua internet e tente novamente.');
-      } else if (err instanceof Error && err.message.includes('Invalid login credentials')) {
-        setError('E-mail ou senha incorretos');
-      } else if (err instanceof Error) {
-        setError(err.message);
+      if (err instanceof Error) {
+        // Handle specific error messages with more user-friendly descriptions
+        if (err.message.includes('Failed to fetch')) {
+          setError('Erro de conexão. Verifique sua internet e tente novamente.');
+        } else if (err.message.includes('Invalid login credentials')) {
+          setError('E-mail ou senha incorretos');
+        } else if (err.message.includes('Erro de configuração do banco de dados')) {
+          setError('Erro de configuração do sistema. Contate o suporte técnico.');
+        } else if (err.message.includes('Erro interno do servidor')) {
+          setError('Erro interno do servidor. Tente novamente em alguns minutos ou contate o suporte.');
+        } else if (err.message.includes('E-mail não confirmado')) {
+          setError('E-mail não confirmado. Verifique sua caixa de entrada e clique no link de confirmação.');
+        } else if (err.message.includes('Muitas tentativas')) {
+          setError('Muitas tentativas de login. Aguarde alguns minutos antes de tentar novamente.');
+        } else {
+          setError(err.message);
+        }
       } else {
         setError(loginType === 'admin' ? 'E-mail/CPF ou senha incorretos' : 'CPF ou senha incorretos');
       }
@@ -118,15 +129,16 @@ const Login: React.FC = () => {
         {error && (
           <div className="bg-red-50 dark:bg-red-900/50 border-l-4 border-red-500 p-4 rounded">
             <p className="text-sm text-red-700 dark:text-red-200">{error}</p>
-            {error.includes('Erro interno do servidor') && (
+            {(error.includes('Erro interno do servidor') || error.includes('Erro de configuração')) && (
               <div className="mt-2 text-xs text-red-600 dark:text-red-300">
-                <p>Este erro indica um problema no servidor. Possíveis causas:</p>
+                <p>Este erro indica um problema no sistema. Possíveis causas:</p>
                 <ul className="list-disc list-inside mt-1 space-y-1">
                   <li>Problemas com triggers ou políticas de segurança no banco de dados</li>
                   <li>Conflitos de dados ou restrições de integridade</li>
                   <li>Sobrecarga temporária do servidor</li>
+                  <li>Configuração incorreta das permissões de usuário</li>
                 </ul>
-                <p className="mt-2">Se o problema persistir, contate o suporte técnico.</p>
+                <p className="mt-2">Se o problema persistir, contate o suporte técnico com o código do erro.</p>
               </div>
             )}
           </div>
