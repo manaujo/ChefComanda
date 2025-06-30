@@ -41,7 +41,14 @@ const AuthContext = createContext<AuthContextData>({} as AuthContextData);
 
 const supabase: SupabaseClient = createClient(
   import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
+  import.meta.env.VITE_SUPABASE_ANON_KEY,
+  {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true
+    }
+  }
 );
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -56,21 +63,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
   
   const navigate = useNavigate();
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
 
   useEffect(() => {
     // Check active sessions and subscribe to auth changes
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        loadUserData(session.user);
-      } else {
-        // Check for employee session
-        checkEmployeeSession();
+    const initializeAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session?.user) {
+          await loadUserData(session.user);
+        } else {
+          // Check for employee session
+          await checkEmployeeSession();
+        }
+      } catch (error) {
+        console.error('Error during auth initialization:', error);
+        setState(prev => ({ ...prev, loading: false }));
+      } finally {
+        setInitialLoadComplete(true);
       }
-    });
+    };
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    initializeAuth();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user) {
-        loadUserData(session.user);
+        await loadUserData(session.user);
       } else {
         setState({ 
           user: null, 
@@ -174,10 +193,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         employeeData: null,
         currentPlan,
       });
-
-      // Redirect based on user role
-      const role = roleData?.role || 'admin';
-      redirectByRole(role);
     } catch (error) {
       console.error('Error loading user data:', error);
       // Only show toast for non-network errors
@@ -189,6 +204,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const redirectByRole = (role: string) => {
+    // Only redirect if this is the initial login, not when returning to the tab
+    if (!initialLoadComplete) return;
+    
     switch (role) {
       case 'admin':
         navigate('/');
