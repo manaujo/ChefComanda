@@ -65,6 +65,9 @@ const MesaCard: React.FC<MesaCardProps> = ({ mesa }) => {
         case 'pagamento':
           setPagamentoModalAberto(true);
           break;
+        case 'liberar':
+          await liberarMesa(mesa.id);
+          break;
         case 'excluir':
           if (window.confirm('Tem certeza que deseja excluir esta mesa?')) {
             await excluirMesa(mesa.id);
@@ -143,7 +146,7 @@ const MesaCard: React.FC<MesaCardProps> = ({ mesa }) => {
                     
                     {mesa.status === 'aguardando' && (
                       <button 
-                        onClick={() => handleAcao('excluir')}
+                        onClick={() => handleAcao('liberar')}
                         className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
                       >
                         Liberar Mesa
@@ -243,7 +246,7 @@ const MesaCard: React.FC<MesaCardProps> = ({ mesa }) => {
                 variant="success" 
                 size="sm" 
                 fullWidth
-                onClick={() => handleAcao('excluir')}
+                onClick={() => handleAcao('liberar')}
               >
                 Liberar Mesa
               </Button>
