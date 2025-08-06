@@ -149,6 +149,15 @@ const MesaCard: React.FC<MesaCardProps> = ({ mesa }) => {
                         Liberar Mesa
                       </button>
                     )}
+                    
+                    {mesa.status === 'livre' && (
+                      <button 
+                        onClick={() => handleAcao('excluir')}
+                        className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
+                      >
+                        Excluir Mesa
+                      </button>
+                    )}
                   </div>
                 </div>
               )}
@@ -237,6 +246,17 @@ const MesaCard: React.FC<MesaCardProps> = ({ mesa }) => {
                 onClick={() => handleAcao('excluir')}
               >
                 Liberar Mesa
+              </Button>
+            )}
+            
+            {mesa.status === 'livre' && (
+              <Button 
+                variant="danger" 
+                size="sm" 
+                fullWidth
+                onClick={() => handleAcao('excluir')}
+              >
+                Excluir Mesa
               </Button>
             )}
           </div>

@@ -18,7 +18,6 @@ interface AuthState {
 interface AuthContextData extends AuthState {
   signUp: (data: SignUpData) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
-  signInEmployee: (cpf: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   updateProfile: (data: UpdateProfileData) => Promise<void>;
   refreshSubscription: () => Promise<void>;
@@ -405,63 +404,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const signInEmployee = async (cpf: string, password: string) => {
-    try {
-      const { data, error } = await supabase.rpc('authenticate_employee', {
-        p_cpf: cpf,
-        p_password: password
-      });
-
-      if (error) throw error;
-      if (!data || data.length === 0) {
-        throw new Error('CPF ou senha incorretos');
-      }
-
-      const employee = data[0];
-
-      // Create session token
-      const token = crypto.randomUUID();
-      const expiresAt = new Date();
-      expiresAt.setHours(expiresAt.getHours() + 8); // 8 hours session
-
-      const { error: sessionError } = await supabase
-        .from('employee_sessions')
-        .insert({
-          employee_id: employee.employee_id,
-          token,
-          expires_at: expiresAt.toISOString()
-        });
-
-      if (sessionError) throw sessionError;
-
-      // Store token in localStorage
-      localStorage.setItem('employee_token', token);
-
-      // Update last login
-      await supabase
-        .from('employee_auth')
-        .update({ last_login: new Date().toISOString() })
-        .eq('employee_id', employee.employee_id);
-
-      // Set state
-      setState({
-        user: null,
-        userRole: employee.role,
-        loading: false,
-        displayName: employee.name,
-        isEmployee: true,
-        employeeData: employee,
-        currentPlan: null,
-      });
-
-      toast.success('Login realizado com sucesso!');
-      redirectByRole(employee.role);
-    } catch (error) {
-      console.error('Error signing in employee:', error);
-      toast.error(error instanceof Error ? error.message : 'Erro ao fazer login');
-    }
-  };
-
   const signOut = async () => {
     try {
       if (state.isEmployee) {
@@ -611,7 +553,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         ...state,
         signUp,
         signIn,
-        signInEmployee,
         signOut,
         updateProfile,
         refreshSubscription,
