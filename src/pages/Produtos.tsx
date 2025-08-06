@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Plus, Search, Filter, Edit2, Trash2, Upload, Download, 
-  FileSpreadsheet, AlertTriangle, MoreVertical, X
+  FileSpreadsheet, AlertTriangle, MoreVertical, X, PlusCircle
 } from 'lucide-react';
 import Button from '../components/ui/Button';
 import { useRestaurante } from '../contexts/RestauranteContext';
@@ -14,8 +14,6 @@ interface ProdutoFormData {
   preco: number;
   descricao?: string;
   disponivel: boolean;
-  estoque: number;
-  estoque_minimo: number;
   imagem_url?: string;
 }
 
@@ -38,13 +36,13 @@ const Produtos: React.FC = () => {
     preco: 0,
     descricao: '',
     disponivel: true,
-    estoque: 0,
-    estoque_minimo: 5
   });
   const [loading, setLoading] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [page, setPage] = useState(1);
   const itemsPerPage = 12;
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [newCategory, setNewCategory] = useState('');
 
   useEffect(() => {
     refreshData();
@@ -71,16 +69,44 @@ const Produtos: React.FC = () => {
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || !e.target.files[0]) return;
 
+    const file = e.target.files[0];
+    
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Por favor, selecione apenas arquivos de imagem');
+      return;
+    }
+    
+    // Validate file size (5MB max)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('A imagem deve ter no máximo 5MB');
+      return;
+    }
+
     try {
       setUploadingImage(true);
       
-      // Use a placeholder image URL instead of trying to upload to storage
-      const placeholderUrl = `https://images.pexels.com/photos/1251198/pexels-photo-1251198.jpeg`;
-      setFormData(prev => ({ ...prev, imagem_url: placeholderUrl }));
-      toast.success('Imagem configurada com sucesso!');
+      // Create a unique filename
+      const fileExt = file.name.split('.').pop();
+      const fileName = `produto-${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+      
+      // Upload to Supabase Storage
+      const { data, error } = await supabase.storage
+        .from('produtos')
+        .upload(fileName, file);
+
+      if (error) throw error;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('produtos')
+        .getPublicUrl(fileName);
+
+      setFormData(prev => ({ ...prev, imagem_url: publicUrl }));
+      toast.success('Imagem enviada com sucesso!');
     } catch (error) {
-      console.error('Error setting image:', error);
-      toast.error('Erro ao configurar imagem');
+      console.error('Error uploading image:', error);
+      toast.error('Erro ao enviar imagem');
     } finally {
       setUploadingImage(false);
     }
@@ -103,8 +129,6 @@ const Produtos: React.FC = () => {
           preco: formData.preco,
           descricao: formData.descricao || '',
           disponivel: formData.disponivel,
-          estoque: formData.estoque,
-          estoque_minimo: formData.estoque_minimo,
           imagem_url: formData.imagem_url
         });
       } else {
@@ -114,8 +138,6 @@ const Produtos: React.FC = () => {
           preco: formData.preco,
           descricao: formData.descricao || '',
           disponivel: formData.disponivel,
-          estoque: formData.estoque,
-          estoque_minimo: formData.estoque_minimo,
           imagem_url: formData.imagem_url
         });
       }
@@ -148,6 +170,23 @@ const Produtos: React.FC = () => {
     }
   };
 
+  const handleAddCategory = async () => {
+    if (!newCategory.trim()) {
+      toast.error('Digite o nome da categoria');
+      return;
+    }
+
+    if (categorias.includes(newCategory.trim())) {
+      toast.error('Esta categoria já existe');
+      return;
+    }
+
+    setFormData({ ...formData, categoria: newCategory.trim() });
+    setShowCategoryModal(false);
+    setNewCategory('');
+    toast.success('Categoria adicionada!');
+  };
+
   const resetForm = () => {
     setFormData({
       nome: '',
@@ -155,8 +194,6 @@ const Produtos: React.FC = () => {
       preco: 0,
       descricao: '',
       disponivel: true,
-      estoque: 0,
-      estoque_minimo: 5
     });
     setProdutoSelecionado(null);
   };
@@ -169,8 +206,6 @@ const Produtos: React.FC = () => {
       preco: produto.preco,
       descricao: produto.descricao || '',
       disponivel: produto.disponivel,
-      estoque: produto.estoque || 0,
-      estoque_minimo: produto.estoque_minimo || 5,
       imagem_url: produto.imagem_url
     });
     setShowModal(true);
@@ -426,18 +461,9 @@ const Produtos: React.FC = () => {
                     {formatarDinheiro(produto.preco)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className={`text-sm ${
-                      produto.estoque <= produto.estoque_minimo
-                        ? 'text-red-600 font-medium'
-                        : 'text-gray-900'
-                    }`}>
-                      {produto.estoque} unidades
-                      {produto.estoque <= produto.estoque_minimo && (
-                        <span className="ml-2 text-xs bg-red-100 text-red-800 px-2 py-0.5 rounded-full">
-                          Baixo
-                        </span>
-                      )}
-                    </div>
+                    <span className="text-sm text-gray-500">
+                      Controlado no estoque
+                    </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
@@ -551,72 +577,50 @@ const Produtos: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700">
                     Categoria
                   </label>
-                  <select
-                    value={formData.categoria}
-                    onChange={(e) => setFormData({ ...formData, categoria: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                    required
-                  >
-                    <option value="">Selecione uma categoria</option>
-                    {categorias.map((categoria) => (
-                      <option key={categoria} value={categoria}>
-                        {categoria}
-                      </option>
-                    ))}
-                    <option value="Bebidas">Bebidas</option>
-                    <option value="Pratos Principais">Pratos Principais</option>
-                    <option value="Sobremesas">Sobremesas</option>
-                    <option value="Entradas">Entradas</option>
-                    <option value="Lanches">Lanches</option>
-                  </select>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Preço
-                    </label>
-                    <div className="mt-1 relative rounded-md shadow-sm">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <span className="text-gray-500 sm:text-sm">R$</span>
-                      </div>
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={formData.preco}
-                        onChange={(e) => setFormData({ ...formData, preco: parseFloat(e.target.value) })}
-                        className="pl-8 block w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Estoque Atual
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={formData.estoque}
-                      onChange={(e) => setFormData({ ...formData, estoque: parseInt(e.target.value) })}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                    />
+                  <div className="flex space-x-2">
+                    <select
+                      value={formData.categoria}
+                      onChange={(e) => setFormData({ ...formData, categoria: e.target.value })}
+                      className="flex-1 mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                      required
+                    >
+                      <option value="">Selecione uma categoria</option>
+                      {categorias.map((categoria) => (
+                        <option key={categoria} value={categoria}>
+                          {categoria}
+                        </option>
+                      ))}
+                    </select>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => setShowCategoryModal(true)}
+                      icon={<PlusCircle size={16} />}
+                      className="mt-1"
+                    >
+                      Nova
+                    </Button>
                   </div>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700">
-                    Estoque Mínimo
+                    Preço
                   </label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={formData.estoque_minimo}
-                    onChange={(e) => setFormData({ ...formData, estoque_minimo: parseInt(e.target.value) })}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                  />
+                  <div className="mt-1 relative rounded-md shadow-sm">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <span className="text-gray-500 sm:text-sm">R$</span>
+                    </div>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={formData.preco}
+                      onChange={(e) => setFormData({ ...formData, preco: parseFloat(e.target.value) })}
+                      className="pl-8 block w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                      required
+                    />
+                  </div>
                 </div>
 
                 <div>
@@ -660,7 +664,9 @@ const Produtos: React.FC = () => {
                               htmlFor="file-upload"
                               className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500"
                             >
-                              <span>Fazer upload</span>
+                              <span>
+                                {uploadingImage ? 'Enviando...' : 'Fazer upload da sua imagem'}
+                              </span>
                               <input
                                 id="file-upload"
                                 name="file-upload"
@@ -673,12 +679,13 @@ const Produtos: React.FC = () => {
                             </label>
                           </div>
                           <p className="text-xs text-gray-500">
-                            PNG, JPG até 5MB
+                            PNG, JPG, JPEG até 5MB
                           </p>
                           {uploadingImage && (
-                            <p className="text-xs text-blue-500">
-                              Enviando imagem...
-                            </p>
+                            <div className="flex items-center justify-center">
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
+                              <span className="ml-2 text-xs text-blue-500">Enviando...</span>
+                            </div>
                           )}
                         </div>
                       </div>
@@ -759,6 +766,66 @@ const Produtos: React.FC = () => {
               >
                 Excluir
               </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Nova Categoria */}
+      {showCategoryModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black bg-opacity-50 flex items-center justify-center">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md m-4">
+            <div className="flex justify-between items-center px-6 py-4 border-b">
+              <h3 className="text-lg font-medium">Nova Categoria</h3>
+              <button
+                onClick={() => {
+                  setShowCategoryModal(false);
+                  setNewCategory('');
+                }}
+                className="text-gray-400 hover:text-gray-500"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="p-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Nome da Categoria
+                </label>
+                <input
+                  type="text"
+                  value={newCategory}
+                  onChange={(e) => setNewCategory(e.target.value)}
+                  className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  placeholder="Ex: Pratos Especiais"
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddCategory();
+                    }
+                  }}
+                />
+              </div>
+
+              <div className="mt-6 flex justify-end space-x-3">
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    setShowCategoryModal(false);
+                    setNewCategory('');
+                  }}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={handleAddCategory}
+                  disabled={!newCategory.trim()}
+                >
+                  Adicionar
+                </Button>
+              </div>
             </div>
           </div>
         </div>

@@ -394,6 +394,8 @@ export const RestauranteProvider: React.FC<RestauranteProviderProps> = ({ childr
     try {
       const novoProduto = await DatabaseService.createProduto({
         restaurante_id: restaurante.id,
+        estoque: 0,
+        estoque_minimo: 5,
         ...produtoData
       });
       
@@ -408,7 +410,13 @@ export const RestauranteProvider: React.FC<RestauranteProviderProps> = ({ childr
 
   const atualizarProduto = async (id: string, produtoData: any) => {
     try {
-      const produtoAtualizado = await DatabaseService.updateProduto(id, produtoData);
+      // Preserve existing stock values when updating
+      const produtoExistente = produtos.find(p => p.id === id);
+      const produtoAtualizado = await DatabaseService.updateProduto(id, {
+        ...produtoData,
+        estoque: produtoExistente?.estoque || 0,
+        estoque_minimo: produtoExistente?.estoque_minimo || 5
+      });
       setProdutos(prev => prev.map(produto => 
         produto.id === id ? produtoAtualizado : produto
       ));
