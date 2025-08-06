@@ -369,5 +369,346 @@ export interface Database {
         };
       };
     };
+    insumos: {
+      Row: {
+        id: string;
+        restaurante_id: string;
+        nome: string;
+        descricao: string | null;
+        unidade_medida: string;
+        quantidade: number;
+        quantidade_minima: number;
+        data_validade: string | null;
+        preco_unitario: number | null;
+        ativo: boolean;
+        created_at: string;
+        updated_at: string;
+      };
+      Insert: {
+        id?: string;
+        restaurante_id: string;
+        nome: string;
+        descricao?: string | null;
+        unidade_medida: string;
+        quantidade?: number;
+        quantidade_minima?: number;
+        data_validade?: string | null;
+        preco_unitario?: number | null;
+        ativo?: boolean;
+        created_at?: string;
+        updated_at?: string;
+      };
+      Update: {
+        id?: string;
+        restaurante_id?: string;
+        nome?: string;
+        descricao?: string | null;
+        unidade_medida?: string;
+        quantidade?: number;
+        quantidade_minima?: number;
+        data_validade?: string | null;
+        preco_unitario?: number | null;
+        ativo?: boolean;
+        created_at?: string;
+        updated_at?: string;
+      };
+    };
+    cardapio_online: {
+      Row: {
+        id: string;
+        restaurante_id: string;
+        nome: string;
+        descricao: string | null;
+        preco: number;
+        categoria: string;
+        imagem_url: string | null;
+        ordem: number;
+        ativo: boolean;
+        disponivel_online: boolean;
+        created_at: string;
+        updated_at: string;
+      };
+      Insert: {
+        id?: string;
+        restaurante_id: string;
+        nome: string;
+        descricao?: string | null;
+        preco: number;
+        categoria: string;
+        imagem_url?: string | null;
+        ordem?: number;
+        ativo?: boolean;
+        disponivel_online?: boolean;
+        created_at?: string;
+        updated_at?: string;
+      };
+      Update: {
+        id?: string;
+        restaurante_id?: string;
+        nome?: string;
+        descricao?: string | null;
+        preco?: number;
+        categoria?: string;
+        imagem_url?: string | null;
+        ordem?: number;
+        ativo?: boolean;
+        disponivel_online?: boolean;
+        created_at?: string;
+        updated_at?: string;
+      };
+    };
+    company_profiles: {
+      Row: {
+        id: string;
+        user_id: string;
+        name: string;
+        cnpj: string | null;
+        address: any | null;
+        contact: any | null;
+        created_at: string;
+        updated_at: string;
+      };
+      Insert: {
+        id?: string;
+        user_id: string;
+        name: string;
+        cnpj?: string | null;
+        address?: any | null;
+        contact?: any | null;
+        created_at?: string;
+        updated_at?: string;
+      };
+      Update: {
+        id?: string;
+        user_id?: string;
+        name?: string;
+        cnpj?: string | null;
+        address?: any | null;
+        contact?: any | null;
+        created_at?: string;
+        updated_at?: string;
+      };
+    };
+    employees: {
+      Row: {
+        id: string;
+        company_id: string;
+        name: string;
+        cpf: string;
+        role: string;
+        active: boolean;
+        created_at: string;
+        updated_at: string;
+      };
+      Insert: {
+        id?: string;
+        company_id: string;
+        name: string;
+        cpf: string;
+        role: string;
+        active?: boolean;
+        created_at?: string;
+        updated_at?: string;
+      };
+      Update: {
+        id?: string;
+        company_id?: string;
+        name?: string;
+        cpf?: string;
+        role?: string;
+        active?: boolean;
+        created_at?: string;
+        updated_at?: string;
+      };
+    };
+    employee_auth: {
+      Row: {
+        id: string;
+        employee_id: string;
+        cpf: string;
+        password_hash: string;
+        last_login: string | null;
+        created_at: string;
+      };
+      Insert: {
+        id?: string;
+        employee_id: string;
+        cpf: string;
+        password_hash: string;
+        last_login?: string | null;
+        created_at?: string;
+      };
+      Update: {
+        id?: string;
+        employee_id?: string;
+        cpf?: string;
+        password_hash?: string;
+        last_login?: string | null;
+        created_at?: string;
+      };
+    };
+    employee_sessions: {
+      Row: {
+        id: string;
+        employee_id: string;
+        token: string;
+        expires_at: string;
+        created_at: string;
+      };
+      Insert: {
+        id?: string;
+        employee_id: string;
+        token: string;
+        expires_at: string;
+        created_at?: string;
+      };
+      Update: {
+        id?: string;
+        employee_id?: string;
+        token?: string;
+        expires_at?: string;
+        created_at?: string;
+      };
+    };
+    notifications: {
+      Row: {
+        id: string;
+        user_id: string;
+        title: string;
+        message: string;
+        type: string;
+        read: boolean;
+        data: any | null;
+        created_at: string;
+      };
+      Insert: {
+        id?: string;
+        user_id: string;
+        title: string;
+        message: string;
+        type: string;
+        read?: boolean;
+        data?: any | null;
+        created_at?: string;
+      };
+      Update: {
+        id?: string;
+        user_id?: string;
+        title?: string;
+        message?: string;
+        type?: string;
+        read?: boolean;
+        data?: any | null;
+        created_at?: string;
+      };
+    };
+    stripe_customers: {
+      Row: {
+        id: string;
+        user_id: string;
+        customer_id: string;
+        created_at: string;
+        deleted_at: string | null;
+      };
+      Insert: {
+        id?: string;
+        user_id: string;
+        customer_id: string;
+        created_at?: string;
+        deleted_at?: string | null;
+      };
+      Update: {
+        id?: string;
+        user_id?: string;
+        customer_id?: string;
+        created_at?: string;
+        deleted_at?: string | null;
+      };
+    };
+    stripe_subscriptions: {
+      Row: {
+        id: string;
+        customer_id: string;
+        subscription_id: string | null;
+        price_id: string | null;
+        status: string;
+        current_period_start: number | null;
+        current_period_end: number | null;
+        cancel_at_period_end: boolean;
+        payment_method_brand: string | null;
+        payment_method_last4: string | null;
+        created_at: string;
+        updated_at: string;
+      };
+      Insert: {
+        id?: string;
+        customer_id: string;
+        subscription_id?: string | null;
+        price_id?: string | null;
+        status?: string;
+        current_period_start?: number | null;
+        current_period_end?: number | null;
+        cancel_at_period_end?: boolean;
+        payment_method_brand?: string | null;
+        payment_method_last4?: string | null;
+        created_at?: string;
+        updated_at?: string;
+      };
+      Update: {
+        id?: string;
+        customer_id?: string;
+        subscription_id?: string | null;
+        price_id?: string | null;
+        status?: string;
+        current_period_start?: number | null;
+        current_period_end?: number | null;
+        cancel_at_period_end?: boolean;
+        payment_method_brand?: string | null;
+        payment_method_last4?: string | null;
+        created_at?: string;
+        updated_at?: string;
+      };
+    };
+    stripe_orders: {
+      Row: {
+        id: string;
+        checkout_session_id: string;
+        payment_intent_id: string | null;
+        customer_id: string;
+        amount_subtotal: number | null;
+        amount_total: number | null;
+        currency: string | null;
+        payment_status: string | null;
+        status: string;
+        order_date: string;
+        created_at: string;
+      };
+      Insert: {
+        id?: string;
+        checkout_session_id: string;
+        payment_intent_id?: string | null;
+        customer_id: string;
+        amount_subtotal?: number | null;
+        amount_total?: number | null;
+        currency?: string | null;
+        payment_status?: string | null;
+        status?: string;
+        order_date?: string;
+        created_at?: string;
+      };
+      Update: {
+        id?: string;
+        checkout_session_id?: string;
+        payment_intent_id?: string | null;
+        customer_id?: string;
+        amount_subtotal?: number | null;
+        amount_total?: number | null;
+        currency?: string | null;
+        payment_status?: string | null;
+        status?: string;
+        order_date?: string;
+        created_at?: string;
+      };
+    };
   };
 }
