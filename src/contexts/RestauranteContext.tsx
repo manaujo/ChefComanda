@@ -368,11 +368,18 @@ export const RestauranteProvider: React.FC<RestauranteProviderProps> = ({ childr
         });
       }
       
-      // Update mesa status to aguardando
-      await DatabaseService.updateMesa(mesaId, { status: 'aguardando' });
+      // Update mesa status to livre and reset values
+      await DatabaseService.updateMesa(mesaId, { 
+        status: 'livre',
+        horario_abertura: null,
+        garcom: null,
+        valor_total: 0
+      });
       
       // Refresh data
       await refreshData();
+      
+      toast.success('Pagamento finalizado e mesa liberada!');
     } catch (error) {
       console.error('Error finalizing payment:', error);
       toast.error('Erro ao finalizar pagamento');

@@ -60,10 +60,9 @@ const PagamentoModal: React.FC<PagamentoModalProps> = ({ isOpen, onClose, mesa }
     try {
       await finalizarPagamento(mesa.id, formaPagamento);
       await refreshData(); // Refresh data to update UI
-      toast.success('Pagamento finalizado com sucesso!');
       onClose();
     } catch (error) {
-      toast.error('Erro ao processar pagamento');
+      // Error is already handled in finalizarPagamento
     } finally {
       setLoading(false);
     }

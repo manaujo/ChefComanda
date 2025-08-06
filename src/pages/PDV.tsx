@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   ShoppingCart, Plus, Minus, Trash2, CreditCard, 
   DollarSign, QrCode, Calculator, Receipt, Search,
-  Filter, X, Check, Clock, User
+  Filter, X, Check, Clock, User, Coffee, CheckCircle
 } from 'lucide-react';
 import Button from '../components/ui/Button';
 import { useRestaurante } from '../contexts/RestauranteContext';
@@ -24,8 +24,18 @@ interface Cliente {
   mesa?: number;
 }
 
+interface ComandaMesa {
+  mesa_id: string;
+  mesa_numero: number;
+  mesa_capacidade: number;
+  garcom?: string;
+  horario_abertura?: string;
+  itens: ComandaItemData[];
+  valor_total: number;
+}
+
 const PDV: React.FC = () => {
-  const { produtos, refreshData } = useRestaurante();
+  const { produtos, refreshData, mesas, itensComanda, finalizarPagamento, liberarMesa } = useRestaurante();
   const [itensVenda, setItensVenda] = useState<ItemVenda[]>([]);
   const [busca, setBusca] = useState('');
   const [categoriaSelecionada, setCategoriaSelecionada] = useState('todos');
@@ -38,6 +48,8 @@ const PDV: React.FC = () => {
   });
   const [taxaServico, setTaxaServico] = useState(false);
   const [showPagamentoModal, setShowPagamentoModal] = useState(false);
+  const [showComandasModal, setComandasModal] = useState(false);
+  const [comandasSelecionada, setComandaSelecionada] = useState<ComandaMesa | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -53,6 +65,28 @@ const PDV: React.FC = () => {
     const matchCategoria = categoriaSelecionada === 'todos' || produto.categoria === categoriaSelecionada;
     return matchBusca && matchCategoria && produto.disponivel;
   });
+
+  // Agrupar comandas por mesa
+  const comandasPorMesa = (): ComandaMesa[] => {
+    const mesasComComandas = mesas.filter(mesa => mesa.status === 'ocupada');
+    
+    return mesasComComandas.map(mesa => {
+      const itensDaMesa = itensComanda.filter(item => item.mesa_id === mesa.id);
+      const valorTotal = itensDaMesa.reduce((total, item) => {
+        return total + (item.preco_unitario * item.quantidade);
+      }, 0);
+
+      return {
+        mesa_id: mesa.id,
+        mesa_numero: mesa.numero,
+        mesa_capacidade: mesa.capacidade,
+        garcom: mesa.garcom,
+        horario_abertura: mesa.horario_abertura,
+        itens: itensDaMesa,
+        valor_total: valorTotal
+      };
+    }).filter(comanda => comanda.itens.length > 0);
+  };
 
   const adicionarItem = (produto: Produto) => {
     const itemExistente = itensVenda.find(item => item.produto.id === produto.id);
@@ -157,6 +191,35 @@ const PDV: React.FC = () => {
     }
   };
 
+  const finalizarComandaMesa = async (comanda: ComandaMesa) => {
+    if (!formaPagamento) {
+      toast.error('Selecione uma forma de pagamento');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Finalizar pagamento da comanda
+      await finalizarPagamento(comanda.mesa_id, formaPagamento);
+      
+      // Liberar a mesa
+      await liberarMesa(comanda.mesa_id);
+      
+      // Atualizar dados
+      await refreshData();
+      
+      toast.success(`Comanda da Mesa ${comanda.mesa_numero} finalizada com sucesso!`);
+      setComandaSelecionada(null);
+      setFormaPagamento(null);
+      setComandasModal(false);
+    } catch (error) {
+      console.error('Error finalizing comanda:', error);
+      toast.error('Erro ao finalizar comanda');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const limparCarrinho = () => {
     setItensVenda([]);
     setCliente({});
@@ -164,15 +227,26 @@ const PDV: React.FC = () => {
     setTaxaServico(false);
   };
 
+  const comandasDisponiveis = comandasPorMesa();
+
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
       <div className="flex h-screen">
         {/* Produtos - Lado Esquerdo */}
         <div className="flex-1 bg-white dark:bg-gray-800 p-6 overflow-y-auto">
           <div className="mb-6">
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-              Ponto de Venda
-            </h1>
+            <div className="flex justify-between items-center mb-4">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+                Ponto de Venda
+              </h1>
+              <Button
+                variant="secondary"
+                icon={<Coffee size={18} />}
+                onClick={() => setComandasModal(true)}
+              >
+                Comandas das Mesas ({comandasDisponiveis.length})
+              </Button>
+            </div>
             
             {/* Filtros */}
             <div className="flex flex-col md:flex-row gap-4 mb-6">
@@ -442,6 +516,101 @@ const PDV: React.FC = () => {
         </div>
       </div>
 
+      {/* Modal de Comandas das Mesas */}
+      {showComandasModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black bg-opacity-50">
+          <div className="flex items-center justify-center min-h-screen p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+              <div className="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                  Comandas das Mesas
+                </h3>
+                <button
+                  onClick={() => setComandasModal(false)}
+                  className="text-gray-400 hover:text-gray-500"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+                {comandasDisponiveis.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Coffee size={48} className="mx-auto text-gray-400 mb-4" />
+                    <p className="text-gray-500">Nenhuma comanda ativa</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {comandasDisponiveis.map((comanda) => (
+                      <div
+                        key={comanda.mesa_id}
+                        className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600"
+                      >
+                        <div className="flex justify-between items-start mb-4">
+                          <div>
+                            <h4 className="font-medium text-gray-900 dark:text-white">
+                              Mesa {comanda.mesa_numero}
+                            </h4>
+                            <div className="text-sm text-gray-500 dark:text-gray-400 space-y-1">
+                              <p>Capacidade: {comanda.mesa_capacidade} pessoas</p>
+                              {comanda.garcom && <p>Garçom: {comanda.garcom}</p>}
+                              {comanda.horario_abertura && (
+                                <div className="flex items-center">
+                                  <Clock size={14} className="mr-1" />
+                                  <span>
+                                    {new Date(comanda.horario_abertura).toLocaleTimeString('pt-BR')}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-lg font-bold text-gray-900 dark:text-white">
+                              {formatarDinheiro(comanda.valor_total)}
+                            </p>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                              {comanda.itens.length} {comanda.itens.length === 1 ? 'item' : 'itens'}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="space-y-2 mb-4">
+                          {comanda.itens.slice(0, 3).map((item) => (
+                            <div key={item.id} className="flex justify-between text-sm">
+                              <span>{item.quantidade}x {item.nome}</span>
+                              <span>{formatarDinheiro(item.preco_unitario * item.quantidade)}</span>
+                            </div>
+                          ))}
+                          {comanda.itens.length > 3 && (
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                              +{comanda.itens.length - 3} {comanda.itens.length - 3 === 1 ? 'item' : 'itens'}
+                            </p>
+                          )}
+                        </div>
+
+                        <Button
+                          variant="primary"
+                          fullWidth
+                          size="sm"
+                          onClick={() => {
+                            setComandaSelecionada(comanda);
+                            setComandasModal(false);
+                            setShowPagamentoModal(true);
+                          }}
+                          icon={<CreditCard size={16} />}
+                        >
+                          Finalizar Pagamento
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal de Pagamento */}
       {showPagamentoModal && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-black bg-opacity-50">
@@ -449,10 +618,17 @@ const PDV: React.FC = () => {
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md">
               <div className="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700">
                 <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                  Finalizar Pagamento
+                  {comandasSelecionada 
+                    ? `Finalizar Mesa ${comandasSelecionada.mesa_numero}`
+                    : 'Finalizar Pagamento'
+                  }
                 </h3>
                 <button
-                  onClick={() => setShowPagamentoModal(false)}
+                  onClick={() => {
+                    setShowPagamentoModal(false);
+                    setComandaSelecionada(null);
+                    setFormaPagamento(null);
+                  }}
                   className="text-gray-400 hover:text-gray-500"
                 >
                   <X size={24} />
@@ -464,8 +640,16 @@ const PDV: React.FC = () => {
                 <div className="text-center mb-6">
                   <p className="text-sm text-gray-500 dark:text-gray-400">Total a pagar</p>
                   <p className="text-3xl font-bold text-gray-900 dark:text-white">
-                    {formatarDinheiro(calcularTotal())}
+                    {comandasSelecionada 
+                      ? formatarDinheiro(comandasSelecionada.valor_total)
+                      : formatarDinheiro(calcularTotal())
+                    }
                   </p>
+                  {comandasSelecionada && (
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                      Mesa {comandasSelecionada.mesa_numero} • {comandasSelecionada.itens.length} {comandasSelecionada.itens.length === 1 ? 'item' : 'itens'}
+                    </p>
+                  )}
                 </div>
 
                 {/* Formas de Pagamento */}
@@ -514,7 +698,7 @@ const PDV: React.FC = () => {
                 </div>
 
                 {/* Valor Recebido (apenas para dinheiro) */}
-                {formaPagamento === 'dinheiro' && (
+                {formaPagamento === 'dinheiro' && !comandasSelecionada && (
                   <div className="mb-6">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Valor Recebido
@@ -549,7 +733,13 @@ const PDV: React.FC = () => {
                   variant="primary"
                   fullWidth
                   size="lg"
-                  onClick={finalizarVenda}
+                  onClick={() => {
+                    if (comandasSelecionada) {
+                      finalizarComandaMesa(comandasSelecionada);
+                    } else {
+                      finalizarVenda();
+                    }
+                  }}
                   isLoading={loading}
                   disabled={!formaPagamento}
                   icon={<Receipt size={20} />}
