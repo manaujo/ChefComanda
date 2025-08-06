@@ -103,7 +103,7 @@ const SignUp: React.FC = () => {
               type="text"
               value={formData.nome}
               onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-              className="pl-10 block w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-colors dark:text-white"
+              className="pl-10 block w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-red-500 dark:focus:ring-red-400 focus:border-red-500 dark:focus:border-red-400 transition-colors dark:text-white"
               placeholder="Seu nome completo"
             />
           </div>
@@ -122,7 +122,7 @@ const SignUp: React.FC = () => {
               type="email"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="pl-10 block w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-colors dark:text-white"
+              className="pl-10 block w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-red-500 dark:focus:ring-red-400 focus:border-red-500 dark:focus:border-red-400 transition-colors dark:text-white"
               placeholder="email"
             />
           </div>
@@ -141,7 +141,7 @@ const SignUp: React.FC = () => {
               type="text"
               value={formData.cpf}
               onChange={(e) => setFormData({ ...formData, cpf: e.target.value })}
-              className="pl-10 block w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-colors dark:text-white"
+              className="pl-10 block w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-red-500 dark:focus:ring-red-400 focus:border-red-500 dark:focus:border-red-400 transition-colors dark:text-white"
               placeholder="000.000.000-00"
             />
           </div>
@@ -160,7 +160,7 @@ const SignUp: React.FC = () => {
               type={showPassword ? 'text' : 'password'}
               value={formData.senha}
               onChange={(e) => setFormData({ ...formData, senha: e.target.value })}
-              className="pl-10 pr-10 block w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-colors dark:text-white"
+              className="pl-10 pr-10 block w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-red-500 dark:focus:ring-red-400 focus:border-red-500 dark:focus:border-red-400 transition-colors dark:text-white"
               placeholder="••••••••"
             />
             <button
@@ -190,7 +190,7 @@ const SignUp: React.FC = () => {
               type={showConfirmPassword ? 'text' : 'password'}
               value={formData.confirmaSenha}
               onChange={(e) => setFormData({ ...formData, confirmaSenha: e.target.value })}
-              className="pl-10 pr-10 block w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-colors dark:text-white"
+              className="pl-10 pr-10 block w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-red-500 dark:focus:ring-red-400 focus:border-red-500 dark:focus:border-red-400 transition-colors dark:text-white"
               placeholder="••••••••"
             />
             <button
@@ -213,7 +213,7 @@ const SignUp: React.FC = () => {
           fullWidth
           size="lg"
           isLoading={loading}
-          className="bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98]"
+          className="bg-gradient-to-r from-red-600 to-red-500 hover:from-red-700 hover:to-red-600 transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98]"
         >
           Criar Conta
         </Button>
@@ -221,7 +221,7 @@ const SignUp: React.FC = () => {
         <div className="text-center">
           <p className="text-sm text-gray-600 dark:text-gray-400">
             Já tem uma conta?{' '}
-            <Link to="/login" className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300 transition-colors">
+            <Link to="/login" className="font-medium text-red-600 hover:text-red-500 dark:text-red-400 dark:hover:text-red-300 transition-colors">
               Faça login
             </Link>
           </p>

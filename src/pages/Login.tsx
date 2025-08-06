@@ -98,7 +98,7 @@ const Login: React.FC = () => {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="pl-10 block w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-colors dark:text-white"
+              className="pl-10 block w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-red-500 dark:focus:ring-red-400 focus:border-red-500 dark:focus:border-red-400 transition-colors dark:text-white"
               placeholder="seu@email.com"
             />
           </div>
@@ -117,7 +117,7 @@ const Login: React.FC = () => {
               type={showPassword ? 'text' : 'password'}
               value={senha}
               onChange={(e) => setSenha(e.target.value)}
-              className="pl-10 pr-10 block w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-colors dark:text-white"
+              className="pl-10 pr-10 block w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-red-500 dark:focus:ring-red-400 focus:border-red-500 dark:focus:border-red-400 transition-colors dark:text-white"
               placeholder="••••••••"
             />
             <button
@@ -139,7 +139,7 @@ const Login: React.FC = () => {
             <input
               id="lembrar"
               type="checkbox"
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded transition-colors dark:border-gray-600 dark:bg-gray-700"
+              className="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded transition-colors dark:border-gray-600 dark:bg-gray-700"
             />
             <label htmlFor="lembrar" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
               Lembrar-me
@@ -147,7 +147,7 @@ const Login: React.FC = () => {
           </div>
 
           <div className="text-sm">
-            <Link to="/auth/forgot-password" className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300 transition-colors">
+            <Link to="/auth/forgot-password" className="font-medium text-red-600 hover:text-red-500 dark:text-red-400 dark:hover:text-red-300 transition-colors">
               Esqueceu sua senha?
             </Link>
           </div>
@@ -159,7 +159,7 @@ const Login: React.FC = () => {
           fullWidth
           size="lg"
           isLoading={loading}
-          className="bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98]"
+          className="bg-gradient-to-r from-red-600 to-red-500 hover:from-red-700 hover:to-red-600 transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98]"
         >
           Entrar
         </Button>
@@ -167,7 +167,7 @@ const Login: React.FC = () => {
         <div className="text-center">
           <p className="text-sm text-gray-600 dark:text-gray-400">
             Não tem uma conta?{' '}
-            <Link to="/signup" className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300 transition-colors">
+            <Link to="/signup" className="font-medium text-red-600 hover:text-red-500 dark:text-red-400 dark:hover:text-red-300 transition-colors">
               Registre-se
             </Link>
           </p>

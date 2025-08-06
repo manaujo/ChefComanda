@@ -312,7 +312,7 @@ const Comandas: React.FC = () => {
         {showBackToTop && (
           <button
             onClick={scrollToTop}
-            className="fixed bottom-8 right-8 bg-blue-600 dark:bg-blue-500 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors flex items-center space-x-2"
+            className="fixed bottom-8 right-8 bg-red-600 dark:bg-red-500 text-white p-4 rounded-full shadow-lg hover:bg-red-700 dark:hover:bg-red-600 transition-colors flex items-center space-x-2"
           >
             <ArrowUp size={20} />
             <span>Voltar</span>

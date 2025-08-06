@@ -76,7 +76,7 @@ const CardapioPublico: React.FC = () => {
               placeholder="Buscar no cardápio..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 w-full rounded-lg border border-gray-200 py-2 px-4 focus:ring-2 focus:ring-[#8B0000] focus:border-[#8B0000]"
+              className="pl-10 w-full rounded-lg border border-gray-200 py-2 px-4 focus:ring-2 focus:ring-red-600 focus:border-red-600"
             />
           </div>
         </div>
@@ -92,8 +92,8 @@ const CardapioPublico: React.FC = () => {
                 onClick={() => setActiveCategory(section.title)}
                 className={`whitespace-nowrap text-sm font-medium px-3 py-2 rounded-full transition-colors ${
                   activeCategory === section.title
-                    ? 'bg-[#8B0000] text-white'
-                    : 'text-gray-600 hover:text-[#8B0000]'
+                    ? 'bg-red-700 text-white'
+                    : 'text-gray-600 hover:text-red-600'
                 }`}
               >
                 {section.title}
@@ -118,7 +118,7 @@ const CardapioPublico: React.FC = () => {
                 <h3 className="font-serif text-xl text-[#4A4A4A] mb-2">{produto.nome}</h3>
                 <p className="text-gray-600 text-sm mb-4">{produto.descricao}</p>
                 <div className="flex items-center justify-between">
-                  <p className="text-xl font-bold text-[#8B0000]">
+                  <p className="text-xl font-bold text-red-700">
                     {formatarDinheiro(produto.preco)}
                   </p>
                   {produto.disponivel ? (

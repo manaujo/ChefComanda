@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
+import LandingPage from './pages/LandingPage';
 import Planos from './pages/profile/Planos';
 import UserProfile from './pages/profile/UserProfile';
 import Settings from './pages/profile/Settings';
@@ -50,6 +51,7 @@ function App() {
             <Toaster position="top-right" />
             <Routes>
               {/* Auth Routes */}
+              <Route path="/landing" element={<LandingPage />} />
               <Route path="/login" element={<AuthLayout><Login /></AuthLayout>} />
               <Route path="/signup" element={<AuthLayout><SignUp /></AuthLayout>} />
               <Route path="/auth/verify-email" element={<AuthLayout><VerifyEmail /></AuthLayout>} />
@@ -91,7 +93,7 @@ function App() {
               </Route>
               
               {/* Redirect any unknown routes to dashboard */}
-              <Route path="*" element={<Navigate to="/" replace />} />
+              <Route path="*" element={<Navigate to="/landing" replace />} />
             </Routes>
           </RestauranteProvider>
         </ThemeProvider>

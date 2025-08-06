@@ -257,14 +257,14 @@ const PDV: React.FC = () => {
                   placeholder="Buscar produtos..."
                   value={busca}
                   onChange={(e) => setBusca(e.target.value)}
-                  className="pl-10 w-full rounded-lg border border-gray-300 dark:border-gray-600 py-2 px-4 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                  className="pl-10 w-full rounded-lg border border-gray-300 dark:border-gray-600 py-2 px-4 focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:bg-gray-700 dark:text-white"
                 />
               </div>
               
               <select
                 value={categoriaSelecionada}
                 onChange={(e) => setCategoriaSelecionada(e.target.value)}
-                className="border border-gray-300 dark:border-gray-600 rounded-md py-2 pl-3 pr-10 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                className="border border-gray-300 dark:border-gray-600 rounded-md py-2 pl-3 pr-10 focus:ring-red-500 focus:border-red-500 dark:bg-gray-700 dark:text-white"
               >
                 <option value="todos">Todas as categorias</option>
                 {categorias.map((categoria) => (
@@ -291,7 +291,7 @@ const PDV: React.FC = () => {
                   <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
                     {produto.categoria}
                   </p>
-                  <p className="text-lg font-bold text-blue-600 dark:text-blue-400">
+                  <p className="text-lg font-bold text-red-600 dark:text-red-400">
                     {formatarDinheiro(produto.preco)}
                   </p>
                   {produto.estoque <= produto.estoque_minimo && (
@@ -345,21 +345,21 @@ const PDV: React.FC = () => {
                 placeholder="Nome do cliente"
                 value={cliente.nome || ''}
                 onChange={(e) => setCliente({ ...cliente, nome: e.target.value })}
-                className="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                className="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 focus:ring-red-500 focus:border-red-500 dark:bg-gray-700 dark:text-white"
               />
               <input
                 type="text"
                 placeholder="Telefone"
                 value={cliente.telefone || ''}
                 onChange={(e) => setCliente({ ...cliente, telefone: e.target.value })}
-                className="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                className="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 focus:ring-red-500 focus:border-red-500 dark:bg-gray-700 dark:text-white"
               />
               <input
                 type="number"
                 placeholder="Número da mesa"
                 value={cliente.mesa || ''}
                 onChange={(e) => setCliente({ ...cliente, mesa: parseInt(e.target.value) || undefined })}
-                className="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                className="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 focus:ring-red-500 focus:border-red-500 dark:bg-gray-700 dark:text-white"
               />
             </div>
           </div>
@@ -658,12 +658,12 @@ const PDV: React.FC = () => {
                     onClick={() => setFormaPagamento('pix')}
                     className={`w-full p-4 rounded-lg border-2 transition-colors ${
                       formaPagamento === 'pix'
-                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                        : 'border-gray-200 dark:border-gray-600 hover:border-blue-200'
+                        ? 'border-red-500 bg-red-50 dark:bg-red-900/20'
+                        : 'border-gray-200 dark:border-gray-600 hover:border-red-200'
                     }`}
                   >
                     <div className="flex items-center">
-                      <QrCode size={24} className="text-blue-500" />
+                      <QrCode size={24} className="text-red-500" />
                       <span className="ml-3 font-medium text-gray-900 dark:text-white">PIX</span>
                     </div>
                   </button>
@@ -672,12 +672,12 @@ const PDV: React.FC = () => {
                     onClick={() => setFormaPagamento('cartao')}
                     className={`w-full p-4 rounded-lg border-2 transition-colors ${
                       formaPagamento === 'cartao'
-                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                        : 'border-gray-200 dark:border-gray-600 hover:border-blue-200'
+                        ? 'border-red-500 bg-red-50 dark:bg-red-900/20'
+                        : 'border-gray-200 dark:border-gray-600 hover:border-red-200'
                     }`}
                   >
                     <div className="flex items-center">
-                      <CreditCard size={24} className="text-blue-500" />
+                      <CreditCard size={24} className="text-red-500" />
                       <span className="ml-3 font-medium text-gray-900 dark:text-white">Cartão</span>
                     </div>
                   </button>
@@ -686,12 +686,12 @@ const PDV: React.FC = () => {
                     onClick={() => setFormaPagamento('dinheiro')}
                     className={`w-full p-4 rounded-lg border-2 transition-colors ${
                       formaPagamento === 'dinheiro'
-                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                        : 'border-gray-200 dark:border-gray-600 hover:border-blue-200'
+                        ? 'border-red-500 bg-red-50 dark:bg-red-900/20'
+                        : 'border-gray-200 dark:border-gray-600 hover:border-red-200'
                     }`}
                   >
                     <div className="flex items-center">
-                      <DollarSign size={24} className="text-blue-500" />
+                      <DollarSign size={24} className="text-red-500" />
                       <span className="ml-3 font-medium text-gray-900 dark:text-white">Dinheiro</span>
                     </div>
                   </button>

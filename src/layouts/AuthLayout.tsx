@@ -8,8 +8,8 @@ const AuthLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         <div className="flex flex-col items-center">
           {/* Modern Chef Illustration */}
           <div className="w-32 h-32 mb-6 relative">
-            <div className="absolute inset-0 bg-blue-500 rounded-full opacity-10 animate-pulse"></div>
-            <Chef className="w-full h-full text-blue-600 p-6" />
+            <div className="absolute inset-0 bg-red-600 rounded-full opacity-10 animate-pulse"></div>
+            <Chef className="w-full h-full text-red-600 p-6" />
           </div>
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
             Chef Comanda

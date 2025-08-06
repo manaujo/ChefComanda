@@ -6,6 +6,7 @@ import {
 import Button from '../components/ui/Button';
 import { useRestaurante } from '../contexts/RestauranteContext';
 import { formatarDinheiro } from '../utils/formatters';
+import { supabase } from '../services/supabase';
 import toast from 'react-hot-toast';
 
 interface ProdutoFormData {
