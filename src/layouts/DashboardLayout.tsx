@@ -17,25 +17,25 @@ const DashboardLayout: React.FC = () => {
   const location = useLocation();
   const { theme, toggleTheme } = useTheme();
   const { userRole, isEmployee } = useAuth();
-  const isPDV = location.pathname === '/pdv';
-  const isComandas = location.pathname === '/comandas';
+  const isPDV = location.pathname === '/dashboard/pdv';
+  const isComandas = location.pathname === '/dashboard/comandas';
 
   // Definir quais itens de menu cada função pode acessar
   const getRoleNavItems = () => {
     const allNavItems = [
-      { name: 'Dashboard', path: '/', icon: <LayoutDashboard size={20} />, roles: ['admin', 'cashier'] },
-      { name: 'Mesas', path: '/mesas', icon: <Coffee size={20} />, roles: ['admin', 'waiter'] },
-      { name: 'Comandas', path: '/comandas', icon: <ClipboardList size={20} />, roles: ['admin', 'kitchen', 'waiter'] },
-      { name: 'PDV', path: '/pdv', icon: <CreditCard size={20} />, roles: ['admin', 'cashier'] },
-      { name: 'Cardápio', path: '/cardapio', icon: <ShoppingBag size={20} />, roles: ['admin', 'stock'] },
-      { name: 'Estoque', path: '/estoque', icon: <ShoppingBag size={20} />, roles: ['admin', 'stock'] },
-      { name: 'Pedidos iFood', path: '/ifood', icon: <ShoppingBag size={20} />, roles: ['admin', 'kitchen'] },
-      { name: 'Relatórios', path: '/relatorios', icon: <PieChart size={20} />, roles: ['admin', 'cashier'] },
-      { name: 'CMV', path: '/cmv', icon: <Calculator size={20} />, roles: ['admin'] },
-      { name: 'Cardápio Online', path: '/cardapio-online', icon: <QrCode size={20} />, roles: ['admin'] },
-      { name: 'Editor de Cardápio', path: '/cardapio-online/editor', icon: <PenSquare size={20} />, roles: ['admin', 'stock'] },
+      { name: 'Dashboard', path: '/dashboard', icon: <LayoutDashboard size={20} />, roles: ['admin', 'cashier'] },
+      { name: 'Mesas', path: '/dashboard/mesas', icon: <Coffee size={20} />, roles: ['admin', 'waiter'] },
+      { name: 'Comandas', path: '/dashboard/comandas', icon: <ClipboardList size={20} />, roles: ['admin', 'kitchen', 'waiter'] },
+      { name: 'PDV', path: '/dashboard/pdv', icon: <CreditCard size={20} />, roles: ['admin', 'cashier'] },
+      { name: 'Cardápio', path: '/dashboard/cardapio', icon: <ShoppingBag size={20} />, roles: ['admin', 'stock'] },
+      { name: 'Estoque', path: '/dashboard/estoque', icon: <ShoppingBag size={20} />, roles: ['admin', 'stock'] },
+      { name: 'Pedidos iFood', path: '/dashboard/ifood', icon: <ShoppingBag size={20} />, roles: ['admin', 'kitchen'] },
+      { name: 'Relatórios', path: '/dashboard/relatorios', icon: <PieChart size={20} />, roles: ['admin', 'cashier'] },
+      { name: 'CMV', path: '/dashboard/cmv', icon: <Calculator size={20} />, roles: ['admin'] },
+      { name: 'Cardápio Online', path: '/dashboard/cardapio-online', icon: <QrCode size={20} />, roles: ['admin'] },
+      { name: 'Editor de Cardápio', path: '/dashboard/cardapio-online/editor', icon: <PenSquare size={20} />, roles: ['admin', 'stock'] },
       { name: 'Cardápio Online (Público)', path: '/cardapio/1', icon: <Globe size={20} />, roles: ['admin'] },
-      { name: 'Central de Ajuda', path: '/ajuda', icon: <HelpCircle size={20} />, roles: ['admin', 'kitchen', 'waiter', 'cashier', 'stock'] },
+      { name: 'Central de Ajuda', path: '/dashboard/ajuda', icon: <HelpCircle size={20} />, roles: ['admin', 'kitchen', 'waiter', 'cashier', 'stock'] },
     ];
 
     // Filtrar itens com base na função do usuário

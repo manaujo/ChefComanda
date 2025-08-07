@@ -215,22 +215,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const redirectByRole = (role: string) => {
     switch (role) {
       case 'admin':
-        navigate('/');
+        navigate('/dashboard');
         break;
       case 'kitchen':
-        navigate('/comandas');
+        navigate('/dashboard/comandas');
         break;
       case 'waiter':
-        navigate('/mesas');
+        navigate('/dashboard/mesas');
         break;
       case 'cashier':
-        navigate('/caixa');
+        navigate('/dashboard/caixa');
         break;
       case 'stock':
-        navigate('/estoque');
+        navigate('/dashboard/estoque');
         break;
       default:
-        navigate('/');
+        navigate('/dashboard');
     }
   };
 
@@ -481,7 +481,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         currentPlan: null,
       });
       toast.success('Logout realizado com sucesso!');
-      navigate('/login');
+      navigate('/landing');
     } catch (error) {
       console.error('Error signing out:', error);
       if (error instanceof Error && error.message.includes('Failed to fetch')) {

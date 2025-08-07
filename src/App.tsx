@@ -52,6 +52,7 @@ function App() {
             <Routes>
               {/* Auth Routes */}
               <Route path="/landing" element={<LandingPage />} />
+              <Route path="/" element={<Navigate to="/landing" replace />} />
               <Route path="/login" element={<AuthLayout><Login /></AuthLayout>} />
               <Route path="/signup" element={<AuthLayout><SignUp /></AuthLayout>} />
               <Route path="/auth/verify-email" element={<AuthLayout><VerifyEmail /></AuthLayout>} />
@@ -63,7 +64,7 @@ function App() {
               <Route path="/cardapio/:restauranteId" element={<CardapioPublico />} />
               
               {/* Protected Routes */}
-              <Route path="/" element={
+              <Route path="/dashboard" element={
                 <PrivateRoute>
                   <DashboardLayout />
                 </PrivateRoute>
