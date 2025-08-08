@@ -6,6 +6,8 @@ import ComandaItem from '../components/comanda/ComandaItem';
 import ComandaModal from '../components/comanda/ComandaModal';
 import { formatarDinheiro } from '../utils/formatters';
 import { useNavigate } from 'react-router-dom';
+import { usePageActive } from '../hooks/usePageVisibility';
+import { usePreventReload } from '../hooks/usePreventReload';
 
 const Comandas: React.FC = () => {
   const navigate = useNavigate();
@@ -15,6 +17,10 @@ const Comandas: React.FC = () => {
   const [comandaModalAberta, setComandaModalAberta] = useState(false);
   const [mesaSelecionada, setMesaSelecionada] = useState<string | null>(null);
   const [showBackToTop, setShowBackToTop] = useState(false);
+  const [dataInitialized, setDataInitialized] = useState(false);
+  
+  const isPageActive = usePageActive();
+  const { currentRoute } = usePreventReload();
   
   useEffect(() => {
     const handleScroll = () => {
@@ -25,6 +31,27 @@ const Comandas: React.FC = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Salvar estado dos filtros
+  useEffect(() => {
+    sessionStorage.setItem('comandas_filters', JSON.stringify({
+      filtroStatus,
+      filtroMesa
+    }));
+  }, [filtroStatus, filtroMesa]);
+
+  // Restaurar estado dos filtros
+  useEffect(() => {
+    const savedFilters = sessionStorage.getItem('comandas_filters');
+    if (savedFilters) {
+      try {
+        const parsed = JSON.parse(savedFilters);
+        setFiltroStatus(parsed.filtroStatus || 'todos');
+        setFiltroMesa(parsed.filtroMesa || null);
+      } catch (error) {
+        console.error('Error restoring comandas filters:', error);
+      }
+    }
+  }, []);
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };

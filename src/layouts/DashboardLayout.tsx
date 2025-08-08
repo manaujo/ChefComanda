@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation, Outlet } from 'react-router-dom';
+import { Link, useLocation, Outlet, useNavigate } from 'react-router-dom';
 import {
   Menu, ChefHat, LayoutDashboard, Users, ShoppingBag,
   ClipboardList, PieChart, Settings, Coffee, QrCode,
@@ -15,10 +15,18 @@ const DashboardLayout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarHover, setSidebarHover] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
-  const { userRole, isEmployee } = useAuth();
+  const { userRole, isEmployee, user, loading } = useAuth();
   const isPDV = location.pathname === '/dashboard/pdv';
   const isComandas = location.pathname === '/dashboard/comandas';
+
+  // Prevent unnecessary redirects when user is already authenticated
+  useEffect(() => {
+    if (!loading && !user) {
+      navigate('/landing');
+    }
+  }, [user, loading, navigate]);
 
   // Definir quais itens de menu cada função pode acessar
   const getRoleNavItems = () => {

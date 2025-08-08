@@ -4,18 +4,22 @@ import { useAuth } from '../contexts/AuthContext';
 
 interface PrivateRouteProps {
   children: React.ReactNode;
-  allowedRoles?: ('admin' | 'kitchen' | 'waiter')[];
+  allowedRoles?: ('admin' | 'kitchen' | 'waiter' | 'cashier' | 'stock')[];
 }
 
 const PrivateRoute: React.FC<PrivateRouteProps> = ({ children, allowedRoles }) => {
-  const { user, userRole, loading } = useAuth();
+  const { user, userRole, loading, isEmployee } = useAuth();
   const location = useLocation();
 
   if (loading) {
-    return <div>Carregando...</div>;
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-500"></div>
+      </div>
+    );
   }
 
-  if (!user) {
+  if (!user && !isEmployee) {
     return <Navigate to="/landing" state={{ from: location }} replace />;
   }
 

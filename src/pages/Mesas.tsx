@@ -5,14 +5,38 @@ import MesaCard from '../components/mesa/MesaCard';
 import NovoMesaModal from '../components/mesa/NovoMesaModal';
 import { useRestaurante } from '../contexts/RestauranteContext';
 import toast from 'react-hot-toast';
+import { usePageActive } from '../hooks/usePageVisibility';
+import { usePreventReload } from '../hooks/usePreventReload';
 
 const Mesas: React.FC = () => {
   const { mesas, refreshData } = useRestaurante();
   const [filtro, setFiltro] = useState<string>('todas');
   const [modalAberto, setModalAberto] = useState(false);
+  const [dataInitialized, setDataInitialized] = useState(false);
+  
+  const isPageActive = usePageActive();
+  const { currentRoute } = usePreventReload();
   
   useEffect(() => {
-    refreshData();
+    // Só carrega dados uma vez quando o componente monta
+    if (!dataInitialized) {
+      refreshData().then(() => {
+        setDataInitialized(true);
+      });
+    }
+  }, [dataInitialized]);
+
+  // Salvar estado do filtro
+  useEffect(() => {
+    sessionStorage.setItem('mesas_filter', filtro);
+  }, [filtro]);
+
+  // Restaurar estado do filtro
+  useEffect(() => {
+    const savedFilter = sessionStorage.getItem('mesas_filter');
+    if (savedFilter) {
+      setFiltro(savedFilter);
+    }
   }, []);
   
   // Apply filter

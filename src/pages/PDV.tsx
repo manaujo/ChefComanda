@@ -9,6 +9,8 @@ import { useRestaurante } from '../contexts/RestauranteContext';
 import { formatarDinheiro } from '../utils/formatters';
 import { Database } from '../types/database';
 import toast from 'react-hot-toast';
+import { usePageActive } from '../hooks/usePageVisibility';
+import { usePreventReload } from '../hooks/usePreventReload';
 
 type Produto = Database['public']['Tables']['produtos']['Row'];
 
@@ -51,9 +53,50 @@ const PDV: React.FC = () => {
   const [showComandasModal, setComandasModal] = useState(false);
   const [comandasSelecionada, setComandaSelecionada] = useState<ComandaMesa | null>(null);
   const [loading, setLoading] = useState(false);
+  const [dataInitialized, setDataInitialized] = useState(false);
+  
+  const isPageActive = usePageActive();
+  const { currentRoute } = usePreventReload();
 
   useEffect(() => {
-    refreshData();
+    // Só carrega dados uma vez quando o componente monta
+    if (!dataInitialized) {
+      refreshData().then(() => {
+        setDataInitialized(true);
+      });
+    }
+  }, [dataInitialized]);
+
+  // Salvar estado do carrinho no sessionStorage
+  useEffect(() => {
+    if (itensVenda.length > 0) {
+      sessionStorage.setItem('pdv_carrinho', JSON.stringify({
+        itensVenda,
+        cliente,
+        desconto,
+        taxaServico,
+        formaPagamento,
+        valorRecebido
+      }));
+    }
+  }, [itensVenda, cliente, desconto, taxaServico, formaPagamento, valorRecebido]);
+
+  // Restaurar estado do carrinho ao carregar
+  useEffect(() => {
+    const savedState = sessionStorage.getItem('pdv_carrinho');
+    if (savedState && itensVenda.length === 0) {
+      try {
+        const parsed = JSON.parse(savedState);
+        setItensVenda(parsed.itensVenda || []);
+        setCliente(parsed.cliente || {});
+        setDesconto(parsed.desconto || { tipo: 'percentual', valor: 0 });
+        setTaxaServico(parsed.taxaServico || false);
+        setFormaPagamento(parsed.formaPagamento || null);
+        setValorRecebido(parsed.valorRecebido || '');
+      } catch (error) {
+        console.error('Error restoring PDV state:', error);
+      }
+    }
   }, []);
 
   // Get unique categories
@@ -183,6 +226,7 @@ const PDV: React.FC = () => {
       setDesconto({ tipo: 'percentual', valor: 0 });
       setTaxaServico(false);
       setShowPagamentoModal(false);
+      sessionStorage.removeItem('pdv_carrinho');
     } catch (error) {
       console.error('Error finalizing sale:', error);
       toast.error('Erro ao finalizar venda');

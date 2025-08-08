@@ -3,7 +3,7 @@ import { createClient, SupabaseClient, User } from '@supabase/supabase-js';
 import { DatabaseService } from '../services/database';
 import StripeService from '../services/StripeService';
 import toast from 'react-hot-toast';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 interface AuthState {
   user: User | null;
@@ -55,6 +55,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
   
   const navigate = useNavigate();
+  const location = useLocation();
+  const [hasRedirected, setHasRedirected] = useState(false);
 
   useEffect(() => {
     // Check active sessions and subscribe to auth changes
@@ -201,7 +203,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('User data loaded successfully, role:', userRole);
       
       // Redirect based on user role
-      redirectByRole(userRole);
+      if (!hasRedirected && shouldRedirect()) {
+        redirectByRole(userRole);
+        setHasRedirected(true);
+      }
     } catch (error) {
       console.error('Error loading user data:', error);
       // Only show toast for non-network errors
@@ -212,7 +217,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const shouldRedirect = () => {
+    // Don't redirect if user is already on a dashboard page
+    const currentPath = location.pathname;
+    const isDashboardPage = currentPath.startsWith('/dashboard');
+    const isAuthPage = ['/login', '/signup', '/auth/', '/landing'].some(path => 
+      currentPath.startsWith(path)
+    );
+    
+    // Only redirect if on auth pages or landing, not if already on dashboard
+    return isAuthPage && !isDashboardPage;
+  };
+
   const redirectByRole = (role: string) => {
+    const currentPath = location.pathname;
+    
+    // Don't redirect if already on appropriate page
+    if (currentPath.startsWith('/dashboard')) {
+      return;
+    }
+    
     switch (role) {
       case 'admin':
         navigate('/dashboard');
@@ -233,6 +257,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         navigate('/dashboard');
     }
   };
+
+  // Reset redirect flag when location changes
+  useEffect(() => {
+    setHasRedirected(false);
+  }, [location.pathname]);
 
   const refreshSubscription = async () => {
     if (!state.user) return;

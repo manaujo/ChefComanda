@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import LandingPage from './pages/LandingPage';
 import Planos from './pages/profile/Planos';
@@ -42,12 +42,24 @@ import { ThemeProvider } from './contexts/ThemeContext';
 // Components
 import PrivateRoute from './components/PrivateRoute';
 
+// Componente para gerenciar navegação sem recarregar
+const NavigationManager: React.FC = () => {
+  const location = useLocation();
+  
+  React.useEffect(() => {
+    // Salvar rota atual
+    sessionStorage.setItem('lastRoute', location.pathname);
+  }, [location.pathname]);
+  
+  return null;
+};
 function App() {
   return (
     <Router>
       <AuthProvider>
         <ThemeProvider>
           <RestauranteProvider>
+            <NavigationManager />
             <Toaster position="top-right" />
             <Routes>
               {/* Auth Routes */}

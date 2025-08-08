@@ -93,12 +93,13 @@ export const RestauranteProvider: React.FC<RestauranteProviderProps> = ({ childr
   const [funcionarios, setFuncionarios] = useState<Funcionario[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [dataLoaded, setDataLoaded] = useState(false);
 
   useEffect(() => {
-    if (user) {
+    if (user && !dataLoaded) {
       refreshData();
     }
-  }, [user]);
+  }, [user, dataLoaded]);
 
   const refreshData = async () => {
     if (!user) return;
@@ -128,6 +129,8 @@ export const RestauranteProvider: React.FC<RestauranteProviderProps> = ({ childr
         
         // Load funcionarios
         await loadFuncionarios();
+        
+        setDataLoaded(true);
       }
     } catch (err) {
       console.error('Error refreshing data:', err);

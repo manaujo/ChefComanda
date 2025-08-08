@@ -28,10 +28,14 @@ const Dashboard: React.FC = () => {
   const [vendasData, setVendasData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [dataInitialized, setDataInitialized] = useState(false);
 
   useEffect(() => {
-    loadDashboardData();
-  }, []);
+    // Só carrega dados uma vez quando o componente monta
+    if (!dataInitialized) {
+      loadDashboardData();
+    }
+  }, [dataInitialized]);
 
   const loadDashboardData = async () => {
     try {
@@ -45,6 +49,7 @@ const Dashboard: React.FC = () => {
       
       setDashboardData(dashboard);
       setVendasData(vendas || []);
+      setDataInitialized(true);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
       toast.error('Erro ao carregar dados do dashboard');
