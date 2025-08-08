@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Edit, Trash2, Package, DollarSign, Tag, Image } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Package, DollarSign, Tag, Image, Upload, X, Loader2 } from 'lucide-react';
 import Button from '../components/ui/Button';
 import { CRUDService } from '../services/CRUDService';
 import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../services/supabase';
+import toast from 'react-hot-toast';
 
 interface Produto {
   id: string;
@@ -24,6 +26,8 @@ export default function Produtos() {
   const [selectedCategory, setSelectedCategory] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Produto | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string>('');
 
   const [formData, setFormData] = useState({
     nome: '',
@@ -78,6 +82,7 @@ export default function Produtos() {
 
   const handleEdit = (produto: Produto) => {
     setEditingProduct(produto);
+    setImagePreview(produto.imagem_url || '');
     setFormData({
       nome: produto.nome,
       descricao: produto.descricao,
@@ -110,6 +115,66 @@ export default function Produtos() {
       imagem_url: ''
     });
     setEditingProduct(null);
+    setImagePreview('');
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Por favor, selecione apenas arquivos de imagem');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('A imagem deve ter no máximo 5MB');
+      return;
+    }
+
+    setUploadingImage(true);
+    try {
+      // Generate unique filename
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+      const filePath = `${fileName}`;
+
+      // Upload to Supabase Storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('produtos')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        throw new Error('Erro ao fazer upload da imagem');
+      }
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('produtos')
+        .getPublicUrl(filePath);
+
+      // Update form data and preview
+      setFormData(prev => ({ ...prev, imagem_url: publicUrl }));
+      setImagePreview(publicUrl);
+      
+      toast.success('Imagem enviada com sucesso!');
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      toast.error(error instanceof Error ? error.message : 'Erro ao enviar imagem');
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const removeImage = () => {
+    setFormData(prev => ({ ...prev, imagem_url: '' }));
+    setImagePreview('');
   };
 
   const filteredProdutos = produtos.filter(produto => {
@@ -326,17 +391,51 @@ export default function Produtos() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    URL da Imagem (opcional)
+                    Imagem do Produto (opcional)
                   </label>
-                  <div className="relative">
-                    <Image className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                    <input
-                      type="url"
-                      value={formData.imagem_url}
-                      onChange={(e) => setFormData({ ...formData, imagem_url: e.target.value })}
-                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="https://exemplo.com/imagem.jpg"
-                    />
+                  
+                  {imagePreview ? (
+                    <div className="relative">
+                      <img
+                        src={imagePreview}
+                        alt="Preview do produto"
+                        className="w-full h-48 object-cover rounded-lg border border-gray-300"
+                      />
+                      <button
+                        type="button"
+                        onClick={removeImage}
+                        className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="relative">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        disabled={uploadingImage}
+                      />
+                      <div className={`w-full h-32 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center hover:border-blue-400 transition-colors ${
+                        uploadingImage ? 'bg-gray-50' : 'hover:bg-gray-50'
+                      }`}>
+                        {uploadingImage ? (
+                          <div className="flex flex-col items-center">
+                            <Loader2 className="w-8 h-8 text-blue-500 animate-spin mb-2" />
+                            <span className="text-sm text-gray-600">Enviando imagem...</span>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center">
+                            <Upload className="w-8 h-8 text-gray-400 mb-2" />
+                            <span className="text-sm text-gray-600">Clique para enviar uma imagem</span>
+                            <span className="text-xs text-gray-500 mt-1">PNG, JPG até 5MB</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                   </div>
                 </div>
 
