@@ -3,7 +3,7 @@ import {
   BarChart, PieChart, TrendingUp, Download, Calendar,
   FileSpreadsheet, Filter, ChevronDown, Users, ShoppingBag,
   DollarSign, Clock, Package, AlertTriangle, RefreshCw,
-  ArrowUp, ArrowDown, Activity, Eye
+  ArrowUp, ArrowDown, Activity, Eye, Coffee
 } from 'lucide-react';
 import Button from '../components/ui/Button';
 import { formatarDinheiro } from '../utils/formatters';
@@ -219,6 +219,8 @@ const Relatorios: React.FC = () => {
   const totalVendas = vendasDiarias.reduce((acc, dia) => acc + dia.total, 0);
   const totalPedidos = vendasDiarias.reduce((acc, dia) => acc + dia.quantidade, 0);
   const ticketMedio = totalPedidos > 0 ? totalVendas / totalPedidos : 0;
+  const mesasOcupadas = mesas.filter(mesa => mesa.status === 'ocupada').length;
+  const produtosEstoqueBaixo = produtos.filter(produto => produto.estoque <= produto.estoque_minimo);
 
   const exportarRelatorio = (formato: 'excel' | 'pdf') => {
     toast.success(`Relatório exportado em ${formato.toUpperCase()}!`);
