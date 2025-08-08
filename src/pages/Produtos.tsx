@@ -43,7 +43,7 @@ export default function Produtos() {
   const loadProdutos = async () => {
     try {
       setLoading(true);
-      const data = await CRUDService.getAll('produtos');
+      const data = await CRUDService.read('produtos');
       setProdutos(data || []);
     } catch (error) {
       console.error('Erro ao carregar produtos:', error);
