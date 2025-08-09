@@ -80,31 +80,7 @@ const CompanyProfile: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-
-    try {
-      if (!user) throw new Error('User not authenticated');
-
-      const { error } = await supabase
-        .from('company_profiles')
-        .upsert({
-          user_id: user.id,
-          ...companyData,
-          updated_at: new Date()
-        }, {
-          onConflict: 'user_id'
-        });
-
-      if (error) throw error;
-
-      toast.success('Dados da empresa atualizados com sucesso!');
-    } catch (error) {
-      console.error('Error updating company data:', error);
-      toast.error('Erro ao atualizar dados da empresa');
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  }
   const formatCNPJ = (value: string) => {
     return value
       .replace(/\D/g, '')

@@ -488,15 +488,27 @@ const LandingPage: React.FC = () => {
               <ul className="space-y-3">
                 <li className="text-gray-400">
                   <strong className="text-white">Email:</strong><br />
-                  contato@chefcomanda.com.br
+                  chefcomandaoficial@gmail.com
                 </li>
                 <li className="text-gray-400">
                   <strong className="text-white">Telefone:</strong><br />
-                  (11) 99999-9999
+                  (62) 98276-0471
+                </li>
+                <li className="text-gray-400">
+                  <strong className="text-white">Instagram:</strong><br />
+                  <a 
+                    href="https://www.instagram.com/chef_comanda_/" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-purple-400 hover:text-purple-300 transition-colors"
+                  >
+                    @chef_comanda_
+                  </a>
                 </li>
                 <li className="text-gray-400">
                   <strong className="text-white">Horário:</strong><br />
-                  Segunda a Sexta, 8h às 18h
+                  Segunda a Sexta, 8h às 18h<br />
+                  <span className="text-green-400">WhatsApp 24/7</span>
                 </li>
               </ul>
             </div>

@@ -4,7 +4,7 @@ import {
   Menu, ChefHat, LayoutDashboard, Users, ShoppingBag,
   ClipboardList, PieChart, Settings, Coffee, QrCode,
   CreditCard, Moon, Sun, Globe, PenSquare, Calculator,
-  HelpCircle
+  HelpCircle, Headphones
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -42,8 +42,8 @@ const DashboardLayout: React.FC = () => {
       { name: 'CMV', path: '/dashboard/cmv', icon: <Calculator size={20} />, roles: ['admin'] },
       { name: 'Cardápio Online', path: '/dashboard/cardapio-online', icon: <QrCode size={20} />, roles: ['admin'] },
       { name: 'Editor de Cardápio', path: '/dashboard/cardapio-online/editor', icon: <PenSquare size={20} />, roles: ['admin', 'stock'] },
-      { name: 'Cardápio Online (Público)', path: '/cardapio/1', icon: <Globe size={20} />, roles: ['admin'] },
       { name: 'Central de Ajuda', path: '/dashboard/ajuda', icon: <HelpCircle size={20} />, roles: ['admin', 'kitchen', 'waiter', 'cashier', 'stock'] },
+      { name: 'Suporte', path: '/dashboard/suporte', icon: <Headphones size={20} />, roles: ['admin', 'kitchen', 'waiter', 'cashier', 'stock'] },
     ];
 
     // Filtrar itens com base na função do usuário

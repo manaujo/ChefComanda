@@ -131,8 +131,17 @@ const Success: React.FC = () => {
       <div className="mt-8 text-center">
         <p className="text-sm text-gray-500">
           Precisa de ajuda? Entre em contato com nosso{' '}
-          <a href="/ajuda" className="text-blue-600 hover:text-blue-500">
+          <a href="/dashboard/suporte" className="text-blue-600 hover:text-blue-500">
             suporte
+          </a>
+          {' '}ou pelo WhatsApp{' '}
+          <a 
+            href="https://wa.me/5562982760471" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="text-blue-600 hover:text-blue-500"
+          >
+            (62) 98276-0471
           </a>
         </p>
       </div>

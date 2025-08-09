@@ -261,18 +261,29 @@ const HelpCenter: React.FC = () => {
               </h2>
               <div className="space-y-4">
                 <a
-                  href="#"
+                  href="mailto:chefcomandaoficial@gmail.com"
                   className="flex items-center text-sm text-blue-600 hover:text-blue-500"
                 >
                   <ExternalLink size={16} className="mr-2" />
-                  Manual do Usuário (PDF)
+                  Suporte por E-mail
                 </a>
                 <a
-                  href="#"
+                  href="https://www.instagram.com/chef_comanda_/"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="flex items-center text-sm text-blue-600 hover:text-blue-500"
                 >
-                  <PlayCircle size={16} className="mr-2" />
-                  Canal no YouTube
+                  <ExternalLink size={16} className="mr-2" />
+                  Instagram @chef_comanda_
+                </a>
+                <a
+                  href="https://wa.me/5562982760471"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center text-sm text-blue-600 hover:text-blue-500"
+                >
+                  <ExternalLink size={16} className="mr-2" />
+                  WhatsApp: (62) 98276-0471
                 </a>
               </div>
             </div>
