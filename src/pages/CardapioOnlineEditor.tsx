@@ -29,7 +29,7 @@ interface Categoria {
 const CardapioOnlineEditor: React.FC = () => {
   const [items, setItems] = useState<CardapioItem[]>([]);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
-  const { produtos } = useRestaurante();
+  const { produtos, restaurante } = useRestaurante();
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -235,6 +235,11 @@ const CardapioOnlineEditor: React.FC = () => {
   };
 
   const moveItem = async (item: CardapioItem, direction: 'up' | 'down') => {
+    if (!restaurante?.id) {
+      toast.error('Restaurante não encontrado');
+      return;
+    }
+
     const currentIndex = items.findIndex(i => i.id === item.id);
     if (
       (direction === 'up' && currentIndex === 0) ||
@@ -250,6 +255,7 @@ const CardapioOnlineEditor: React.FC = () => {
     // Update ordem values
     const updates = newItems.map((item, index) => ({
       id: item.id,
+      restaurante_id: restaurante.id,
       ordem: index
     }));
 
@@ -261,6 +267,7 @@ const CardapioOnlineEditor: React.FC = () => {
 
       if (error) throw error;
       setItems(newItems);
+      toast.success('Ordem atualizada com sucesso!');
     } catch (error) {
       console.error('Error reordering items:', error);
       toast.error('Erro ao reordenar itens');

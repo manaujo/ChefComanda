@@ -3,19 +3,28 @@ import { QrCode, Download, Link as LinkIcon } from 'lucide-react';
 import QRCode from 'qrcode';
 import Button from '../components/ui/Button';
 import toast from 'react-hot-toast';
+import { useRestaurante } from '../contexts/RestauranteContext';
 
 const CardapioOnline: React.FC = () => {
   const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
   const [cardapioUrl, setCardapioUrl] = useState<string>('');
   const [loading, setLoading] = useState(false);
+  const { restaurante } = useRestaurante();
 
   useEffect(() => {
-    generateQRCode();
-  }, []);
+    if (restaurante?.id) {
+      generateQRCode();
+    }
+  }, [restaurante?.id]);
 
   const generateQRCode = async () => {
+    if (!restaurante?.id) {
+      toast.error('ID do restaurante não encontrado');
+      return;
+    }
+
     try {
-      const url = `${window.location.origin}/cardapio/1`; // Replace with actual restaurant ID
+      const url = `${window.location.origin}/cardapio/${restaurante.id}`;
       setCardapioUrl(url);
       const qrCode = await QRCode.toDataURL(url);
       setQrCodeUrl(qrCode);
