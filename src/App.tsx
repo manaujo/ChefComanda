@@ -28,7 +28,6 @@ import CardapioOnline from './pages/CardapioOnline';
 import CardapioOnlineEditor from './pages/CardapioOnlineEditor';
 import CardapioPublico from './pages/CardapioPublico';
 import CMV from './pages/CMV';
-import HelpCenter from './pages/HelpCenter';
 import Suporte from './pages/Suporte';
 
 // Profile Pages
@@ -94,7 +93,6 @@ function App() {
                 <Route path="cardapio-online" element={<PrivateRoute allowedRoles={['admin']}><CardapioOnline /></PrivateRoute>} />
                 <Route path="cardapio-online/editor" element={<PrivateRoute allowedRoles={['admin']}><CardapioOnlineEditor /></PrivateRoute>} />
                 <Route path="cmv" element={<PrivateRoute allowedRoles={['admin']}><CMV /></PrivateRoute>} />
-                <Route path="ajuda" element={<PrivateRoute><HelpCenter /></PrivateRoute>} />
                 <Route path="suporte" element={<PrivateRoute><Suporte /></PrivateRoute>} />
                 
                 {/* Profile Routes */}

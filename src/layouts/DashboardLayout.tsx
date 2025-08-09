@@ -42,7 +42,6 @@ const DashboardLayout: React.FC = () => {
       { name: 'CMV', path: '/dashboard/cmv', icon: <Calculator size={20} />, roles: ['admin'] },
       { name: 'Cardápio Online', path: '/dashboard/cardapio-online', icon: <QrCode size={20} />, roles: ['admin'] },
       { name: 'Editor de Cardápio', path: '/dashboard/cardapio-online/editor', icon: <PenSquare size={20} />, roles: ['admin', 'stock'] },
-      { name: 'Central de Ajuda', path: '/dashboard/ajuda', icon: <HelpCircle size={20} />, roles: ['admin', 'kitchen', 'waiter', 'cashier', 'stock'] },
       { name: 'Suporte', path: '/dashboard/suporte', icon: <Headphones size={20} />, roles: ['admin', 'kitchen', 'waiter', 'cashier', 'stock'] },
     ];
 

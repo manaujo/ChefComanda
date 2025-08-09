@@ -94,16 +94,6 @@ const Suporte: React.FC = () => {
               Fale Conosco
             </button>
             <button
-              onClick={() => setActiveTab('ticket')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                activeTab === 'ticket'
-                  ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-              }`}
-            >
-              Abrir Ticket
-            </button>
-            <button
               onClick={() => setActiveTab('faq')}
               className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
                 activeTab === 'faq'
@@ -257,115 +247,6 @@ const Suporte: React.FC = () => {
             </div>
           )}
 
-          {/* Abrir Ticket */}
-          {activeTab === 'ticket' && (
-            <div className="max-w-2xl mx-auto">
-              <div className="text-center mb-8">
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-                  Abrir Ticket de Suporte
-                </h2>
-                <p className="text-gray-600 dark:text-gray-400">
-                  Descreva seu problema detalhadamente para que possamos ajudá-lo melhor
-                </p>
-              </div>
-
-              <form onSubmit={handleSubmitTicket} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Nome Completo
-                    </label>
-                    <div className="relative">
-                      <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                      <input
-                        type="text"
-                        value={ticketData.nome}
-                        onChange={(e) => setTicketData({ ...ticketData, nome: e.target.value })}
-                        className="pl-10 w-full rounded-lg border border-gray-300 dark:border-gray-600 py-3 px-4 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-                        placeholder="Seu nome completo"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      E-mail
-                    </label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                      <input
-                        type="email"
-                        value={ticketData.email}
-                        onChange={(e) => setTicketData({ ...ticketData, email: e.target.value })}
-                        className="pl-10 w-full rounded-lg border border-gray-300 dark:border-gray-600 py-3 px-4 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-                        placeholder="seu@email.com"
-                        required
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Prioridade
-                  </label>
-                  <select
-                    value={ticketData.prioridade}
-                    onChange={(e) => setTicketData({ ...ticketData, prioridade: e.target.value as any })}
-                    className="w-full rounded-lg border border-gray-300 dark:border-gray-600 py-3 px-4 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-                  >
-                    <option value="baixa">Baixa - Dúvida geral</option>
-                    <option value="media">Média - Problema funcional</option>
-                    <option value="alta">Alta - Sistema não funciona</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Assunto
-                  </label>
-                  <div className="relative">
-                    <FileText className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                    <input
-                      type="text"
-                      value={ticketData.assunto}
-                      onChange={(e) => setTicketData({ ...ticketData, assunto: e.target.value })}
-                      className="pl-10 w-full rounded-lg border border-gray-300 dark:border-gray-600 py-3 px-4 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-                      placeholder="Resumo do problema ou dúvida"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Descrição Detalhada
-                  </label>
-                  <textarea
-                    value={ticketData.mensagem}
-                    onChange={(e) => setTicketData({ ...ticketData, mensagem: e.target.value })}
-                    rows={6}
-                    className="w-full rounded-lg border border-gray-300 dark:border-gray-600 py-3 px-4 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-                    placeholder="Descreva seu problema ou dúvida com o máximo de detalhes possível..."
-                    required
-                  />
-                </div>
-
-                <Button
-                  type="submit"
-                  variant="primary"
-                  fullWidth
-                  size="lg"
-                  isLoading={loading}
-                  icon={<Send size={18} />}
-                  className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
-                >
-                  Enviar Ticket de Suporte
-                </Button>
-              </form>
-            </div>
-          )}
 
           {/* FAQ */}
           {activeTab === 'faq' && (
