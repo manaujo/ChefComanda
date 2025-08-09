@@ -220,7 +220,6 @@ const Relatorios: React.FC = () => {
   const totalPedidos = vendasDiarias.reduce((acc, dia) => acc + dia.quantidade, 0);
   const ticketMedio = totalPedidos > 0 ? totalVendas / totalPedidos : 0;
   const mesasOcupadas = mesas.filter(mesa => mesa.status === 'ocupada').length;
-  const produtosEstoqueBaixo = produtos.filter(produto => produto.estoque <= produto.estoque_minimo);
 
   const exportarRelatorio = (formato: 'excel' | 'pdf') => {
     toast.success(`Relatório exportado em ${formato.toUpperCase()}!`);

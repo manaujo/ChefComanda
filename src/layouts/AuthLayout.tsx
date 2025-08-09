@@ -1,32 +1,32 @@
 import React from 'react';
-import { ChefHat as Chef } from 'lucide-react';
+import { ChefHat } from 'lucide-react';
 
 const AuthLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-red-50 via-orange-50 to-yellow-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-700 flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative overflow-hidden">
+      {/* Background Decorations */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-red-200/30 to-orange-200/30 rounded-full blur-3xl"></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-yellow-200/30 to-red-200/30 rounded-full blur-3xl"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-br from-orange-100/20 to-red-100/20 rounded-full blur-3xl"></div>
+      </div>
+      
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="flex flex-col items-center">
-          {/* Modern Chef Illustration */}
-          <div className="w-32 h-32 mb-6 relative">
-            <div className="absolute inset-0 bg-red-600 rounded-full opacity-10 animate-pulse"></div>
-            <Chef className="w-full h-full text-red-600 p-6" />
-          </div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Chef Comanda
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
-            Seu negócio no ritmo da tecnologia
-          </p>
-        </div>
+        {/* Logo will be handled by Login component */}
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white dark:bg-gray-800 py-8 px-4 shadow-xl rounded-lg sm:px-10">
+        <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm py-10 px-6 shadow-2xl rounded-2xl sm:px-12 border border-white/20 dark:border-gray-700/50 relative">
+          {/* Subtle inner glow */}
+          <div className="absolute inset-0 bg-gradient-to-br from-white/50 to-transparent rounded-2xl pointer-events-none"></div>
+          <div className="relative z-10">
+            {children}
+          </div>
           {children}
         </div>
       </div>
       
-      <div className="mt-6 text-center text-xs text-gray-500 dark:text-gray-400">
+      <div className="mt-8 text-center text-xs text-gray-500 dark:text-gray-400 relative z-10">
         &copy; {new Date().getFullYear()} ChefComanda. Todos os direitos reservados.
       </div>
     </div>

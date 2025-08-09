@@ -29,6 +29,7 @@ const Dashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [dataInitialized, setDataInitialized] = useState(false);
+  const [insumosEstoqueBaixo, setInsumosEstoqueBaixo] = useState<any[]>([]);
 
   useEffect(() => {
     // Só carrega dados uma vez quando o componente monta
@@ -49,12 +50,42 @@ const Dashboard: React.FC = () => {
       
       setDashboardData(dashboard);
       setVendasData(vendas || []);
+      
+      // Carregar alertas de estoque (insumos)
+      await loadInsumosEstoqueBaixo();
       setDataInitialized(true);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
       toast.error('Erro ao carregar dados do dashboard');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadInsumosEstoqueBaixo = async () => {
+    try {
+      const { data: restaurante } = await supabase
+        .from('restaurantes')
+        .select('id')
+        .single();
+
+      if (!restaurante) return;
+
+      const { data: insumos } = await supabase
+        .from('insumos')
+        .select('*')
+        .eq('restaurante_id', restaurante.id)
+        .eq('ativo', true)
+        .order('quantidade');
+
+      // Filtrar insumos com estoque baixo
+      const insumosComEstoqueBaixo = (insumos || []).filter(insumo => 
+        Number(insumo.quantidade) <= Number(insumo.quantidade_minima)
+      );
+
+      setInsumosEstoqueBaixo(insumosComEstoqueBaixo);
+    } catch (error) {
+      console.error('Error loading insumos estoque baixo:', error);
     }
   };
 
@@ -78,11 +109,6 @@ const Dashboard: React.FC = () => {
   const vendasHoje = vendasData.reduce((acc, venda) => acc + venda.total, 0);
   const pedidosHoje = vendasData.reduce((acc, venda) => acc + venda.quantidade, 0);
   const ticketMedio = pedidosHoje > 0 ? vendasHoje / pedidosHoje : 0;
-
-  // Produtos com estoque baixo
-  const produtosEstoqueBaixo = produtos.filter(produto => 
-    produto.estoque <= produto.estoque_minimo
-  );
 
   // Itens pendentes na cozinha
   const itensPendentes = itensComanda.filter(item => 
@@ -150,15 +176,15 @@ const Dashboard: React.FC = () => {
       </div>
 
       {/* Alertas Críticos */}
-      {(produtosEstoqueBaixo.length > 0 || itensPendentes.length > 5) && (
+      {(insumosEstoqueBaixo.length > 0 || itensPendentes.length > 5) && (
         <div className="bg-gradient-to-r from-red-50 to-orange-50 border-l-4 border-red-500 p-4 rounded-lg">
           <div className="flex items-center">
             <AlertTriangle className="h-5 w-5 text-red-500 mr-2" />
             <div>
               <h3 className="text-sm font-medium text-red-800">Atenção Necessária</h3>
               <div className="mt-1 text-sm text-red-700">
-                {produtosEstoqueBaixo.length > 0 && (
-                  <p>{produtosEstoqueBaixo.length} produto(s) com estoque baixo</p>
+                {insumosEstoqueBaixo.length > 0 && (
+                  <p>{insumosEstoqueBaixo.length} insumo(s) com estoque baixo</p>
                 )}
                 {itensPendentes.length > 5 && (
                   <p>{itensPendentes.length} itens aguardando preparo</p>
@@ -422,7 +448,7 @@ const Dashboard: React.FC = () => {
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              Alertas de Estoque
+              Alertas de Estoque (Insumos)
             </h3>
             <div className="p-2 bg-red-100 dark:bg-red-900 rounded-lg">
               <Package size={20} className="text-red-600 dark:text-red-400" />
@@ -430,12 +456,12 @@ const Dashboard: React.FC = () => {
           </div>
           
           <div className="space-y-3 max-h-64 overflow-y-auto">
-            {produtosEstoqueBaixo.slice(0, 5).map(produto => (
-              <div key={produto.id} className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+            {insumosEstoqueBaixo.slice(0, 5).map(insumo => (
+              <div key={insumo.id} className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
                 <div>
-                  <p className="font-medium text-gray-900 dark:text-white">{produto.nome}</p>
+                  <p className="font-medium text-gray-900 dark:text-white">{insumo.nome}</p>
                   <p className="text-sm text-red-600 dark:text-red-400">
-                    Estoque: {produto.estoque} (mín: {produto.estoque_minimo})
+                    Estoque: {insumo.quantidade} {insumo.unidade_medida} (mín: {insumo.quantidade_minima})
                   </p>
                 </div>
                 <div className="p-1 bg-red-100 dark:bg-red-900 rounded-full">
@@ -444,7 +470,7 @@ const Dashboard: React.FC = () => {
               </div>
             ))}
             
-            {produtosEstoqueBaixo.length === 0 && (
+            {insumosEstoqueBaixo.length === 0 && (
               <div className="text-center py-8 text-gray-500 dark:text-gray-400">
                 <Package size={32} className="mx-auto mb-2 opacity-50" />
                 <p>Estoque em dia</p>
