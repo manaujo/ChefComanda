@@ -341,6 +341,11 @@ export class CRUDService {
     return data || [];
   }
 
+  // Categorias
+  static async getCategoriasByRestaurante(restauranteId: string) {
+    return this.read('categorias', { restaurante_id: restauranteId });
+  }
+
   // Relatórios
   static async getRelatorioVendas(
     restauranteId: string,

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Edit, Trash2, Package, DollarSign, Tag, Image, Upload, X, Loader2 } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Package, DollarSign, Tag, Image, Upload, X, Loader2, FolderPlus } from 'lucide-react';
 import Button from '../components/ui/Button';
 import { CRUDService } from '../services/CRUDService';
 import { useAuth } from '../contexts/AuthContext';
@@ -18,14 +18,25 @@ interface Produto {
   updated_at: string;
 }
 
+interface Categoria {
+  id: string;
+  nome: string;
+  descricao?: string;
+  ativa: boolean;
+  created_at: string;
+}
+
 export default function Produtos() {
   const { user } = useAuth();
   const [produtos, setProdutos] = useState<Produto[]>([]);
+  const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Produto | null>(null);
+  const [editingCategory, setEditingCategory] = useState<Categoria | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [imagePreview, setImagePreview] = useState<string>('');
 
@@ -38,10 +49,15 @@ export default function Produtos() {
     imagem_url: ''
   });
 
-  const categorias = ['Entradas', 'Pratos Principais', 'Sobremesas', 'Bebidas', 'Lanches'];
+  const [categoryFormData, setCategoryFormData] = useState({
+    nome: '',
+    descricao: '',
+    ativa: true
+  });
 
   useEffect(() => {
     loadProdutos();
+    loadCategorias();
   }, []);
 
   const loadProdutos = async () => {
@@ -53,6 +69,15 @@ export default function Produtos() {
       console.error('Erro ao carregar produtos:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadCategorias = async () => {
+    try {
+      const data = await CRUDService.read('categorias');
+      setCategorias(data || []);
+    } catch (error) {
+      console.error('Erro ao carregar categorias:', error);
     }
   };
 
@@ -92,6 +117,41 @@ export default function Produtos() {
     }
   };
 
+  const handleCategorySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    try {
+      // Get restaurant ID first
+      const { data: restaurante, error: restauranteError } = await supabase
+        .from('restaurantes')
+        .select('id')
+        .eq('user_id', user?.id)
+        .single();
+
+      if (restauranteError) {
+        console.error('Error getting restaurant:', restauranteError);
+        throw new Error('Restaurante não encontrado');
+      }
+
+      const categoryData = {
+        ...categoryFormData,
+        restaurante_id: restaurante.id
+      };
+
+      if (editingCategory) {
+        await CRUDService.update('categorias', editingCategory.id, categoryData);
+      } else {
+        await CRUDService.create('categorias', categoryData);
+      }
+
+      await loadCategorias();
+      resetCategoryForm();
+      setShowCategoryModal(false);
+    } catch (error) {
+      console.error('Erro ao salvar categoria:', error);
+    }
+  };
+
   const handleEdit = (produto: Produto) => {
     setEditingProduct(produto);
     setImagePreview(produto.imagem_url || '');
@@ -106,6 +166,16 @@ export default function Produtos() {
     setShowModal(true);
   };
 
+  const handleEditCategory = (categoria: Categoria) => {
+    setEditingCategory(categoria);
+    setCategoryFormData({
+      nome: categoria.nome,
+      descricao: categoria.descricao || '',
+      ativa: categoria.ativa
+    });
+    setShowCategoryModal(true);
+  };
+
   const handleDelete = async (id: string) => {
     if (confirm('Tem certeza que deseja excluir este produto?')) {
       try {
@@ -113,6 +183,17 @@ export default function Produtos() {
         await loadProdutos();
       } catch (error) {
         console.error('Erro ao excluir produto:', error);
+      }
+    }
+  };
+
+  const handleDeleteCategory = async (id: string) => {
+    if (confirm('Tem certeza que deseja excluir esta categoria?')) {
+      try {
+        await CRUDService.delete('categorias', id);
+        await loadCategorias();
+      } catch (error) {
+        console.error('Erro ao excluir categoria:', error);
       }
     }
   };
@@ -128,6 +209,15 @@ export default function Produtos() {
     });
     setEditingProduct(null);
     setImagePreview('');
+  };
+
+  const resetCategoryForm = () => {
+    setCategoryFormData({
+      nome: '',
+      descricao: '',
+      ativa: true
+    });
+    setEditingCategory(null);
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -224,6 +314,16 @@ export default function Produtos() {
           <Plus className="w-5 h-5" />
           Novo Produto
         </Button>
+        <Button
+          onClick={() => {
+            resetCategoryForm();
+            setShowCategoryModal(true);
+          }}
+          className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg flex items-center gap-2 transition-colors"
+        >
+          <FolderPlus className="w-5 h-5" />
+          Nova Categoria
+        </Button>
       </div>
 
       {/* Filtros */}
@@ -247,10 +347,65 @@ export default function Produtos() {
             className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
             <option value="">Todas as categorias</option>
-            {categorias.map(categoria => (
-              <option key={categoria} value={categoria}>{categoria}</option>
+            {categorias.filter(cat => cat.ativa).map(categoria => (
+              <option key={categoria.id} value={categoria.nome}>{categoria.nome}</option>
             ))}
           </select>
+        </div>
+      </div>
+
+      {/* Gestão de Categorias */}
+      <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-lg font-semibold text-gray-900">Categorias</h2>
+          <Button
+            onClick={() => {
+              resetCategoryForm();
+              setShowCategoryModal(true);
+            }}
+            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+            size="sm"
+          >
+            <FolderPlus className="w-4 h-4" />
+            Nova Categoria
+          </Button>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+          {categorias.map(categoria => (
+            <div
+              key={categoria.id}
+              className={`p-3 rounded-lg border-2 transition-colors ${
+                categoria.ativa 
+                  ? 'border-green-200 bg-green-50 hover:bg-green-100' 
+                  : 'border-gray-200 bg-gray-50'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <span className={`text-sm font-medium ${
+                  categoria.ativa ? 'text-green-800' : 'text-gray-500'
+                }`}>
+                  {categoria.nome}
+                </span>
+                <div className="flex space-x-1">
+                  <button
+                    onClick={() => handleEditCategory(categoria)}
+                    className="text-blue-600 hover:text-blue-800 p-1"
+                  >
+                    <Edit className="w-3 h-3" />
+                  </button>
+                  <button
+                    onClick={() => handleDeleteCategory(categoria.id)}
+                    className="text-red-600 hover:text-red-800 p-1"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                </div>
+              </div>
+              {categoria.descricao && (
+                <p className="text-xs text-gray-600 mt-1">{categoria.descricao}</p>
+              )}
+            </div>
+          ))}
         </div>
       </div>
 
@@ -394,8 +549,8 @@ export default function Produtos() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
                       <option value="">Selecione...</option>
-                      {categorias.map(categoria => (
-                        <option key={categoria} value={categoria}>{categoria}</option>
+                     {categorias.filter(cat => cat.ativa).map(categoria => (
+                       <option key={categoria.id} value={categoria.nome}>{categoria.nome}</option>
                       ))}
                     </select>
                   </div>
@@ -480,6 +635,81 @@ export default function Produtos() {
                     className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
                   >
                     {editingProduct ? 'Atualizar' : 'Criar'} Produto
+                  </Button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Categoria */}
+      {showCategoryModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-md w-full">
+            <div className="p-6">
+              <h2 className="text-xl font-semibold text-gray-900 mb-6">
+                {editingCategory ? 'Editar Categoria' : 'Nova Categoria'}
+              </h2>
+              
+              <form onSubmit={handleCategorySubmit} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Nome da Categoria
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={categoryFormData.nome}
+                    onChange={(e) => setCategoryFormData({ ...categoryFormData, nome: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    placeholder="Ex: Pratos Principais"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Descrição (opcional)
+                  </label>
+                  <textarea
+                    value={categoryFormData.descricao}
+                    onChange={(e) => setCategoryFormData({ ...categoryFormData, descricao: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    rows={3}
+                    placeholder="Descrição da categoria..."
+                  />
+                </div>
+
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id="categoria-ativa"
+                    checked={categoryFormData.ativa}
+                    onChange={(e) => setCategoryFormData({ ...categoryFormData, ativa: e.target.checked })}
+                    className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="categoria-ativa" className="ml-2 block text-sm text-gray-700">
+                    Categoria ativa
+                  </label>
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setShowCategoryModal(false);
+                      resetCategoryForm();
+                    }}
+                    className="flex-1"
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    type="submit"
+                    className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    {editingCategory ? 'Atualizar' : 'Criar'} Categoria
                   </Button>
                 </div>
               </form>

@@ -1,15 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Plus, Search, Filter, Edit2, Trash2, Upload, Eye,
-  EyeOff, ArrowUp, ArrowDown, AlertTriangle, X
-} from 'lucide-react';
+import { Plus, Search, Filter, Edit2, Trash2, Upload, Eye, EyeOff, ArrowUp, ArrowDown, AlertTriangle, X, FolderSync as Sync } from 'lucide-react';
 import Button from '../components/ui/Button';
 import { useRestaurante } from '../contexts/RestauranteContext';
 import { formatarDinheiro } from '../utils/formatters';
 import { supabase } from '../services/supabase';
+import { CRUDService } from '../services/CRUDService';
 import toast from 'react-hot-toast';
 
-interface MenuItem {
+interface CardapioItem {
   id: string;
   nome: string;
   descricao: string;
@@ -21,27 +19,28 @@ interface MenuItem {
   disponivel_online: boolean;
 }
 
-const CATEGORIAS = [
-  'Menu Principal',
-  'Menu Kids',
-  'Entradas',
-  'Bebidas',
-  'Sobremesas'
-];
+interface Categoria {
+  id: string;
+  nome: string;
+  descricao?: string;
+  ativa: boolean;
+}
 
 const CardapioOnlineEditor: React.FC = () => {
-  const [items, setItems] = useState<MenuItem[]>([]);
+  const [items, setItems] = useState<CardapioItem[]>([]);
+  const [categorias, setCategorias] = useState<Categoria[]>([]);
+  const { produtos } = useRestaurante();
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
+  const [selectedItem, setSelectedItem] = useState<CardapioItem | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('todas');
   const [formData, setFormData] = useState({
     nome: '',
     descricao: '',
     preco: '',
-    categoria: 'Menu Principal',
+    categoria: '',
     imagem_url: '',
     ativo: true,
     disponivel_online: true
@@ -49,7 +48,17 @@ const CardapioOnlineEditor: React.FC = () => {
 
   useEffect(() => {
     loadMenuItems();
+    loadCategorias();
   }, []);
+
+  const loadCategorias = async () => {
+    try {
+      const data = await CRUDService.read('categorias');
+      setCategorias(data || []);
+    } catch (error) {
+      console.error('Erro ao carregar categorias:', error);
+    }
+  };
 
   const loadMenuItems = async () => {
     try {
@@ -75,6 +84,63 @@ const CardapioOnlineEditor: React.FC = () => {
     } catch (error) {
       console.error('Error loading menu items:', error);
       toast.error('Erro ao carregar itens do cardápio');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const syncFromProdutos = async () => {
+    try {
+      setLoading(true);
+      
+      const { data: restaurante } = await supabase
+        .from('restaurantes')
+        .select('id')
+        .single();
+
+      if (!restaurante) {
+        toast.error('Restaurante não encontrado');
+        return;
+      }
+
+      // Get existing cardapio items to avoid duplicates
+      const { data: existingItems } = await supabase
+        .from('cardapio_online')
+        .select('nome')
+        .eq('restaurante_id', restaurante.id);
+
+      const existingNames = new Set(existingItems?.map(item => item.nome) || []);
+
+      // Sync products that don't exist in cardapio_online
+      const newItems = produtos
+        .filter(produto => !existingNames.has(produto.nome))
+        .map((produto, index) => ({
+          restaurante_id: restaurante.id,
+          nome: produto.nome,
+          descricao: produto.descricao || '',
+          preco: produto.preco,
+          categoria: produto.categoria,
+          imagem_url: produto.imagem_url || '',
+          ordem: items.length + index,
+          ativo: produto.disponivel,
+          disponivel_online: produto.disponivel
+        }));
+
+      if (newItems.length > 0) {
+        const { error } = await supabase
+          .from('cardapio_online')
+          .insert(newItems);
+
+        if (error) throw error;
+
+        toast.success(`${newItems.length} produtos sincronizados com sucesso!`);
+        loadMenuItems();
+      } else {
+        toast.info('Todos os produtos já estão sincronizados');
+      }
+    } catch (error) {
+      console.error('Error syncing products:', error);
+      toast.error('Erro ao sincronizar produtos');
     } finally {
       setLoading(false);
     }
@@ -168,7 +234,7 @@ const CardapioOnlineEditor: React.FC = () => {
     }
   };
 
-  const moveItem = async (item: MenuItem, direction: 'up' | 'down') => {
+  const moveItem = async (item: CardapioItem, direction: 'up' | 'down') => {
     const currentIndex = items.findIndex(i => i.id === item.id);
     if (
       (direction === 'up' && currentIndex === 0) ||
@@ -208,7 +274,7 @@ const CardapioOnlineEditor: React.FC = () => {
       nome: '',
       descricao: '',
       preco: '',
-      categoria: 'Menu Principal',
+      categoria: categorias.length > 0 ? categorias[0].nome : '',
       imagem_url: '',
       ativo: true,
       disponivel_online: true
@@ -242,6 +308,14 @@ const CardapioOnlineEditor: React.FC = () => {
         >
           Novo Item
         </Button>
+        <Button
+          variant="secondary"
+          icon={<Sync size={18} />}
+          onClick={syncFromProdutos}
+          isLoading={loading}
+        >
+          Sincronizar Produtos
+        </Button>
       </div>
 
       {/* Filtros */}
@@ -264,8 +338,8 @@ const CardapioOnlineEditor: React.FC = () => {
             className="w-full border border-gray-300 rounded-md py-2 pl-3 pr-10 focus:ring-blue-500 focus:border-blue-500"
           >
             <option value="todas">Todas as categorias</option>
-            {CATEGORIAS.map(categoria => (
-              <option key={categoria} value={categoria}>{categoria}</option>
+            {categorias.filter(cat => cat.ativa).map(categoria => (
+              <option key={categoria.id} value={categoria.nome}>{categoria.nome}</option>
             ))}
           </select>
         </div>
@@ -454,9 +528,11 @@ const CardapioOnlineEditor: React.FC = () => {
                         value={formData.categoria}
                         onChange={(e) => setFormData({ ...formData, categoria: e.target.value })}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                        required
                       >
-                        {CATEGORIAS.map(categoria => (
-                          <option key={categoria} value={categoria}>{categoria}</option>
+                        <option value="">Selecione uma categoria</option>
+                        {categorias.filter(cat => cat.ativa).map(categoria => (
+                          <option key={categoria.id} value={categoria.nome}>{categoria.nome}</option>
                         ))}
                       </select>
                     </div>

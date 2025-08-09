@@ -11,6 +11,7 @@ type Mesa = Database['public']['Tables']['mesas']['Row'];
 type Produto = Database['public']['Tables']['produtos']['Row'];
 type Comanda = Database['public']['Tables']['comandas']['Row'];
 type ItemComanda = Database['public']['Tables']['itens_comanda']['Row'];
+type Categoria = Database['public']['Tables']['categorias']['Row'];
 
 interface ComandaItemData {
   id: string;
@@ -47,6 +48,7 @@ interface RestauranteContextType {
   restaurante: Restaurante | null;
   mesas: Mesa[];
   produtos: Produto[];
+  categorias: Categoria[];
   comandas: Comanda[];
   itensComanda: ComandaItemData[];
   funcionarios: Funcionario[];
@@ -88,6 +90,7 @@ export const RestauranteProvider: React.FC<RestauranteProviderProps> = ({ childr
   const [restaurante, setRestaurante] = useState<Restaurante | null>(null);
   const [mesas, setMesas] = useState<Mesa[]>([]);
   const [produtos, setProdutos] = useState<Produto[]>([]);
+  const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [comandas, setComandas] = useState<Comanda[]>([]);
   const [itensComanda, setItensComanda] = useState<ComandaItemData[]>([]);
   const [funcionarios, setFuncionarios] = useState<Funcionario[]>([]);
@@ -114,14 +117,16 @@ export const RestauranteProvider: React.FC<RestauranteProviderProps> = ({ childr
         setRestaurante(restauranteData);
         
         // Load all related data
-        const [mesasData, produtosData, comandasData] = await Promise.all([
+        const [mesasData, produtosData, categoriasData, comandasData] = await Promise.all([
           DatabaseService.getMesas(restauranteData.id),
           DatabaseService.getProdutos(restauranteData.id),
+          CRUDService.getCategoriasByRestaurante(restauranteData.id),
           DatabaseService.getComandas(restauranteData.id)
         ]);
         
         setMesas(mesasData || []);
         setProdutos(produtosData || []);
+        setCategorias(categoriasData || []);
         setComandas(comandasData || []);
         
         // Load itens comanda with product details
@@ -478,6 +483,7 @@ export const RestauranteProvider: React.FC<RestauranteProviderProps> = ({ childr
     restaurante,
     mesas,
     produtos,
+    categorias,
     comandas,
     itensComanda,
     funcionarios,

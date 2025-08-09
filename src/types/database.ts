@@ -413,6 +413,35 @@ export interface Database {
         updated_at?: string;
       };
     };
+    categorias: {
+      Row: {
+        id: string;
+        restaurante_id: string;
+        nome: string;
+        descricao: string | null;
+        ativa: boolean;
+        created_at: string;
+        updated_at: string;
+      };
+      Insert: {
+        id?: string;
+        restaurante_id: string;
+        nome: string;
+        descricao?: string | null;
+        ativa?: boolean;
+        created_at?: string;
+        updated_at?: string;
+      };
+      Update: {
+        id?: string;
+        restaurante_id?: string;
+        nome?: string;
+        descricao?: string | null;
+        ativa?: boolean;
+        created_at?: string;
+        updated_at?: string;
+      };
+    };
     cardapio_online: {
       Row: {
         id: string;

@@ -1,24 +1,94 @@
 import React, { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import { ChefHat, Search } from 'lucide-react';
 import { formatarDinheiro } from '../utils/formatters';
-import { cardapioItems } from '../data/mockData';
+import { supabase } from '../services/supabase';
+import { CRUDService } from '../services/CRUDService';
+
+interface CardapioItem {
+  id: string;
+  nome: string;
+  descricao: string;
+  preco: number;
+  categoria: string;
+  imagem_url: string;
+  disponivel_online: boolean;
+}
+
+interface Categoria {
+  id: string;
+  nome: string;
+  ativa: boolean;
+}
 
 const CardapioPublico: React.FC = () => {
+  const { restauranteId } = useParams<{ restauranteId: string }>();
+  const [cardapioItems, setCardapioItems] = useState<CardapioItem[]>([]);
+  const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeCategory, setActiveCategory] = useState('Menu Principal');
+  const [activeCategory, setActiveCategory] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [restauranteNome, setRestauranteNome] = useState('');
 
   useEffect(() => {
-    setTimeout(() => setLoading(false), 1000);
-  }, []);
+    if (restauranteId) {
+      loadCardapioData();
+    }
+  }, [restauranteId]);
 
-  const menuSections = [
-    { id: 'menu-principal', title: 'Menu Principal' },
-    { id: 'menu-kids', title: 'Menu Kids' },
-    { id: 'entradas', title: 'Entradas' },
-    { id: 'bebidas', title: 'Bebidas' },
-    { id: 'sobremesas', title: 'Sobremesas' }
-  ];
+  const loadCardapioData = async () => {
+    try {
+      setLoading(true);
+      
+      // Load restaurant info
+      const { data: restaurante } = await supabase
+        .from('restaurantes')
+        .select('nome')
+        .eq('id', restauranteId)
+        .single();
+
+      if (restaurante) {
+        setRestauranteNome(restaurante.nome);
+      }
+
+      // Load cardapio items
+      const { data: items } = await supabase
+        .from('cardapio_online')
+        .select('*')
+        .eq('restaurante_id', restauranteId)
+        .eq('ativo', true)
+        .eq('disponivel_online', true)
+        .order('ordem');
+
+      if (items) {
+        setCardapioItems(items);
+        
+        // Get unique categories from items
+        const uniqueCategories = Array.from(new Set(items.map(item => item.categoria)));
+        const categoriesData = uniqueCategories.map((cat, index) => ({
+          id: `cat-${index}`,
+          nome: cat,
+          ativa: true
+        }));
+        
+        setCategorias(categoriesData);
+        
+        // Set first category as active
+        if (categoriesData.length > 0) {
+          setActiveCategory(categoriesData[0].nome);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading cardapio data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const menuSections = categorias.map(categoria => ({
+    id: categoria.nome.toLowerCase().replace(/\s+/g, '-'),
+    title: categoria.nome
+  }));
 
   const filteredProducts = cardapioItems.filter(produto => {
     const matchSearch = produto.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -60,7 +130,9 @@ const CardapioPublico: React.FC = () => {
       }}>
         <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
           <div className="text-center text-white">
-            <h1 className="text-4xl md:text-5xl font-serif mb-4">Nosso Cardápio</h1>
+            <h1 className="text-4xl md:text-5xl font-serif mb-4">
+              {restauranteNome || 'Nosso Cardápio'}
+            </h1>
             <p className="text-xl opacity-90 font-light">Sabores únicos e inesquecíveis</p>
           </div>
         </div>
@@ -134,6 +206,17 @@ const CardapioPublico: React.FC = () => {
               </div>
             </div>
           ))}
+          
+          {filteredProducts.length === 0 && (
+            <div className="col-span-full text-center py-12">
+              <p className="text-gray-500">
+                {searchTerm 
+                  ? 'Nenhum produto encontrado para sua busca'
+                  : 'Nenhum produto disponível nesta categoria'
+                }
+              </p>
+            </div>
+          )}
         </div>
       </main>
     </div>
