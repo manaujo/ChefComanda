@@ -60,10 +60,22 @@ export default function Produtos() {
     e.preventDefault();
     
     try {
+      // Get restaurant ID first
+      const { data: restaurante, error: restauranteError } = await supabase
+        .from('restaurantes')
+        .select('id')
+        .eq('user_id', user?.id)
+        .single();
+
+      if (restauranteError) {
+        console.error('Error getting restaurant:', restauranteError);
+        throw new Error('Restaurante não encontrado');
+      }
+
       const productData = {
         ...formData,
         preco: parseFloat(formData.preco),
-        user_id: user?.id
+        restaurante_id: restaurante.id
       };
 
       if (editingProduct) {
