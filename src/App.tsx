@@ -98,6 +98,7 @@ function App() {
                 {/* Profile Routes */}
                 <Route path="profile">
                   <Route path="user" element={<PrivateRoute><UserProfile /></PrivateRoute>} />
+                <Route index element={<Navigate to="user" replace />} />
                   <Route path="settings" element={<PrivateRoute><Settings /></PrivateRoute>} />
                   <Route path="company" element={<PrivateRoute allowedRoles={['admin']}><CompanyProfile /></PrivateRoute>} />
                   <Route path="employees" element={<PrivateRoute allowedRoles={['admin']}><EmployeeManagement /></PrivateRoute>} />

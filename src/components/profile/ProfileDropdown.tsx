@@ -61,7 +61,7 @@ const ProfileDropdown: React.FC = () => {
           {userRole === 'admin' && (
             <>
               <Link
-                to="/profile/company"
+                to="/dashboard/profile/company"
                 className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                 onClick={() => setIsOpen(false)}
               >
@@ -69,7 +69,7 @@ const ProfileDropdown: React.FC = () => {
                 Dados da Empresa
               </Link>
               <Link
-                to="/profile/employees"
+                to="/dashboard/profile/employees"
                 className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                 onClick={() => setIsOpen(false)}
               >
@@ -80,7 +80,7 @@ const ProfileDropdown: React.FC = () => {
           )}
 
           <Link
-            to="/profile/settings"
+            to="/dashboard/profile/settings"
             className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
             onClick={() => setIsOpen(false)}
           >
@@ -90,7 +90,7 @@ const ProfileDropdown: React.FC = () => {
           
           {userRole === 'admin' && (
             <Link
-              to="/profile/planos"
+              to="/dashboard/profile/planos"
               className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
               onClick={() => setIsOpen(false)}
             >

@@ -1,323 +1,237 @@
 import React, { useState, useEffect } from 'react';
-import { Check, CreditCard, AlertTriangle, Loader2 } from 'lucide-react';
+import { Check, CreditCard, AlertTriangle, Loader2, Crown, Star } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import { useAuth } from '../../contexts/AuthContext';
-import { stripeProducts, getProductByPriceId } from '../../stripe-config';
-import StripeService, { SubscriptionData } from '../../services/StripeService';
 import toast from 'react-hot-toast';
 
 const Planos: React.FC = () => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
-  const [currentSubscription, setCurrentSubscription] = useState<SubscriptionData | null>(null);
-  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
+  const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'yearly' | null>(null);
 
-  useEffect(() => {
-    if (user) {
-      loadSubscription();
-    }
-  }, [user]);
-
-  const loadSubscription = async () => {
-    try {
-      setLoading(true);
-      const subscription = await StripeService.getUserSubscription();
-      setCurrentSubscription(subscription);
-    } catch (error) {
-      console.error('Error loading subscription:', error);
-      toast.error('Erro ao carregar assinatura');
-    } finally {
+  const handleSubscribe = (planType: 'monthly' | 'yearly') => {
+    setLoading(true);
+    setSelectedPlan(planType);
+    
+    // Simular processo de checkout
+    setTimeout(() => {
+      toast.success(`Redirecionando para o checkout do plano ${planType === 'monthly' ? 'mensal' : 'anual'}...`);
       setLoading(false);
-    }
+      setSelectedPlan(null);
+    }, 2000);
   };
-
-  const handleSubscribe = async (priceId: string) => {
-    try {
-      setCheckoutLoading(priceId);
-      
-      const product = getProductByPriceId(priceId);
-      if (!product) {
-        throw new Error('Produto não encontrado');
-      }
-
-      const { url } = await StripeService.createCheckoutSession({
-        priceId,
-        mode: product.mode,
-      });
-
-      if (url) {
-        window.location.href = url;
-      }
-    } catch (error) {
-      console.error('Error creating checkout session:', error);
-      toast.error(error instanceof Error ? error.message : 'Erro ao processar assinatura');
-    } finally {
-      setCheckoutLoading(null);
-    }
-  };
-
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(price);
-  };
-
-  const getCurrentPlan = () => {
-    if (!currentSubscription?.price_id) return null;
-    return getProductByPriceId(currentSubscription.price_id);
-  };
-
-  const isCurrentPlan = (priceId: string) => {
-    return currentSubscription?.price_id === priceId && 
-           ['active', 'trialing'].includes(currentSubscription.subscription_status);
-  };
-
-  const getSubscriptionStatusText = (status: string) => {
-    const statusMap: Record<string, string> = {
-      'active': 'Ativa',
-      'trialing': 'Período de teste',
-      'past_due': 'Pagamento em atraso',
-      'canceled': 'Cancelada',
-      'incomplete': 'Incompleta',
-      'unpaid': 'Não paga',
-      'paused': 'Pausada'
-    };
-    return statusMap[status] || status;
-  };
-
-  // Group products by billing cycle
-  const monthlyPlans = stripeProducts.filter(p => 
-    !p.name.toLowerCase().includes('anual')
-  );
-  
-  const yearlyPlans = stripeProducts.filter(p => 
-    p.name.toLowerCase().includes('anual')
-  );
-
-  const currentPlans = billingCycle === 'monthly' ? monthlyPlans : yearlyPlans;
-
-  // Define prices for each plan
-  const planPrices: Record<string, { monthly: number; yearly: number }> = {
-    'Starter': { monthly: 40.00, yearly: 430.80 },
-    'Básico': { monthly: 60.90, yearly: 599.88 },
-    'Profissional': { monthly: 85.90, yearly: 790.80 }
-  };
-
-  const calculateYearlySavings = (planName: string) => {
-    const baseName = planName.replace(' Anual', '');
-    const prices = planPrices[baseName];
-    if (!prices) return 0;
-    
-    const monthlyTotal = prices.monthly * 12;
-    return monthlyTotal - prices.yearly;
-  };
-
-  const getPlanPrice = (product: any) => {
-    const baseName = product.name.replace(' Anual', '');
-    const prices = planPrices[baseName];
-    
-    if (!prices) return 0;
-    
-    return product.name.includes('Anual') ? prices.yearly : prices.monthly;
-  };
-
-  const getPlanFeatures = (planName: string) => {
-    const baseName = planName.replace(' Anual', '');
-    
-    const features: Record<string, string[]> = {
-      'Starter': [
-        'Sistema de PDV completo',
-        'Controle de estoque',
-        'Dashboard e relatórios',
-        'Exportação de dados (PDF e Excel)',
-        'Relatórios avançados de vendas',
-        'Suporte padrão',
-        'Teste grátis de 7 dias'
-      ],
-      'Básico': [
-        'Acesso completo às comandas e mesas',
-        'Gerenciamento para garçons e cozinha',
-        'Controle de estoque',
-        'Acesso ao dashboard',
-        'Relatórios avançados de vendas',
-        'Exportação de dados (PDF e Excel)',
-        'Suporte padrão',
-        'Teste grátis de 7 dias'
-      ],
-      'Profissional': [
-        'Todas as funcionalidades do plano Básico',
-        'Sistema de PDV completo',
-        'Integração com ifood',
-        'Controle de estoque avançado',
-        'Relatórios detalhados',
-        'Exportação de dados (PDF e Excel)',
-        'Relatórios avançados de vendas',
-        'Suporte prioritário',
-        'Teste grátis de 7 dias'
-      ]
-    };
-
-    return features[baseName] || [];
-  };
-
-  if (loading) {
-    return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-center items-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-        </div>
-      </div>
-    );
-  }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      {/* Current Subscription Alert */}
-      {currentSubscription && currentSubscription.subscription_status !== 'not_started' && (
-        <div className="mb-8 bg-blue-50 border-l-4 border-blue-400 p-4">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <CreditCard className="h-5 w-5 text-blue-400" />
-            </div>
-            <div className="ml-3">
-              <h3 className="text-sm font-medium text-blue-800">
-                Assinatura Atual
-              </h3>
-              <div className="mt-2 text-sm text-blue-700">
-                <p>
-                  Plano {getCurrentPlan()?.name || 'Desconhecido'} - {getSubscriptionStatusText(currentSubscription.subscription_status)}
-                  {currentSubscription.cancel_at_period_end && ' (Cancelamento agendado)'}
-                </p>
-                {currentSubscription.current_period_end && (
-                  <p className="mt-1">
-                    Próxima cobrança em {new Date(currentSubscription.current_period_end * 1000).toLocaleDateString('pt-BR')}
-                  </p>
-                )}
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="text-center mb-12">
+        <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
+          Planos ChefComanda
+        </h1>
+        <p className="text-xl text-gray-600 dark:text-gray-400 max-w-3xl mx-auto">
+          Escolha o plano ideal para o seu negócio e transforme a gestão do seu restaurante
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-5xl mx-auto">
+        {/* Plano Mensal */}
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden border border-gray-200 dark:border-gray-700 hover:shadow-2xl transition-all duration-300">
+          <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-8 py-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-2xl font-bold text-white">Plano Mensal</h3>
+                <p className="text-blue-100 mt-2">Flexibilidade total</p>
+              </div>
+              <div className="p-3 bg-white/20 rounded-full">
+                <CreditCard className="w-6 h-6 text-white" />
               </div>
             </div>
           </div>
-        </div>
-      )}
+          
+          <div className="p-8">
+            <div className="text-center mb-8">
+              <div className="text-5xl font-bold text-gray-900 dark:text-white mb-2">
+                R$ 120
+                <span className="text-lg font-normal text-gray-500 dark:text-gray-400">/mês</span>
+              </div>
+              <p className="text-gray-600 dark:text-gray-400">Faturamento mensal</p>
+            </div>
+            
+            <ul className="space-y-4 mb-8">
+              <li className="flex items-center">
+                <Check className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />
+                <span className="text-gray-700 dark:text-gray-300">Todas as funcionalidades</span>
+              </li>
+              <li className="flex items-center">
+                <Check className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />
+                <span className="text-gray-700 dark:text-gray-300">Suporte técnico incluído</span>
+              </li>
+              <li className="flex items-center">
+                <Check className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />
+                <span className="text-gray-700 dark:text-gray-300">Atualizações automáticas</span>
+              </li>
+              <li className="flex items-center">
+                <Check className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />
+                <span className="text-gray-700 dark:text-gray-300">Backup automático</span>
+              </li>
+            </ul>
 
-      {/* Billing Cycle Toggle */}
-      <div className="flex justify-center mb-8">
-        <div className="bg-gray-100 p-1 rounded-lg inline-flex">
-          <button
-            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-              billingCycle === 'monthly'
-                ? 'bg-white shadow-sm text-gray-800'
-                : 'text-gray-600 hover:text-gray-800'
-            }`}
-            onClick={() => setBillingCycle('monthly')}
-          >
-            Mensal
-          </button>
-          <button
-            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-              billingCycle === 'yearly'
-                ? 'bg-white shadow-sm text-gray-800'
-                : 'text-gray-600 hover:text-gray-800'
-            }`}
-            onClick={() => setBillingCycle('yearly')}
-          >
-            Anual
-            <span className="ml-1 text-green-500 text-xs">
-              Economize até {formatPrice(calculateYearlySavings('Profissional'))}
-            </span>
-          </button>
-        </div>
-      </div>
-
-      {/* Plans Grid */}
-      <div className="grid md:grid-cols-3 gap-8">
-        {currentPlans.map((product, index) => {
-          const price = getPlanPrice(product);
-          const features = getPlanFeatures(product.name);
-          const isPopular = product.name.includes('Profissional');
-          const isCurrent = isCurrentPlan(product.priceId);
-          const isLoading = checkoutLoading === product.priceId;
-
-          return (
-            <div
-              key={product.id}
-              className={`relative bg-white rounded-lg shadow-sm overflow-hidden border-2 transition-transform hover:scale-105 ${
-                isPopular
-                  ? 'border-blue-500 transform scale-105 z-10'
-                  : 'border-gray-200'
-              }`}
+            <Button
+              variant="primary"
+              fullWidth
+              size="lg"
+              onClick={() => handleSubscribe('monthly')}
+              isLoading={loading && selectedPlan === 'monthly'}
+              className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-4 text-lg"
             >
-              {isPopular && (
-                <div className="absolute top-0 right-0 bg-blue-500 text-white px-3 py-1 text-sm font-medium">
-                  Melhor escolha
-                </div>
-              )}
+              Começar Agora
+            </Button>
+          </div>
+        </div>
 
-              <div className="p-6">
-                <h3 className="text-2xl font-bold text-gray-900">
-                  {product.name}
-                </h3>
-                <p className="mt-2 text-sm text-gray-500">
-                  {product.description}
-                </p>
-                <p className="mt-4">
-                  <span className="text-4xl font-extrabold text-gray-900">
-                    {formatPrice(price)}
-                  </span>
-                  <span className="text-base font-medium text-gray-500">
-                    /{billingCycle === 'monthly' ? 'mês' : 'ano'}
-                  </span>
-                </p>
-
-                {billingCycle === 'yearly' && (
-                  <p className="mt-2 text-sm text-green-600">
-                    Economize {formatPrice(calculateYearlySavings(product.name))} ao ano
-                  </p>
-                )}
-
-                <ul className="mt-6 space-y-4">
-                  {features.map((feature, featureIndex) => (
-                    <li key={featureIndex} className="flex items-start">
-                      <div className="flex-shrink-0">
-                        <Check className="h-5 w-5 text-green-500" />
-                      </div>
-                      <p className="ml-3 text-sm text-gray-700">
-                        {feature}
-                      </p>
-                    </li>
-                  ))}
-                </ul>
-
-                <div className="mt-8">
-                  <Button
-                    variant={isPopular ? 'primary' : 'secondary'}
-                    fullWidth
-                    onClick={() => handleSubscribe(product.priceId)}
-                    isLoading={isLoading}
-                    disabled={isCurrent || isLoading}
-                  >
-                    {isCurrent 
-                      ? 'Plano Atual' 
-                      : isLoading 
-                        ? 'Processando...' 
-                        : billingCycle === 'yearly' 
-                          ? 'Assinar Plano Anual' 
-                          : 'Comece agora'
-                    }
-                  </Button>
-                </div>
+        {/* Plano Anual */}
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden border-2 border-yellow-400 hover:shadow-2xl transition-all duration-300 relative">
+          <div className="absolute top-0 right-0 bg-yellow-400 text-yellow-900 px-4 py-2 rounded-bl-lg font-semibold text-sm flex items-center">
+            <Star className="w-4 h-4 mr-1" />
+            10% OFF
+          </div>
+          
+          <div className="bg-gradient-to-r from-yellow-500 to-orange-500 px-8 py-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-2xl font-bold text-white">Plano Anual</h3>
+                <p className="text-yellow-100 mt-2">Melhor custo-benefício</p>
+              </div>
+              <div className="p-3 bg-white/20 rounded-full">
+                <Crown className="w-6 h-6 text-white" />
               </div>
             </div>
-          );
-        })}
+          </div>
+          
+          <div className="p-8">
+            <div className="text-center mb-8">
+              <div className="text-5xl font-bold text-gray-900 dark:text-white mb-2">
+                R$ 1.296
+                <span className="text-lg font-normal text-gray-500 dark:text-gray-400">/ano</span>
+              </div>
+              <p className="text-gray-600 dark:text-gray-400">Equivalente a R$ 108/mês</p>
+              <div className="inline-block bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-3 py-1 rounded-full text-sm font-medium mt-2">
+                Economia de R$ 144/ano
+              </div>
+            </div>
+            
+            <ul className="space-y-4 mb-8">
+              <li className="flex items-center">
+                <Check className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />
+                <span className="text-gray-700 dark:text-gray-300">Todas as funcionalidades</span>
+              </li>
+              <li className="flex items-center">
+                <Check className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />
+                <span className="text-gray-700 dark:text-gray-300">Suporte prioritário</span>
+              </li>
+              <li className="flex items-center">
+                <Check className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />
+                <span className="text-gray-700 dark:text-gray-300">Relatórios avançados</span>
+              </li>
+              <li className="flex items-center">
+                <Check className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />
+                <span className="text-gray-700 dark:text-gray-300">Consultoria gratuita</span>
+              </li>
+            </ul>
+
+            <Button
+              variant="primary"
+              fullWidth
+              size="lg"
+              onClick={() => handleSubscribe('yearly')}
+              isLoading={loading && selectedPlan === 'yearly'}
+              className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white font-semibold py-4 text-lg"
+            >
+              Começar Agora
+            </Button>
+          </div>
+        </div>
       </div>
 
-      {/* Additional Info */}
+      {/* Recursos Inclusos */}
+      <div className="mt-16 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 rounded-2xl p-8">
+        <div className="text-center mb-8">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+            Recursos Inclusos em Todos os Planos
+          </h2>
+          <p className="text-gray-600 dark:text-gray-400">
+            Acesso completo a todas as funcionalidades do ChefComanda
+          </p>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="flex items-start space-x-3">
+            <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
+              <CreditCard className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-gray-900 dark:text-white">Sistema PDV Completo</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Ponto de venda integrado com múltiplas formas de pagamento</p>
+            </div>
+          </div>
+          
+          <div className="flex items-start space-x-3">
+            <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
+              <Check className="w-5 h-5 text-green-600 dark:text-green-400" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-gray-900 dark:text-white">Controle de Comandas</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Gestão completa de mesas e pedidos em tempo real</p>
+            </div>
+          </div>
+          
+          <div className="flex items-start space-x-3">
+            <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
+              <AlertTriangle className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-gray-900 dark:text-white">Controle de Estoque</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Gestão de insumos com alertas automáticos</p>
+            </div>
+          </div>
+          
+          <div className="flex items-start space-x-3">
+            <div className="p-2 bg-red-100 dark:bg-red-900 rounded-lg">
+              <CreditCard className="w-5 h-5 text-red-600 dark:text-red-400" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-gray-900 dark:text-white">Relatórios Detalhados</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Dashboard e relatórios de vendas em tempo real</p>
+            </div>
+          </div>
+          
+          <div className="flex items-start space-x-3">
+            <div className="p-2 bg-yellow-100 dark:bg-yellow-900 rounded-lg">
+              <Star className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-gray-900 dark:text-white">Cardápio Online</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">QR Code para pedidos diretos dos clientes</p>
+            </div>
+          </div>
+          
+          <div className="flex items-start space-x-3">
+            <div className="p-2 bg-indigo-100 dark:bg-indigo-900 rounded-lg">
+              <Loader2 className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-gray-900 dark:text-white">Suporte Especializado</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Equipe técnica dedicada para ajudar seu negócio</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Garantia */}
       <div className="mt-12 text-center">
-        <p className="text-sm text-gray-500">
-          Todos os planos incluem teste grátis de 7 dias. Cancele a qualquer momento.
-        </p>
+        <div className="inline-flex items-center space-x-2 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 px-6 py-3 rounded-full">
+          <Check className="w-5 h-5" />
+          <span className="font-medium">Teste grátis de 7 dias • Cancele a qualquer momento</span>
+        </div>
       </div>
     </div>
   );
