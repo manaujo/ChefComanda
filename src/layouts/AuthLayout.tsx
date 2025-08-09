@@ -1,5 +1,5 @@
-import React from 'react';
-import { ChefHat } from 'lucide-react';
+import React from "react";
+import { ChefHat } from "lucide-react";
 
 const AuthLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
@@ -10,7 +10,7 @@ const AuthLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-yellow-200/30 to-red-200/30 rounded-full blur-3xl"></div>
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-br from-orange-100/20 to-red-100/20 rounded-full blur-3xl"></div>
       </div>
-      
+
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         {/* Logo will be handled by Login component */}
       </div>
@@ -19,15 +19,13 @@ const AuthLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm py-10 px-6 shadow-2xl rounded-2xl sm:px-12 border border-white/20 dark:border-gray-700/50 relative">
           {/* Subtle inner glow */}
           <div className="absolute inset-0 bg-gradient-to-br from-white/50 to-transparent rounded-2xl pointer-events-none"></div>
-          <div className="relative z-10">
-            {children}
-          </div>
-          {children}
+          <div className="relative z-10">{children}</div>
         </div>
       </div>
-      
+
       <div className="mt-8 text-center text-xs text-gray-500 dark:text-gray-400 relative z-10">
-        &copy; {new Date().getFullYear()} ChefComanda. Todos os direitos reservados.
+        &copy; {new Date().getFullYear()} ChefComanda. Todos os direitos
+        reservados.
       </div>
     </div>
   );
