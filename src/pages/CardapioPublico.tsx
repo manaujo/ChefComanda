@@ -26,6 +26,13 @@ interface Restaurante {
   id: string;
   nome: string;
   telefone: string;
+  configuracoes?: {
+    nome_exibicao?: string;
+    tempo_entrega?: string;
+    whatsapp?: string;
+    endereco?: string;
+    horario_funcionamento?: string;
+  };
 }
 
 interface ItemCarrinho {
@@ -58,7 +65,7 @@ const CardapioPublico: React.FC = () => {
     try {
       const { data, error } = await supabase
         .from('restaurantes')
-        .select('id, nome, telefone')
+        .select('id, nome, telefone, configuracoes')
         .eq('id', restauranteId)
         .single();
 
@@ -168,7 +175,8 @@ const CardapioPublico: React.FC = () => {
     const total = calcularTotal();
     const mensagem = `🍽️ *Novo Pedido - ${restaurante?.nome}*\n\n${pedidoTexto}\n\n*Total: ${formatarDinheiro(total)}*\n\nPor favor, confirme o pedido e informe o tempo de preparo.`;
     
-    const whatsappUrl = `https://wa.me/${restaurante?.telefone?.replace(/\D/g, '')}?text=${encodeURIComponent(mensagem)}`;
+    const whatsappNumber = restaurante?.configuracoes?.whatsapp || restaurante?.telefone || '';
+    const whatsappUrl = `https://wa.me/${whatsappNumber.replace(/\D/g, '')}?text=${encodeURIComponent(mensagem)}`;
     window.open(whatsappUrl, '_blank');
     
     toast.success('Pedido enviado via WhatsApp!');
@@ -234,7 +242,7 @@ const CardapioPublico: React.FC = () => {
       <section className="bg-gradient-to-r from-red-600 via-red-700 to-red-800 text-white py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            Bem-vindo ao {restaurante.nome}
+            Bem-vindo ao {restaurante.configuracoes?.nome_exibicao || restaurante.nome}
           </h2>
           <p className="text-xl text-red-100 mb-6">
             Explore nosso delicioso cardápio e faça seu pedido
@@ -242,7 +250,7 @@ const CardapioPublico: React.FC = () => {
           <div className="flex items-center justify-center space-x-6 text-red-100">
             <div className="flex items-center">
               <Clock className="w-5 h-5 mr-2" />
-              <span>Entrega em 30-45 min</span>
+              <span>Entrega em {restaurante.configuracoes?.tempo_entrega || '30-45 min'}</span>
             </div>
             <div className="flex items-center">
               <Star className="w-5 h-5 mr-2 text-yellow-400" />
@@ -580,7 +588,9 @@ const CardapioPublico: React.FC = () => {
                 <div className="p-2 bg-gradient-to-br from-red-600 to-red-700 rounded-lg">
                   <ChefHat className="w-6 h-6 text-white" />
                 </div>
-                <span className="text-xl font-bold">{restaurante.nome}</span>
+                <span className="text-xl font-bold">
+                  {restaurante.configuracoes?.nome_exibicao || restaurante.nome}
+                </span>
               </div>
               <p className="text-gray-400">
                 Sabores únicos e experiências inesquecíveis
@@ -592,28 +602,31 @@ const CardapioPublico: React.FC = () => {
               <div className="space-y-2">
                 <div className="flex items-center">
                   <Phone className="w-4 h-4 mr-2 text-gray-400" />
-                  <span className="text-gray-300">{restaurante.telefone}</span>
+                  <span className="text-gray-300">
+                    {restaurante.configuracoes?.whatsapp || restaurante.telefone}
+                  </span>
                 </div>
-                <div className="flex items-center">
-                  <MapPin className="w-4 h-4 mr-2 text-gray-400" />
-                  <span className="text-gray-300">Endereço do restaurante</span>
-                </div>
+                {restaurante.configuracoes?.endereco && (
+                  <div className="flex items-center">
+                    <MapPin className="w-4 h-4 mr-2 text-gray-400" />
+                    <span className="text-gray-300">{restaurante.configuracoes.endereco}</span>
+                  </div>
+                )}
               </div>
             </div>
             
             <div>
               <h3 className="text-lg font-semibold mb-4">Horário de Funcionamento</h3>
-              <div className="space-y-1 text-gray-300">
-                <p>Segunda a Quinta: 11h às 23h</p>
-                <p>Sexta e Sábado: 11h às 00h</p>
-                <p>Domingo: 11h às 22h</p>
+              <div className="text-gray-300 whitespace-pre-line text-sm">
+                {restaurante.configuracoes?.horario_funcionamento || 
+                 'Segunda a Quinta: 11h às 23h\nSexta e Sábado: 11h às 00h\nDomingo: 11h às 22h'}
               </div>
             </div>
           </div>
           
           <div className="border-t border-gray-800 mt-8 pt-8 text-center">
             <p className="text-gray-400">
-              © 2025 {restaurante.nome} - Cardápio Digital powered by ChefComanda
+              © 2025 {restaurante.configuracoes?.nome_exibicao || restaurante.nome} - Cardápio Digital powered by ChefComanda
             </p>
           </div>
         </div>

@@ -72,6 +72,7 @@ interface RestauranteContextType {
   adicionarProduto: (produto: any) => Promise<void>;
   atualizarProduto: (id: string, produto: any) => Promise<void>;
   excluirProduto: (id: string) => Promise<void>;
+  atualizarRestaurante: (dados: any) => Promise<void>;
   
   // Data functions
   refreshData: () => Promise<void>;
@@ -448,6 +449,20 @@ export const RestauranteProvider: React.FC<RestauranteProviderProps> = ({ childr
     }
   };
 
+  const atualizarRestaurante = async (dados: any) => {
+    if (!restaurante) throw new Error('Restaurante não encontrado');
+    
+    try {
+      const restauranteAtualizado = await DatabaseService.updateRestaurante(restaurante.id, dados);
+      setRestaurante(restauranteAtualizado);
+      toast.success('Restaurante atualizado com sucesso!');
+    } catch (error) {
+      console.error('Error updating restaurant:', error);
+      toast.error('Erro ao atualizar restaurante');
+      throw error;
+    }
+  };
+
   // Dashboard and reports
   const getDashboardData = async () => {
     if (!restaurante) return null;
@@ -507,6 +522,7 @@ export const RestauranteProvider: React.FC<RestauranteProviderProps> = ({ childr
     adicionarProduto,
     atualizarProduto,
     excluirProduto,
+    atualizarRestaurante,
     
     // Data functions
     refreshData,
