@@ -39,8 +39,10 @@ import {
 import Button from "../components/ui/Button";
 import toast from "react-hot-toast";
 import { supabase } from "../services/supabase";
+import { useAuth } from "../contexts/AuthContext";
 
 const Dashboard: React.FC = () => {
+  const { user } = useAuth();
   const {
     mesas,
     produtos,
@@ -66,6 +68,8 @@ const Dashboard: React.FC = () => {
   }, [dataInitialized]);
 
   const loadDashboardData = async () => {
+    if (!user) return;
+    
     try {
       setLoading(true);
       await refreshData();
@@ -90,10 +94,13 @@ const Dashboard: React.FC = () => {
   };
 
   const loadInsumosEstoqueBaixo = async () => {
+    if (!user) return;
+    
     try {
       const { data: restaurante } = await supabase
         .from("restaurantes")
         .select("id")
+        .eq("user_id", user?.id)
         .single();
 
       if (!restaurante) return;

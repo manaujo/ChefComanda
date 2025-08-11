@@ -65,8 +65,11 @@ const Relatorios: React.FC = () => {
     produtos, 
     itensComanda, 
     mesas,
+    restaurante,
     refreshData 
   } = useRestaurante();
+  
+  const produtosEstoqueBaixo = produtos.filter(p => p.estoque <= p.estoque_minimo);
   
   const [periodoSelecionado, setPeriodoSelecionado] = useState('7dias');
   const [categoriaAtiva, setCategoriaAtiva] = useState('vendas');
@@ -140,7 +143,10 @@ const Relatorios: React.FC = () => {
 
   const loadVendasPorGarcom = async () => {
     try {
-      const garcons = funcionarios.filter(func => func.role === 'waiter');
+      // Garantir que estamos usando apenas funcionários do restaurante atual
+      const garcons = funcionarios.filter(func => 
+        func.role === 'waiter' && func.active
+      );
       
       if (garcons.length === 0) {
         setVendasGarcons([]);
@@ -149,7 +155,11 @@ const Relatorios: React.FC = () => {
 
       // Calcular vendas por garçom baseado nas mesas ocupadas
       const vendasPorGarcom: VendaGarcom[] = garcons.map(garcom => {
-        const mesasDoGarcom = mesas.filter(mesa => mesa.garcom === garcom.name);
+        // Filtrar apenas mesas do restaurante atual
+        const mesasDoGarcom = mesas.filter(mesa => 
+          mesa.garcom === garcom.name && 
+          mesa.restaurante_id === restaurante?.id
+        );
         const vendasGarcom = mesasDoGarcom.reduce((acc, mesa) => {
           const itensMesa = itensComanda.filter(item => item.mesa_id === mesa.id);
           return acc + itensMesa.reduce((total, item) => total + (item.preco_unitario * item.quantidade), 0);

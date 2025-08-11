@@ -5,6 +5,7 @@ import { formatarDinheiro } from '../utils/formatters';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import toast from 'react-hot-toast';
 import { supabase } from '../services/supabase';
+import { useAuth } from '../contexts/AuthContext';
 
 interface Produto {
   id: number;
@@ -19,6 +20,7 @@ interface Produto {
 }
 
 const CMV: React.FC = () => {
+  const { user } = useAuth();
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -34,12 +36,15 @@ const CMV: React.FC = () => {
   }, []);
 
   const loadCMVData = async () => {
+    if (!user) return;
+    
     setLoading(true);
     try {
       // Carregar produtos do banco de dados
       const { data: restaurante } = await supabase
         .from('restaurantes')
         .select('id')
+        .eq('user_id', user?.id)
         .single();
 
       if (!restaurante) {

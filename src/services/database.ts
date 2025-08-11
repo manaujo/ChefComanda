@@ -96,31 +96,17 @@ export class DatabaseService {
 
   // Comandas
   static async getComandas(restauranteId: string) {
-    // First get mesas for this restaurant
-    const { data: mesas, error: mesasError } = await supabase
-      .from('mesas')
-      .select('id')
-      .eq('restaurante_id', restauranteId);
-
-    if (mesasError) throw mesasError;
-    
-    if (!mesas || mesas.length === 0) {
-      return [];
-    }
-
-    const mesaIds = mesas.map(mesa => mesa.id);
-
     const { data, error } = await supabase
       .from('comandas')
       .select(`
         *,
-        mesa:mesas(*),
+        mesa:mesas!inner(*),
         itens:itens_comanda(
           *,
           produto:produtos(*)
         )
       `)
-      .in('mesa_id', mesaIds)
+      .eq('mesa.restaurante_id', restauranteId)
       .order('created_at', { ascending: false });
 
     if (error) throw error;

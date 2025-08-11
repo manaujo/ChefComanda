@@ -50,6 +50,7 @@ const Estoque: React.FC = () => {
       const { data: restaurante } = await supabase
         .from('restaurantes')
         .select('id')
+        .eq('user_id', user?.id)
         .maybeSingle();
 
       if (!restaurante) {
@@ -85,6 +86,7 @@ const Estoque: React.FC = () => {
       const { data: restaurante } = await supabase
         .from('restaurantes')
         .select('id')
+        .eq('user_id', user?.id)
         .maybeSingle();
 
       if (!restaurante) {

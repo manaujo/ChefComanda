@@ -5,6 +5,7 @@ import { useRestaurante } from '../contexts/RestauranteContext';
 import { formatarDinheiro } from '../utils/formatters';
 import { supabase } from '../services/supabase';
 import { CRUDService } from '../services/CRUDService';
+import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
 
 interface CardapioItem {
@@ -29,6 +30,7 @@ interface Categoria {
 const CardapioOnlineEditor: React.FC = () => {
   const [items, setItems] = useState<CardapioItem[]>([]);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
+  const { user } = useAuth();
   const { produtos, restaurante, atualizarRestaurante } = useRestaurante();
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'items' | 'config'>('items');
@@ -100,6 +102,7 @@ const CardapioOnlineEditor: React.FC = () => {
       const { data: restaurante } = await supabase
         .from('restaurantes')
         .select('id')
+        .eq('user_id', user?.id)
         .single();
 
       if (!restaurante) {
@@ -130,6 +133,7 @@ const CardapioOnlineEditor: React.FC = () => {
       const { data: restaurante } = await supabase
         .from('restaurantes')
         .select('id')
+        .eq('user_id', user?.id)
         .single();
 
       if (!restaurante) {
@@ -188,6 +192,7 @@ const CardapioOnlineEditor: React.FC = () => {
       const { data: restaurante } = await supabase
         .from('restaurantes')
         .select('id')
+        .eq('user_id', user?.id)
         .single();
 
       if (!restaurante) {

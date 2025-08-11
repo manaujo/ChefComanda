@@ -37,7 +37,7 @@ interface ComandaMesa {
 }
 
 const PDV: React.FC = () => {
-  const { produtos, refreshData, mesas, itensComanda, finalizarPagamento, liberarMesa } = useRestaurante();
+  const { produtos, refreshData, mesas, itensComanda, finalizarPagamento, liberarMesa, restaurante } = useRestaurante();
   const [itensVenda, setItensVenda] = useState<ItemVenda[]>([]);
   const [busca, setBusca] = useState('');
   const [categoriaSelecionada, setCategoriaSelecionada] = useState('todos');
@@ -111,7 +111,12 @@ const PDV: React.FC = () => {
 
   // Agrupar comandas por mesa
   const comandasPorMesa = (): ComandaMesa[] => {
-    const mesasComComandas = mesas.filter(mesa => mesa.status === 'ocupada');
+    // Filtrar apenas mesas do restaurante atual que estão ocupadas
+    const mesasComComandas = mesas.filter(mesa => 
+      mesa.status === 'ocupada' && 
+      // Verificar se a mesa pertence ao restaurante do usuário logado
+      mesa.restaurante_id === restaurante?.id
+    );
     
     return mesasComComandas.map(mesa => {
       const itensDaMesa = itensComanda.filter(item => item.mesa_id === mesa.id);

@@ -108,29 +108,36 @@ class ReportsService {
     endDate: string
   ): Promise<GarcomReport[]> {
     try {
-      // Get employees with waiter role
+      // Get company profile for this restaurant's user
+      const { data: restaurante, error: restError } = await supabase
+        .from('restaurantes')
+        .select('user_id')
+        .eq('id', restauranteId)
+        .single();
+
+      if (restError) throw restError;
+
+      const { data: companyProfile, error: compError } = await supabase
+        .from('company_profiles')
+        .select('id')
+        .eq('user_id', restaurante.user_id)
+        .single();
+
+      if (compError) throw compError;
+
+      // Get employees with waiter role for this company
       const { data: employees, error: empError } = await supabase
         .from('employees')
-        .select(`
-          id,
-          name,
-          company_profiles!inner(
-            restaurantes!inner(id)
-          )
-        `)
+        .select('id, name')
         .eq('role', 'waiter')
-        .eq('active', true);
+        .eq('active', true)
+        .eq('company_id', companyProfile.id);
 
       if (empError) throw empError;
 
-      // Filter employees by restaurant
-      const restaurantEmployees = (employees || []).filter(emp => 
-        emp.company_profiles?.restaurantes?.some((r: any) => r.id === restauranteId)
-      );
-
       // Get sales data for each waiter
       const garcomStats = await Promise.all(
-        restaurantEmployees.map(async (employee) => {
+        (employees || []).map(async (employee) => {
           const { data: vendas, error: vendasError } = await supabase
             .from('vendas')
             .select('valor_total, mesa_id')

@@ -61,14 +61,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   useEffect(() => {
     // Check active sessions and subscribe to auth changes
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        loadUserData(session.user);
-      } else {
-        // Check for employee session
-        checkEmployeeSession();
-      }
-    });
+    supabase.auth.getSession()
+      .then(({ data: { session } }) => {
+        if (session?.user) {
+          loadUserData(session.user);
+        } else {
+          // Check for employee session
+          checkEmployeeSession();
+        }
+      })
+      .catch(async (error) => {
+        console.error("Error getting session:", error);
+        // Clear any invalid tokens
+        try {
+          await supabase.auth.signOut();
+        } catch (signOutError) {
+          console.error("Error signing out:", signOutError);
+        }
+        setState({
+          user: null,
+          userRole: null,
+          loading: false,
+          displayName: null,
+          isEmployee: false,
+          employeeData: null,
+          currentPlan: null
+        });
+      });
 
     const {
       data: { subscription }

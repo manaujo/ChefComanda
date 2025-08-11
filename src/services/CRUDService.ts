@@ -70,7 +70,14 @@ export class CRUDService {
 
   // Mesas
   static async getMesasByRestaurante(restauranteId: string) {
-    return this.read('mesas', { restaurante_id: restauranteId });
+    const { data, error } = await supabase
+      .from('mesas')
+      .select('*')
+      .eq('restaurante_id', restauranteId)
+      .order('numero');
+
+    if (error) throw error;
+    return data || [];
   }
 
   static async updateMesaStatus(
@@ -86,7 +93,14 @@ export class CRUDService {
 
   // Produtos
   static async getProdutosByRestaurante(restauranteId: string) {
-    return this.read('produtos', { restaurante_id: restauranteId });
+    const { data, error } = await supabase
+      .from('produtos')
+      .select('*')
+      .eq('restaurante_id', restauranteId)
+      .order('nome');
+
+    if (error) throw error;
+    return data || [];
   }
 
   static async getProdutosByCategoria(restauranteId: string, categoria: string) {
@@ -223,10 +237,11 @@ export class CRUDService {
         produto:produtos!inner(nome, categoria, preco),
         comanda:comandas!inner(
           mesa:mesas!inner(
-            restaurante:restaurantes!inner(id)
+            restaurante_id
           )
         )
       `)
+      .eq('comanda.mesa.restaurante_id', restauranteId)
       .gte('created_at', startDate.toISOString())
       .limit(1000); // Limit to prevent large queries
 
@@ -236,25 +251,22 @@ export class CRUDService {
     const produtoStats = new Map();
     
     (data || []).forEach((item: any) => {
-      // Check if this item belongs to the restaurant
-      if (item.comanda?.mesa?.restaurante?.id === restauranteId) {
-        const produtoId = item.produto_id;
-        const produto = item.produto;
-        
-        if (!produtoStats.has(produtoId)) {
-          produtoStats.set(produtoId, {
-            id: produtoId,
-            nome: produto.nome,
-            categoria: produto.categoria,
-            quantidade: 0,
-            valor: 0
-          });
-        }
-        
-        const stats = produtoStats.get(produtoId);
-        stats.quantidade += item.quantidade;
-        stats.valor += item.quantidade * Number(item.preco_unitario);
+      const produtoId = item.produto_id;
+      const produto = item.produto;
+      
+      if (!produtoStats.has(produtoId)) {
+        produtoStats.set(produtoId, {
+          id: produtoId,
+          nome: produto.nome,
+          categoria: produto.categoria,
+          quantidade: 0,
+          valor: 0
+        });
       }
+      
+      const stats = produtoStats.get(produtoId);
+      stats.quantidade += item.quantidade;
+      stats.valor += item.quantidade * Number(item.preco_unitario);
     });
 
     return Array.from(produtoStats.values())
@@ -321,7 +333,6 @@ export class CRUDService {
       .from('cardapio_online')
       .select('*')
       .eq('restaurante_id', restauranteId)
-      .eq('ativo', true)
       .order('ordem');
 
     if (error) throw error;
@@ -343,7 +354,14 @@ export class CRUDService {
 
   // Categorias
   static async getCategoriasByRestaurante(restauranteId: string) {
-    return this.read('categorias', { restaurante_id: restauranteId });
+    const { data, error } = await supabase
+      .from('categorias')
+      .select('*')
+      .eq('restaurante_id', restauranteId)
+      .order('nome');
+
+    if (error) throw error;
+    return data || [];
   }
 
   // Relatórios

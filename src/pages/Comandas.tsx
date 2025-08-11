@@ -11,7 +11,7 @@ import { usePreventReload } from '../hooks/usePreventReload';
 
 const Comandas: React.FC = () => {
   const navigate = useNavigate();
-  const { mesas, itensComanda, atualizarStatusItem } = useRestaurante();
+  const { mesas, itensComanda, atualizarStatusItem, restaurante } = useRestaurante();
   const [filtroStatus, setFiltroStatus] = useState<string>('todos');
   const [filtroMesa, setFiltroMesa] = useState<string | null>(null);
   const [comandaModalAberta, setComandaModalAberta] = useState(false);
@@ -69,6 +69,12 @@ const Comandas: React.FC = () => {
   // Aplicar filtros
   const mesasFiltradasIds = Object.keys(itensPorMesa)
     .filter(mesaId => {
+      // Verificar se a mesa pertence ao restaurante do usuário logado
+      const mesa = mesas.find(m => m.id === mesaId);
+      if (!mesa || mesa.restaurante_id !== restaurante?.id) {
+        return false;
+      }
+      
       if (filtroMesa !== null && mesaId !== filtroMesa) {
         return false;
       }

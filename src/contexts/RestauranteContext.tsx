@@ -155,12 +155,14 @@ export const RestauranteProvider: React.FC<RestauranteProviderProps> = ({ childr
           comanda:comandas!inner(
             mesa_id,
             mesa:mesas!inner(
-              restaurante_id
+              restaurante_id,
+              numero
             )
           ),
           produto:produtos!inner(nome, categoria, preco)
         `)
-        .eq('comanda.mesa.restaurante_id', restauranteId);
+        .eq('comanda.mesa.restaurante_id', restauranteId)
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
 
@@ -196,7 +198,22 @@ export const RestauranteProvider: React.FC<RestauranteProviderProps> = ({ childr
         .maybeSingle();
 
       if (companyData) {
-        const funcionariosData = await CRUDService.getEmployeesByCompany(companyData.id);
+        const { data: funcionariosData, error } = await supabase
+          .from('employees')
+          .select(`
+            *,
+            employee_auth!left(id)
+          `)
+          .eq('company_id', companyData.id)
+          .order('name');
+
+        if (error) throw error;
+        
+        const formattedFuncionarios = (funcionariosData || []).map(emp => ({
+          ...emp,
+          has_auth: !!emp.employee_auth?.id
+        }));
+        
         setFuncionarios(funcionariosData || []);
       }
     } catch (error) {

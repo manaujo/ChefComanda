@@ -63,10 +63,23 @@ export default function Produtos() {
   const loadProdutos = async () => {
     try {
       setLoading(true);
-      const data = await CRUDService.read('produtos');
+      // Get user's restaurant first
+      const { data: restaurante, error: restauranteError } = await supabase
+        .from('restaurantes')
+        .select('id')
+        .eq('user_id', user?.id)
+        .single();
+
+      if (restauranteError) {
+        console.error('Error getting restaurant:', restauranteError);
+        throw new Error('Restaurante não encontrado');
+      }
+
+      const data = await CRUDService.getProdutosByRestaurante(restaurante.id);
       setProdutos(data || []);
     } catch (error) {
       console.error('Erro ao carregar produtos:', error);
+      toast.error('Erro ao carregar produtos');
     } finally {
       setLoading(false);
     }
@@ -74,10 +87,23 @@ export default function Produtos() {
 
   const loadCategorias = async () => {
     try {
-      const data = await CRUDService.read('categorias');
+      // Get user's restaurant first
+      const { data: restaurante, error: restauranteError } = await supabase
+        .from('restaurantes')
+        .select('id')
+        .eq('user_id', user?.id)
+        .single();
+
+      if (restauranteError) {
+        console.error('Error getting restaurant:', restauranteError);
+        throw new Error('Restaurante não encontrado');
+      }
+
+      const data = await CRUDService.getCategoriasByRestaurante(restaurante.id);
       setCategorias(data || []);
     } catch (error) {
       console.error('Erro ao carregar categorias:', error);
+      toast.error('Erro ao carregar categorias');
     }
   };
 
