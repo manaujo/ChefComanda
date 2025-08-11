@@ -1,11 +1,27 @@
-import React, { useState, useEffect } from 'react';
-import { Calculator, PieChart, TrendingUp, AlertTriangle, Download, FileSpreadsheet } from 'lucide-react';
-import Button from '../components/ui/Button';
-import { formatarDinheiro } from '../utils/formatters';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import toast from 'react-hot-toast';
-import { supabase } from '../services/supabase';
-import { useAuth } from '../contexts/AuthContext';
+import React, { useState, useEffect } from "react";
+import {
+  Calculator,
+  PieChart,
+  TrendingUp,
+  AlertTriangle,
+  Download,
+  FileSpreadsheet
+} from "lucide-react";
+import Button from "../components/ui/Button";
+import { formatarDinheiro } from "../utils/formatters";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer
+} from "recharts";
+import toast from "react-hot-toast";
+import { supabase } from "../services/supabase";
+import { useAuth } from "../contexts/AuthContext";
 
 interface Produto {
   id: number;
@@ -25,10 +41,10 @@ const CMV: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
-    nome: '',
-    custoUnitario: '',
-    precoVenda: '',
-    quantidadeVendida: ''
+    nome: "",
+    custoUnitario: "",
+    precoVenda: "",
+    quantidadeVendida: ""
   });
 
   useEffect(() => {
@@ -37,49 +53,54 @@ const CMV: React.FC = () => {
 
   const loadCMVData = async () => {
     if (!user) return;
-    
+
     setLoading(true);
     try {
       // Carregar produtos do banco de dados
       const { data: restaurante } = await supabase
-        .from('restaurantes')
-        .select('id')
-        .eq('user_id', user?.id)
+        .from("restaurantes")
+        .select("id")
+        .eq("user_id", user?.id)
         .single();
 
       if (!restaurante) {
-        throw new Error('Restaurante não encontrado');
+        throw new Error("Restaurante não encontrado");
       }
 
       // Obter produtos e vendas
       const { data: produtos } = await supabase
-        .from('produtos')
-        .select('*')
-        .eq('restaurante_id', restaurante.id);
+        .from("produtos")
+        .select("*")
+        .eq("restaurante_id", restaurante.id);
 
       // Obter itens vendidos
       const { data: itensVendidos } = await supabase
-        .from('itens_comanda')
-        .select(`
+        .from("itens_comanda")
+        .select(
+          `
           produto_id,
           quantidade,
           preco_unitario,
           produtos(nome, preco)
-        `)
-        .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString());
+        `
+        )
+        .gte(
+          "created_at",
+          new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+        );
 
       // Calcular CMV
       const produtosMap = new Map();
-      
+
       itensVendidos?.forEach((item: any) => {
         const produtoId = item.produto_id;
-        const produto = produtos?.find(p => p.id === produtoId);
-        
+        const produto = produtos?.find((p) => p.id === produtoId);
+
         if (produto) {
           const custoUnitario = produto.preco * 0.4; // Estimativa de custo (40% do preço)
           const quantidade = item.quantidade;
           const precoVenda = item.preco_unitario;
-          
+
           if (!produtosMap.has(produtoId)) {
             produtosMap.set(produtoId, {
               id: produtoId,
@@ -93,33 +114,36 @@ const CMV: React.FC = () => {
               percentualCMV: 0
             });
           }
-          
+
           const produtoStats = produtosMap.get(produtoId);
           produtoStats.quantidadeVendida += quantidade;
           produtoStats.custoTotal += custoUnitario * quantidade;
           produtoStats.receitaTotal += precoVenda * quantidade;
         }
       });
-      
+
       // Calcular margens e percentuais
       const produtosCMV: Produto[] = [];
       produtosMap.forEach((produto) => {
-        produto.margemLucro = ((produto.receitaTotal - produto.custoTotal) / produto.receitaTotal) * 100;
-        produto.percentualCMV = (produto.custoTotal / produto.receitaTotal) * 100;
+        produto.margemLucro =
+          ((produto.receitaTotal - produto.custoTotal) / produto.receitaTotal) *
+          100;
+        produto.percentualCMV =
+          (produto.custoTotal / produto.receitaTotal) * 100;
         produtosCMV.push(produto);
       });
-      
+
       // Ordenar por quantidade vendida
       produtosCMV.sort((a, b) => b.quantidadeVendida - a.quantidadeVendida);
-      
+
       // Se não houver dados reais, usar dados fictícios
       if (produtosCMV.length === 0) {
         setProdutos([
           {
             id: 1,
             nome: "Picanha Grelhada",
-            custoUnitario: 45.90,
-            precoVenda: 89.90,
+            custoUnitario: 45.9,
+            precoVenda: 89.9,
             quantidadeVendida: 50,
             custoTotal: 2295,
             receitaTotal: 4495,
@@ -129,19 +153,19 @@ const CMV: React.FC = () => {
           {
             id: 2,
             nome: "Frango à Parmegiana",
-            custoUnitario: 25.50,
-            precoVenda: 59.90,
+            custoUnitario: 25.5,
+            precoVenda: 59.9,
             quantidadeVendida: 75,
-            custoTotal: 1912.50,
-            receitaTotal: 4492.50,
+            custoTotal: 1912.5,
+            receitaTotal: 4492.5,
             margemLucro: 57.43,
             percentualCMV: 42.57
           },
           {
             id: 3,
             nome: "Salmão Grelhado",
-            custoUnitario: 38.90,
-            precoVenda: 79.90,
+            custoUnitario: 38.9,
+            precoVenda: 79.9,
             quantidadeVendida: 30,
             custoTotal: 1167,
             receitaTotal: 2397,
@@ -153,16 +177,16 @@ const CMV: React.FC = () => {
         setProdutos(produtosCMV);
       }
     } catch (error) {
-      console.error('Error loading CMV data:', error);
-      toast.error('Erro ao carregar dados de CMV');
-      
+      console.error("Error loading CMV data:", error);
+      toast.error("Erro ao carregar dados de CMV");
+
       // Usar dados fictícios em caso de erro
       setProdutos([
         {
           id: 1,
           nome: "Picanha Grelhada",
-          custoUnitario: 45.90,
-          precoVenda: 89.90,
+          custoUnitario: 45.9,
+          precoVenda: 89.9,
           quantidadeVendida: 50,
           custoTotal: 2295,
           receitaTotal: 4495,
@@ -172,19 +196,19 @@ const CMV: React.FC = () => {
         {
           id: 2,
           nome: "Frango à Parmegiana",
-          custoUnitario: 25.50,
-          precoVenda: 59.90,
+          custoUnitario: 25.5,
+          precoVenda: 59.9,
           quantidadeVendida: 75,
-          custoTotal: 1912.50,
-          receitaTotal: 4492.50,
+          custoTotal: 1912.5,
+          receitaTotal: 4492.5,
           margemLucro: 57.43,
           percentualCMV: 42.57
         },
         {
           id: 3,
           nome: "Salmão Grelhado",
-          custoUnitario: 38.90,
-          precoVenda: 79.90,
+          custoUnitario: 38.9,
+          precoVenda: 79.9,
           quantidadeVendida: 30,
           custoTotal: 1167,
           receitaTotal: 2397,
@@ -197,26 +221,32 @@ const CMV: React.FC = () => {
     }
   };
 
-  const totalCMV = produtos.reduce((acc, produto) => acc + produto.custoTotal, 0);
-  const totalReceita = produtos.reduce((acc, produto) => acc + produto.receitaTotal, 0);
+  const totalCMV = produtos.reduce(
+    (acc, produto) => acc + produto.custoTotal,
+    0
+  );
+  const totalReceita = produtos.reduce(
+    (acc, produto) => acc + produto.receitaTotal,
+    0
+  );
   const lucroBruto = totalReceita - totalCMV;
   const percentualCMVGeral = (totalCMV / totalReceita) * 100;
   const margemLucroBruta = (lucroBruto / totalReceita) * 100;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const custoUnitario = parseFloat(formData.custoUnitario);
     const precoVenda = parseFloat(formData.precoVenda);
     const quantidadeVendida = parseInt(formData.quantidadeVendida);
-    
+
     const custoTotal = custoUnitario * quantidadeVendida;
     const receitaTotal = precoVenda * quantidadeVendida;
     const margemLucro = ((receitaTotal - custoTotal) / receitaTotal) * 100;
     const percentualCMV = (custoTotal / receitaTotal) * 100;
 
     const novoProduto: Produto = {
-      id: Math.max(0, ...produtos.map(p => p.id)) + 1,
+      id: Math.max(0, ...produtos.map((p) => p.id)) + 1,
       nome: formData.nome,
       custoUnitario,
       precoVenda,
@@ -229,21 +259,21 @@ const CMV: React.FC = () => {
 
     setProdutos([...produtos, novoProduto]);
     setFormData({
-      nome: '',
-      custoUnitario: '',
-      precoVenda: '',
-      quantidadeVendida: ''
+      nome: "",
+      custoUnitario: "",
+      precoVenda: "",
+      quantidadeVendida: ""
     });
     setShowForm(false);
-    toast.success('Produto adicionado com sucesso!');
+    toast.success("Produto adicionado com sucesso!");
   };
 
   const handleDeleteProduto = (id: number) => {
-    setProdutos(produtos.filter(p => p.id !== id));
-    toast.success('Produto removido com sucesso!');
+    setProdutos(produtos.filter((p) => p.id !== id));
+    toast.success("Produto removido com sucesso!");
   };
 
-  const exportarDados = (formato: 'excel' | 'pdf') => {
+  const exportarDados = (formato: "excel" | "pdf") => {
     toast.success(`Relatório exportado em ${formato.toUpperCase()}`);
   };
 
@@ -251,7 +281,9 @@ const CMV: React.FC = () => {
     <div className="space-y-6 p-6">
       <div className="flex justify-between items-start">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Custo da Mercadoria Vendida (CMV)</h1>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Custo da Mercadoria Vendida (CMV)
+          </h1>
           <p className="mt-1 text-gray-500">
             Análise e controle dos custos dos produtos vendidos
           </p>
@@ -260,14 +292,14 @@ const CMV: React.FC = () => {
           <Button
             variant="ghost"
             icon={<FileSpreadsheet size={18} />}
-            onClick={() => exportarDados('excel')}
+            onClick={() => exportarDados("excel")}
           >
             Excel
           </Button>
           <Button
             variant="ghost"
             icon={<Download size={18} />}
-            onClick={() => exportarDados('pdf')}
+            onClick={() => exportarDados("pdf")}
           >
             PDF
           </Button>
@@ -286,8 +318,12 @@ const CMV: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-500">CMV Total</p>
-                  <p className="text-2xl font-bold mt-1">{formatarDinheiro(totalCMV)}</p>
-                  <p className="text-sm text-gray-500 mt-1">{percentualCMVGeral.toFixed(2)}% da receita</p>
+                  <p className="text-2xl font-bold mt-1">
+                    {formatarDinheiro(totalCMV)}
+                  </p>
+                  <p className="text-sm text-gray-500 mt-1">
+                    {percentualCMVGeral.toFixed(2)}% da receita
+                  </p>
                 </div>
                 <div className="p-3 bg-blue-100 rounded-full">
                   <Calculator size={24} className="text-blue-600" />
@@ -299,8 +335,12 @@ const CMV: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-500">Receita Total</p>
-                  <p className="text-2xl font-bold mt-1">{formatarDinheiro(totalReceita)}</p>
-                  <p className="text-sm text-gray-500 mt-1">Faturamento bruto</p>
+                  <p className="text-2xl font-bold mt-1">
+                    {formatarDinheiro(totalReceita)}
+                  </p>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Faturamento bruto
+                  </p>
                 </div>
                 <div className="p-3 bg-green-100 rounded-full">
                   <TrendingUp size={24} className="text-green-600" />
@@ -312,8 +352,12 @@ const CMV: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-500">Lucro Bruto</p>
-                  <p className="text-2xl font-bold mt-1">{formatarDinheiro(lucroBruto)}</p>
-                  <p className="text-sm text-gray-500 mt-1">Margem: {margemLucroBruta.toFixed(2)}%</p>
+                  <p className="text-2xl font-bold mt-1">
+                    {formatarDinheiro(lucroBruto)}
+                  </p>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Margem: {margemLucroBruta.toFixed(2)}%
+                  </p>
                 </div>
                 <div className="p-3 bg-purple-100 rounded-full">
                   <PieChart size={24} className="text-purple-600" />
@@ -350,7 +394,11 @@ const CMV: React.FC = () => {
                   <Tooltip />
                   <Legend />
                   <Bar dataKey="custoTotal" name="Custo Total" fill="#3B82F6" />
-                  <Bar dataKey="receitaTotal" name="Receita Total" fill="#10B981" />
+                  <Bar
+                    dataKey="receitaTotal"
+                    name="Receita Total"
+                    fill="#10B981"
+                  />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -361,10 +409,7 @@ const CMV: React.FC = () => {
             <div className="p-6 border-b border-gray-200">
               <div className="flex justify-between items-center">
                 <h2 className="text-lg font-medium">Produtos Analisados</h2>
-                <Button
-                  variant="primary"
-                  onClick={() => setShowForm(true)}
-                >
+                <Button variant="primary" onClick={() => setShowForm(true)}>
                   Adicionar Produto
                 </Button>
               </div>
@@ -374,28 +419,52 @@ const CMV: React.FC = () => {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
                       Produto
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
                       Custo Unit.
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
                       Preço Venda
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
                       Qtd. Vendida
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
                       CMV Total
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
                       Receita Total
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
                       Margem
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
                       Ações
                     </th>
                   </tr>
@@ -404,31 +473,45 @@ const CMV: React.FC = () => {
                   {produtos.map((produto) => (
                     <tr key={produto.id}>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">{produto.nome}</div>
+                        <div className="text-sm font-medium text-gray-900">
+                          {produto.nome}
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">{formatarDinheiro(produto.custoUnitario)}</div>
+                        <div className="text-sm text-gray-900">
+                          {formatarDinheiro(produto.custoUnitario)}
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">{formatarDinheiro(produto.precoVenda)}</div>
+                        <div className="text-sm text-gray-900">
+                          {formatarDinheiro(produto.precoVenda)}
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">{produto.quantidadeVendida}</div>
+                        <div className="text-sm text-gray-900">
+                          {produto.quantidadeVendida}
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">{formatarDinheiro(produto.custoTotal)}</div>
+                        <div className="text-sm text-gray-900">
+                          {formatarDinheiro(produto.custoTotal)}
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">{formatarDinheiro(produto.receitaTotal)}</div>
+                        <div className="text-sm text-gray-900">
+                          {formatarDinheiro(produto.receitaTotal)}
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          produto.margemLucro >= 40
-                            ? 'bg-green-100 text-green-800'
-                            : produto.margemLucro >= 30
-                            ? 'bg-yellow-100 text-yellow-800'
-                            : 'bg-red-100 text-red-800'
-                        }`}>
+                        <span
+                          className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                            produto.margemLucro >= 40
+                              ? "bg-green-100 text-green-800"
+                              : produto.margemLucro >= 30
+                              ? "bg-yellow-100 text-yellow-800"
+                              : "bg-red-100 text-red-800"
+                          }`}
+                        >
                           {produto.margemLucro.toFixed(2)}%
                         </span>
                       </td>
@@ -453,7 +536,10 @@ const CMV: React.FC = () => {
           {showForm && (
             <div className="fixed inset-0 z-50 overflow-y-auto">
               <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-                <div className="fixed inset-0 transition-opacity" aria-hidden="true">
+                <div
+                  className="fixed inset-0 transition-opacity"
+                  aria-hidden="true"
+                >
                   <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
                 </div>
 
@@ -472,7 +558,9 @@ const CMV: React.FC = () => {
                           <input
                             type="text"
                             value={formData.nome}
-                            onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+                            onChange={(e) =>
+                              setFormData({ ...formData, nome: e.target.value })
+                            }
                             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500"
                             required
                           />
@@ -484,14 +572,21 @@ const CMV: React.FC = () => {
                           </label>
                           <div className="mt-1 relative rounded-md shadow-sm">
                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                              <span className="text-gray-500 sm:text-sm">R$</span>
+                              <span className="text-gray-500 sm:text-sm">
+                                R$
+                              </span>
                             </div>
                             <input
                               type="number"
                               step="0.01"
                               min="0"
                               value={formData.custoUnitario}
-                              onChange={(e) => setFormData({ ...formData, custoUnitario: e.target.value })}
+                              onChange={(e) =>
+                                setFormData({
+                                  ...formData,
+                                  custoUnitario: e.target.value
+                                })
+                              }
                               className="pl-8 block w-full rounded-md border-gray-300 focus:ring-blue-500 focus:border-blue-500"
                               required
                             />
@@ -504,14 +599,21 @@ const CMV: React.FC = () => {
                           </label>
                           <div className="mt-1 relative rounded-md shadow-sm">
                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                              <span className="text-gray-500 sm:text-sm">R$</span>
+                              <span className="text-gray-500 sm:text-sm">
+                                R$
+                              </span>
                             </div>
                             <input
                               type="number"
                               step="0.01"
                               min="0"
                               value={formData.precoVenda}
-                              onChange={(e) => setFormData({ ...formData, precoVenda: e.target.value })}
+                              onChange={(e) =>
+                                setFormData({
+                                  ...formData,
+                                  precoVenda: e.target.value
+                                })
+                              }
                               className="pl-8 block w-full rounded-md border-gray-300 focus:ring-blue-500 focus:border-blue-500"
                               required
                             />
@@ -526,7 +628,12 @@ const CMV: React.FC = () => {
                             type="number"
                             min="1"
                             value={formData.quantidadeVendida}
-                            onChange={(e) => setFormData({ ...formData, quantidadeVendida: e.target.value })}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                quantidadeVendida: e.target.value
+                              })
+                            }
                             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500"
                             required
                           />

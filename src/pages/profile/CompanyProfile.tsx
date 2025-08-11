@@ -1,9 +1,18 @@
-import React, { useState, useEffect } from 'react';
-import { Building2, MapPin, Phone, Mail, Save, AlertTriangle, User, FileText } from 'lucide-react';
-import Button from '../../components/ui/Button';
-import { useAuth } from '../../contexts/AuthContext';
-import { supabase } from '../../services/supabase';
-import toast from 'react-hot-toast';
+import React, { useState, useEffect } from "react";
+import {
+  Building2,
+  MapPin,
+  Phone,
+  Mail,
+  Save,
+  AlertTriangle,
+  User,
+  FileText
+} from "lucide-react";
+import Button from "../../components/ui/Button";
+import { useAuth } from "../../contexts/AuthContext";
+import { supabase } from "../../services/supabase";
+import toast from "react-hot-toast";
 
 interface CompanyData {
   name: string;
@@ -28,21 +37,21 @@ const CompanyProfile: React.FC = () => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [companyData, setCompanyData] = useState<CompanyData>({
-    name: '',
-    cnpj: '',
+    name: "",
+    cnpj: "",
     address: {
-      street: '',
-      number: '',
-      complement: '',
-      neighborhood: '',
-      city: '',
-      state: '',
-      zipcode: ''
+      street: "",
+      number: "",
+      complement: "",
+      neighborhood: "",
+      city: "",
+      state: "",
+      zipcode: ""
     },
     contact: {
-      phone: '',
-      email: user?.email || '',
-      website: ''
+      phone: "",
+      email: user?.email || "",
+      website: ""
     }
   });
 
@@ -57,9 +66,9 @@ const CompanyProfile: React.FC = () => {
       if (!user) return;
 
       const { data, error } = await supabase
-        .from('company_profiles')
-        .select('*')
-        .eq('user_id', user.id)
+        .from("company_profiles")
+        .select("*")
+        .eq("user_id", user.id)
         .maybeSingle();
 
       if (error) throw error;
@@ -72,37 +81,81 @@ const CompanyProfile: React.FC = () => {
         });
       }
     } catch (error) {
-      console.error('Error loading company data:', error);
-      toast.error('Erro ao carregar dados da empresa');
+      console.error("Error loading company data:", error);
+      toast.error("Erro ao carregar dados da empresa");
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-  }
+
+    try {
+      if (!user) {
+        throw new Error("Usuário não autenticado");
+      }
+
+      // Validações básicas
+      if (!companyData.name || !companyData.cnpj) {
+        throw new Error("Preencha os campos obrigatórios");
+      }
+
+      // Salvar ou atualizar dados da empresa
+      const { data, error } = await supabase
+        .from("company_profiles")
+        .upsert(
+          {
+            user_id: user.id,
+            name: companyData.name,
+            cnpj: companyData.cnpj,
+            address: companyData.address,
+            contact: companyData.contact,
+            updated_at: new Date().toISOString()
+          },
+          {
+            onConflict: "user_id"
+          }
+        )
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      toast.success("Dados da empresa salvos com sucesso!");
+    } catch (error) {
+      console.error("Error saving company data:", error);
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Erro ao salvar dados da empresa"
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const formatCNPJ = (value: string) => {
     return value
-      .replace(/\D/g, '')
-      .replace(/^(\d{2})(\d)/, '$1.$2')
-      .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
-      .replace(/\.(\d{3})(\d)/, '.$1/$2')
-      .replace(/(\d{4})(\d)/, '$1-$2')
+      .replace(/\D/g, "")
+      .replace(/^(\d{2})(\d)/, "$1.$2")
+      .replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3")
+      .replace(/\.(\d{3})(\d)/, ".$1/$2")
+      .replace(/(\d{4})(\d)/, "$1-$2")
       .slice(0, 18);
   };
 
   const formatPhone = (value: string) => {
     return value
-      .replace(/\D/g, '')
-      .replace(/^(\d{2})(\d)/, '($1) $2')
-      .replace(/(\d)(\d{4})$/, '$1-$2')
+      .replace(/\D/g, "")
+      .replace(/^(\d{2})(\d)/, "($1) $2")
+      .replace(/(\d)(\d{4})$/, "$1-$2")
       .slice(0, 15);
   };
 
   const formatCEP = (value: string) => {
     return value
-      .replace(/\D/g, '')
-      .replace(/^(\d{5})(\d)/, '$1-$2')
+      .replace(/\D/g, "")
+      .replace(/^(\d{5})(\d)/, "$1-$2")
       .slice(0, 9);
   };
 
@@ -113,7 +166,8 @@ const CompanyProfile: React.FC = () => {
           Dados da Empresa
         </h1>
         <p className="text-gray-600 dark:text-gray-400">
-          Complete as informações da sua empresa para utilizar todas as funcionalidades do sistema
+          Complete as informações da sua empresa para utilizar todas as
+          funcionalidades do sistema
         </p>
       </div>
 
@@ -140,7 +194,9 @@ const CompanyProfile: React.FC = () => {
                 <input
                   type="text"
                   value={companyData.name}
-                  onChange={(e) => setCompanyData({ ...companyData, name: e.target.value })}
+                  onChange={(e) =>
+                    setCompanyData({ ...companyData, name: e.target.value })
+                  }
                   className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-colors"
                   placeholder="Digite a razão social da empresa"
                   required
@@ -155,7 +211,12 @@ const CompanyProfile: React.FC = () => {
                 <input
                   type="text"
                   value={companyData.cnpj}
-                  onChange={(e) => setCompanyData({ ...companyData, cnpj: formatCNPJ(e.target.value) })}
+                  onChange={(e) =>
+                    setCompanyData({
+                      ...companyData,
+                      cnpj: formatCNPJ(e.target.value)
+                    })
+                  }
                   className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-colors"
                   placeholder="00.000.000/0000-00"
                   required
@@ -170,10 +231,12 @@ const CompanyProfile: React.FC = () => {
                 <input
                   type="email"
                   value={companyData.contact.email}
-                  onChange={(e) => setCompanyData({
-                    ...companyData,
-                    contact: { ...companyData.contact, email: e.target.value }
-                  })}
+                  onChange={(e) =>
+                    setCompanyData({
+                      ...companyData,
+                      contact: { ...companyData.contact, email: e.target.value }
+                    })
+                  }
                   className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-colors"
                   placeholder="contato@empresa.com.br"
                 />
@@ -203,10 +266,15 @@ const CompanyProfile: React.FC = () => {
                 <input
                   type="text"
                   value={companyData.address.street}
-                  onChange={(e) => setCompanyData({
-                    ...companyData,
-                    address: { ...companyData.address, street: e.target.value }
-                  })}
+                  onChange={(e) =>
+                    setCompanyData({
+                      ...companyData,
+                      address: {
+                        ...companyData.address,
+                        street: e.target.value
+                      }
+                    })
+                  }
                   className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 dark:bg-gray-700 dark:text-white transition-colors"
                   placeholder="Rua, Avenida, etc."
                   required
@@ -220,10 +288,15 @@ const CompanyProfile: React.FC = () => {
                 <input
                   type="text"
                   value={companyData.address.number}
-                  onChange={(e) => setCompanyData({
-                    ...companyData,
-                    address: { ...companyData.address, number: e.target.value }
-                  })}
+                  onChange={(e) =>
+                    setCompanyData({
+                      ...companyData,
+                      address: {
+                        ...companyData.address,
+                        number: e.target.value
+                      }
+                    })
+                  }
                   className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 dark:bg-gray-700 dark:text-white transition-colors"
                   placeholder="123"
                   required
@@ -237,10 +310,15 @@ const CompanyProfile: React.FC = () => {
                 <input
                   type="text"
                   value={companyData.address.complement}
-                  onChange={(e) => setCompanyData({
-                    ...companyData,
-                    address: { ...companyData.address, complement: e.target.value }
-                  })}
+                  onChange={(e) =>
+                    setCompanyData({
+                      ...companyData,
+                      address: {
+                        ...companyData.address,
+                        complement: e.target.value
+                      }
+                    })
+                  }
                   className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 dark:bg-gray-700 dark:text-white transition-colors"
                   placeholder="Sala, Andar, etc."
                 />
@@ -253,10 +331,15 @@ const CompanyProfile: React.FC = () => {
                 <input
                   type="text"
                   value={companyData.address.neighborhood}
-                  onChange={(e) => setCompanyData({
-                    ...companyData,
-                    address: { ...companyData.address, neighborhood: e.target.value }
-                  })}
+                  onChange={(e) =>
+                    setCompanyData({
+                      ...companyData,
+                      address: {
+                        ...companyData.address,
+                        neighborhood: e.target.value
+                      }
+                    })
+                  }
                   className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 dark:bg-gray-700 dark:text-white transition-colors"
                   placeholder="Nome do bairro"
                   required
@@ -270,10 +353,12 @@ const CompanyProfile: React.FC = () => {
                 <input
                   type="text"
                   value={companyData.address.city}
-                  onChange={(e) => setCompanyData({
-                    ...companyData,
-                    address: { ...companyData.address, city: e.target.value }
-                  })}
+                  onChange={(e) =>
+                    setCompanyData({
+                      ...companyData,
+                      address: { ...companyData.address, city: e.target.value }
+                    })
+                  }
                   className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 dark:bg-gray-700 dark:text-white transition-colors"
                   placeholder="Nome da cidade"
                   required
@@ -286,10 +371,12 @@ const CompanyProfile: React.FC = () => {
                 </label>
                 <select
                   value={companyData.address.state}
-                  onChange={(e) => setCompanyData({
-                    ...companyData,
-                    address: { ...companyData.address, state: e.target.value }
-                  })}
+                  onChange={(e) =>
+                    setCompanyData({
+                      ...companyData,
+                      address: { ...companyData.address, state: e.target.value }
+                    })
+                  }
                   className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 dark:bg-gray-700 dark:text-white transition-colors"
                   required
                 >
@@ -331,10 +418,15 @@ const CompanyProfile: React.FC = () => {
                 <input
                   type="text"
                   value={companyData.address.zipcode}
-                  onChange={(e) => setCompanyData({
-                    ...companyData,
-                    address: { ...companyData.address, zipcode: formatCEP(e.target.value) }
-                  })}
+                  onChange={(e) =>
+                    setCompanyData({
+                      ...companyData,
+                      address: {
+                        ...companyData.address,
+                        zipcode: formatCEP(e.target.value)
+                      }
+                    })
+                  }
                   className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 dark:bg-gray-700 dark:text-white transition-colors"
                   placeholder="00000-000"
                   required
@@ -351,7 +443,9 @@ const CompanyProfile: React.FC = () => {
               <Phone size={24} className="mr-3" />
               <div>
                 <h2 className="text-xl font-semibold">Contato</h2>
-                <p className="text-purple-100 text-sm">Informações de contato</p>
+                <p className="text-purple-100 text-sm">
+                  Informações de contato
+                </p>
               </div>
             </div>
           </div>
@@ -366,10 +460,15 @@ const CompanyProfile: React.FC = () => {
                 <input
                   type="text"
                   value={companyData.contact.phone}
-                  onChange={(e) => setCompanyData({
-                    ...companyData,
-                    contact: { ...companyData.contact, phone: formatPhone(e.target.value) }
-                  })}
+                  onChange={(e) =>
+                    setCompanyData({
+                      ...companyData,
+                      contact: {
+                        ...companyData.contact,
+                        phone: formatPhone(e.target.value)
+                      }
+                    })
+                  }
                   className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 dark:bg-gray-700 dark:text-white transition-colors"
                   placeholder="(00) 00000-0000"
                   required
@@ -383,10 +482,15 @@ const CompanyProfile: React.FC = () => {
                 <input
                   type="url"
                   value={companyData.contact.website}
-                  onChange={(e) => setCompanyData({
-                    ...companyData,
-                    contact: { ...companyData.contact, website: e.target.value }
-                  })}
+                  onChange={(e) =>
+                    setCompanyData({
+                      ...companyData,
+                      contact: {
+                        ...companyData.contact,
+                        website: e.target.value
+                      }
+                    })
+                  }
                   className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 dark:bg-gray-700 dark:text-white transition-colors"
                   placeholder="https://www.empresa.com.br"
                 />
@@ -416,8 +520,9 @@ const CompanyProfile: React.FC = () => {
           <div className="text-sm text-amber-700 dark:text-amber-300">
             <p className="font-medium mb-1">Importante:</p>
             <p>
-              Complete todos os dados da empresa para ter acesso completo às funcionalidades do sistema, 
-              incluindo emissão de relatórios e gestão de funcionários.
+              Complete todos os dados da empresa para ter acesso completo às
+              funcionalidades do sistema, incluindo emissão de relatórios e
+              gestão de funcionários.
             </p>
           </div>
         </div>
