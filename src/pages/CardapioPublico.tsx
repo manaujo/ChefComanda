@@ -96,6 +96,11 @@ const CardapioPublico: React.FC = () => {
   const loadCardapioItems = async () => {
     try {
       setLoading(true);
+      
+      if (!restauranteId) {
+        throw new Error('ID do restaurante não fornecido');
+      }
+      
       const { data, error } = await supabase
         .from("cardapio_online")
         .select("*")

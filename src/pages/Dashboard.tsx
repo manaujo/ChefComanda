@@ -97,13 +97,38 @@ const Dashboard: React.FC = () => {
     if (!user) return;
     
     try {
-      const { data: restaurante } = await supabase
+      // Get or create user's restaurant
+      let { data: restaurante, error: restauranteError } = await supabase
         .from("restaurantes")
-        .select("id")
+        .select("*")
         .eq("user_id", user?.id)
-        .single();
+        .maybeSingle();
 
-      if (!restaurante) return;
+      if (restauranteError && restauranteError.code !== 'PGRST116') {
+        console.error('Error getting restaurant:', restauranteError);
+        return;
+      }
+
+      // Create restaurant if it doesn't exist
+      if (!restaurante) {
+        console.log('Creating restaurant for user:', user?.id);
+        const { data: newRestaurante, error: createError } = await supabase
+          .from('restaurantes')
+          .insert({
+            user_id: user?.id,
+            nome: `Restaurante de ${user?.user_metadata?.name || 'Usuário'}`,
+            telefone: ""
+          })
+          .select()
+          .single();
+
+        if (createError) {
+          console.error('Error creating restaurant:', createError);
+          return;
+        }
+        
+        restaurante = newRestaurante;
+      }
 
       const { data: insumos } = await supabase
         .from("insumos")

@@ -112,32 +112,42 @@ export const RestauranteProvider: React.FC<RestauranteProviderProps> = ({ childr
       setLoading(true);
       setError(null);
       
-      // Load restaurant
-      const restauranteData = await DatabaseService.getRestaurante(user.id);
-      if (restauranteData) {
-        setRestaurante(restauranteData);
-        
-        // Load all related data
-        const [mesasData, produtosData, categoriasData, comandasData] = await Promise.all([
-          DatabaseService.getMesas(restauranteData.id),
-          DatabaseService.getProdutos(restauranteData.id),
-          CRUDService.getCategoriasByRestaurante(restauranteData.id),
-          DatabaseService.getComandas(restauranteData.id)
-        ]);
-        
-        setMesas(mesasData || []);
-        setProdutos(produtosData || []);
-        setCategorias(categoriasData || []);
-        setComandas(comandasData || []);
-        
-        // Load itens comanda with product details
-        await loadItensComanda(restauranteData.id);
-        
-        // Load funcionarios
-        await loadFuncionarios();
-        
-        setDataLoaded(true);
+      // Load or create restaurant
+      let restauranteData = await DatabaseService.getRestaurante(user.id);
+      
+      if (!restauranteData) {
+        // Create restaurant if it doesn't exist
+        console.log("Creating restaurant for user:", user.id);
+        restauranteData = await DatabaseService.createRestaurante({
+          user_id: user.id,
+          nome: `Restaurante de ${user.user_metadata?.name || 'Usuário'}`,
+          telefone: ""
+        });
+        console.log("Restaurant created:", restauranteData.id);
       }
+      
+      setRestaurante(restauranteData);
+      
+      // Load all related data
+      const [mesasData, produtosData, categoriasData, comandasData] = await Promise.all([
+        DatabaseService.getMesas(restauranteData.id),
+        DatabaseService.getProdutos(restauranteData.id),
+        CRUDService.getCategoriasByRestaurante(restauranteData.id),
+        DatabaseService.getComandas(restauranteData.id)
+      ]);
+      
+      setMesas(mesasData || []);
+      setProdutos(produtosData || []);
+      setCategorias(categoriasData || []);
+      setComandas(comandasData || []);
+      
+      // Load itens comanda with product details
+      await loadItensComanda(restauranteData.id);
+      
+      // Load funcionarios
+      await loadFuncionarios();
+      
+      setDataLoaded(true);
     } catch (err) {
       console.error('Error refreshing data:', err);
       setError(err instanceof Error ? err.message : 'Erro ao carregar dados');

@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import Button from '../components/ui/Button';
 import { useRestaurante } from '../contexts/RestauranteContext';
+import { useAuth } from '../contexts/AuthContext';
 import { formatarDinheiro } from '../utils/formatters';
 import { supabase } from '../services/supabase';
 import toast from 'react-hot-toast';
@@ -22,6 +23,7 @@ interface Insumo {
 }
 
 const Estoque: React.FC = () => {
+  const { user } = useAuth();
   const [insumos, setInsumos] = useState<Insumo[]>([]);
   const [loading, setLoading] = useState(false);
   const [busca, setBusca] = useState('');
@@ -47,15 +49,38 @@ const Estoque: React.FC = () => {
   const loadInsumos = async () => {
     try {
       setLoading(true);
-      const { data: restaurante } = await supabase
+      
+      // Get or create user's restaurant
+      let { data: restaurante, error: restauranteError } = await supabase
         .from('restaurantes')
-        .select('id')
+        .select('*')
         .eq('user_id', user?.id)
         .maybeSingle();
 
+      if (restauranteError && restauranteError.code !== 'PGRST116') {
+        console.error('Error getting restaurant:', restauranteError);
+        throw new Error('Restaurante não encontrado');
+      }
+
+      // Create restaurant if it doesn't exist
       if (!restaurante) {
-        toast.error('Restaurante não encontrado');
-        return;
+        console.log('Creating restaurant for user:', user?.id);
+        const { data: newRestaurante, error: createError } = await supabase
+          .from('restaurantes')
+          .insert({
+            user_id: user?.id,
+            nome: `Restaurante de ${user?.user_metadata?.name || 'Usuário'}`,
+            telefone: ""
+          })
+          .select()
+          .single();
+
+        if (createError) {
+          console.error('Error creating restaurant:', createError);
+          throw new Error('Erro ao criar restaurante');
+        }
+        
+        restaurante = newRestaurante;
       }
 
       const { data, error } = await supabase
@@ -83,14 +108,36 @@ const Estoque: React.FC = () => {
         throw new Error('Preencha os campos obrigatórios');
       }
 
-      const { data: restaurante } = await supabase
+      // Get or create user's restaurant
+      let { data: restaurante, error: restauranteError } = await supabase
         .from('restaurantes')
-        .select('id')
+        .select('*')
         .eq('user_id', user?.id)
         .maybeSingle();
 
-      if (!restaurante) {
+      if (restauranteError && restauranteError.code !== 'PGRST116') {
+        console.error('Error getting restaurant:', restauranteError);
         throw new Error('Restaurante não encontrado');
+      }
+
+      // Create restaurant if it doesn't exist
+      if (!restaurante) {
+        const { data: newRestaurante, error: createError } = await supabase
+          .from('restaurantes')
+          .insert({
+            user_id: user?.id,
+            nome: `Restaurante de ${user?.user_metadata?.name || 'Usuário'}`,
+            telefone: ""
+          })
+          .select()
+          .single();
+
+        if (createError) {
+          console.error('Error creating restaurant:', createError);
+          throw new Error('Erro ao criar restaurante');
+        }
+        
+        restaurante = newRestaurante;
       }
 
       if (selectedInsumo) {

@@ -162,6 +162,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     try {
       console.log("Loading user data for:", user.id);
 
+      // Ensure user has a restaurant - create one if it doesn't exist
+      let { data: restaurante, error: restauranteError } = await supabase
+        .from("restaurantes")
+        .select("*")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (restauranteError && restauranteError.code !== "PGRST116") {
+        console.error("Error checking restaurant:", restauranteError);
+      }
+
+      // Create restaurant if it doesn't exist
+      if (!restaurante) {
+        console.log("Creating restaurant for new user:", user.id);
+        const { data: newRestaurante, error: createError } = await supabase
+          .from("restaurantes")
+          .insert({
+            user_id: user.id,
+            nome: `Restaurante de ${user.user_metadata?.name || 'Usuário'}`,
+            telefone: "",
+            configuracoes: {}
+          })
+          .select()
+          .single();
+
+        if (createError) {
+          console.error("Error creating restaurant:", createError);
+        } else {
+          restaurante = newRestaurante;
+          console.log("Restaurant created successfully:", restaurante.id);
+        }
+      }
+
       // Load user role and profile data with better error handling
       const [roleResult, profileResult] = await Promise.allSettled([
         supabase

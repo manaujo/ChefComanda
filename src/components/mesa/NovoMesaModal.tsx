@@ -64,8 +64,10 @@ const NovoMesaModal: React.FC<NovoMesaModalProps> = ({ isOpen, onClose }) => {
 
   if (!isOpen) return null;
 
-  // Filtrar apenas funcionários com função de garçom
-  const garcons = funcionarios.filter(func => func.role === 'waiter');
+  // Filtrar apenas funcionários com função de garçom e que estão ativos
+  const garcons = funcionarios.filter(func => 
+    func.role === 'waiter' && func.active
+  );
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">

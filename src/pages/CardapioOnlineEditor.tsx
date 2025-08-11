@@ -99,15 +99,38 @@ const CardapioOnlineEditor: React.FC = () => {
   const loadMenuItems = async () => {
     try {
       setLoading(true);
-      const { data: restaurante } = await supabase
+      
+      // Get or create user's restaurant
+      let { data: restaurante, error: restauranteError } = await supabase
         .from('restaurantes')
-        .select('id')
+        .select('*')
         .eq('user_id', user?.id)
-        .single();
+        .maybeSingle();
 
+      if (restauranteError && restauranteError.code !== 'PGRST116') {
+        console.error('Error getting restaurant:', restauranteError);
+        throw new Error('Restaurante não encontrado');
+      }
+
+      // Create restaurant if it doesn't exist
       if (!restaurante) {
-        toast.error('Restaurante não encontrado');
-        return;
+        console.log('Creating restaurant for user:', user?.id);
+        const { data: newRestaurante, error: createError } = await supabase
+          .from('restaurantes')
+          .insert({
+            user_id: user?.id,
+            nome: `Restaurante de ${user?.user_metadata?.name || 'Usuário'}`,
+            telefone: ""
+          })
+          .select()
+          .single();
+
+        if (createError) {
+          console.error('Error creating restaurant:', createError);
+          throw new Error('Erro ao criar restaurante');
+        }
+        
+        restaurante = newRestaurante;
       }
 
       const { data, error } = await supabase
@@ -130,15 +153,36 @@ const CardapioOnlineEditor: React.FC = () => {
     try {
       setLoading(true);
       
-      const { data: restaurante } = await supabase
+      // Get or create user's restaurant
+      let { data: restaurante, error: restauranteError } = await supabase
         .from('restaurantes')
-        .select('id')
+        .select('*')
         .eq('user_id', user?.id)
-        .single();
+        .maybeSingle();
 
+      if (restauranteError && restauranteError.code !== 'PGRST116') {
+        console.error('Error getting restaurant:', restauranteError);
+        throw new Error('Restaurante não encontrado');
+      }
+
+      // Create restaurant if it doesn't exist
       if (!restaurante) {
-        toast.error('Restaurante não encontrado');
-        return;
+        const { data: newRestaurante, error: createError } = await supabase
+          .from('restaurantes')
+          .insert({
+            user_id: user?.id,
+            nome: `Restaurante de ${user?.user_metadata?.name || 'Usuário'}`,
+            telefone: ""
+          })
+          .select()
+          .single();
+
+        if (createError) {
+          console.error('Error creating restaurant:', createError);
+          throw new Error('Erro ao criar restaurante');
+        }
+        
+        restaurante = newRestaurante;
       }
 
       // Get existing cardapio items to avoid duplicates
@@ -189,14 +233,36 @@ const CardapioOnlineEditor: React.FC = () => {
     setLoading(true);
 
     try {
-      const { data: restaurante } = await supabase
+      // Get or create user's restaurant
+      let { data: restaurante, error: restauranteError } = await supabase
         .from('restaurantes')
-        .select('id')
+        .select('*')
         .eq('user_id', user?.id)
-        .single();
+        .maybeSingle();
 
-      if (!restaurante) {
+      if (restauranteError && restauranteError.code !== 'PGRST116') {
+        console.error('Error getting restaurant:', restauranteError);
         throw new Error('Restaurante não encontrado');
+      }
+
+      // Create restaurant if it doesn't exist
+      if (!restaurante) {
+        const { data: newRestaurante, error: createError } = await supabase
+          .from('restaurantes')
+          .insert({
+            user_id: user?.id,
+            nome: `Restaurante de ${user?.user_metadata?.name || 'Usuário'}`,
+            telefone: ""
+          })
+          .select()
+          .single();
+
+        if (createError) {
+          console.error('Error creating restaurant:', createError);
+          throw new Error('Erro ao criar restaurante');
+        }
+        
+        restaurante = newRestaurante;
       }
 
       const menuItem = {
