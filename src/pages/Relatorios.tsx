@@ -9,6 +9,7 @@ import Button from '../components/ui/Button';
 import { formatarDinheiro } from '../utils/formatters';
 import { useRestaurante } from '../contexts/RestauranteContext';
 import RelatorioOperadorModal from '../components/caixa/RelatorioOperadorModal';
+import FuncionariosCaixaTab from '../components/relatorios/FuncionariosCaixaTab';
 import CaixaService from '../services/CaixaService';
 import toast from 'react-hot-toast';
 import { 
@@ -405,6 +406,14 @@ const Relatorios: React.FC = () => {
                 className="flex-1 md:flex-none"
               >
                 Operacional
+              </Button>
+              <Button
+                variant={categoriaAtiva === 'funcionarios' ? 'primary' : 'ghost'}
+                onClick={() => setCategoriaAtiva('funcionarios')}
+                icon={<Users size={18} />}
+                className="flex-1 md:flex-none"
+              >
+                Funcionários Caixa
               </Button>
             </div>
           </div>
@@ -905,6 +914,10 @@ const Relatorios: React.FC = () => {
                 </div>
               )}
             </div>
+          )}
+
+          {categoriaAtiva === 'funcionarios' && (
+            <FuncionariosCaixaTab />
           )}
 
           {/* Resumo Geral */}

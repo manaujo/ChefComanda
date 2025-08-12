@@ -2,9 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { 
   ShoppingCart, Plus, Minus, Trash2, CreditCard, 
   DollarSign, QrCode, Calculator, Receipt, Search,
-  Filter, X, Check, Clock, User, Coffee, CheckCircle
+  Filter, X, Check, Clock, User, Coffee, CheckCircle,
+  Power, PowerOff
 } from 'lucide-react';
 import Button from '../components/ui/Button';
+import PDVControlModal from '../components/pdv/PDVControlModal';
+import PDVStatusBar from '../components/pdv/PDVStatusBar';
+import PDVService from '../services/PDVService';
+import CaixaService from '../services/CaixaService';
 import { useRestaurante } from '../contexts/RestauranteContext';
 import { formatarDinheiro } from '../utils/formatters';
 import { Database } from '../types/database';
@@ -52,6 +57,9 @@ const PDV: React.FC = () => {
   const [showPagamentoModal, setShowPagamentoModal] = useState(false);
   const [showComandasModal, setComandasModal] = useState(false);
   const [comandasSelecionada, setComandaSelecionada] = useState<ComandaMesa | null>(null);
+  const [showPDVModal, setShowPDVModal] = useState(false);
+  const [pdvModalMode, setPDVModalMode] = useState<'abrir' | 'fechar'>('abrir');
+  const [caixaPDV, setCaixaPDV] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [dataInitialized, setDataInitialized] = useState(false);
   
@@ -61,11 +69,50 @@ const PDV: React.FC = () => {
   useEffect(() => {
     // Só carrega dados uma vez quando o componente monta
     if (!dataInitialized) {
-      refreshData().then(() => {
+      Promise.all([
+        refreshData(),
+        loadCaixaPDV()
+      ]).then(() => {
         setDataInitialized(true);
       });
     }
   }, [dataInitialized]);
+
+  // Carregar caixa do PDV
+  const loadCaixaPDV = async () => {
+    try {
+      if (!restaurante?.id) return;
+
+      // Verificar se há um caixa aberto
+      const caixa = await CaixaService.getCaixaAberto(restaurante.id);
+      setCaixaPDV(caixa);
+
+      // Verificar localStorage também
+      const savedCaixa = localStorage.getItem('pdvAtual');
+      if (savedCaixa && !caixa) {
+        try {
+          const parsedCaixa = JSON.parse(savedCaixa);
+          // Verificar se ainda está aberto no banco
+          const { data } = await supabase
+            .from('caixas_operadores')
+            .select('*')
+            .eq('id', parsedCaixa.id)
+            .eq('status', 'aberto')
+            .maybeSingle();
+          
+          if (data) {
+            setCaixaPDV(data);
+          } else {
+            localStorage.removeItem('pdvAtual');
+          }
+        } catch (error) {
+          localStorage.removeItem('pdvAtual');
+        }
+      }
+    } catch (error) {
+      console.error('Error loading PDV cash register:', error);
+    }
+  };
 
   // Salvar estado do carrinho no sessionStorage
   useEffect(() => {
@@ -202,6 +249,11 @@ const PDV: React.FC = () => {
       return;
     }
 
+    if (!caixaPDV) {
+      toast.error('PDV precisa estar aberto para realizar vendas');
+      return;
+    }
+
     if (!formaPagamento) {
       toast.error('Selecione uma forma de pagamento');
       return;
@@ -218,8 +270,25 @@ const PDV: React.FC = () => {
 
     setLoading(true);
     try {
-      // Simular finalização da venda
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Registrar venda no PDV
+      await PDVService.registrarVenda(restaurante?.id || '', caixaPDV.id, {
+        itens: itensVenda.map(item => ({
+          produto_id: item.produto.id,
+          nome: item.produto.nome,
+          quantidade: item.quantidade,
+          preco_unitario: item.produto.preco,
+          observacao: item.observacao
+        })),
+        valor_total: calcularTotal(),
+        forma_pagamento: formaPagamento,
+        desconto: calcularDesconto(),
+        taxa_servico: calcularTaxaServico(),
+        cliente: {
+          nome: cliente.nome,
+          telefone: cliente.telefone,
+          mesa: cliente.mesa
+        }
+      });
       
       toast.success('Venda finalizada com sucesso!');
       
@@ -232,6 +301,9 @@ const PDV: React.FC = () => {
       setTaxaServico(false);
       setShowPagamentoModal(false);
       sessionStorage.removeItem('pdv_carrinho');
+      
+      // Recarregar dados do caixa para atualizar saldo
+      await loadCaixaPDV();
     } catch (error) {
       console.error('Error finalizing sale:', error);
       toast.error('Erro ao finalizar venda');
@@ -280,9 +352,24 @@ const PDV: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
+      {/* Barra de Status do PDV */}
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4">
+        <PDVStatusBar
+          caixaAtual={caixaPDV}
+          onAbrirPDV={() => {
+            setPDVModalMode('abrir');
+            setShowPDVModal(true);
+          }}
+          onFecharPDV={() => {
+            setPDVModalMode('fechar');
+            setShowPDVModal(true);
+          }}
+        />
+      </div>
+
       <div className="flex h-screen">
         {/* Produtos - Lado Esquerdo */}
-        <div className="flex-1 bg-white dark:bg-gray-800 p-6 overflow-y-auto">
+        <div className="flex-1 bg-white dark:bg-gray-800 p-6 overflow-y-auto pt-2">
           <div className="mb-6">
             <div className="flex justify-between items-center mb-4">
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
@@ -330,8 +417,16 @@ const PDV: React.FC = () => {
             {produtosFiltrados.map((produto) => (
               <div
                 key={produto.id}
-                onClick={() => adicionarItem(produto)}
-                className="bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg p-4 cursor-pointer hover:shadow-md transition-shadow"
+                onClick={() => {
+                  if (!caixaPDV) {
+                    toast.error('PDV precisa estar aberto para adicionar itens');
+                    return;
+                  }
+                  adicionarItem(produto);
+                }}
+                className={`bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg p-4 cursor-pointer hover:shadow-md transition-shadow ${
+                  !caixaPDV ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
               >
                 <div className="text-center">
                   <h3 className="font-medium text-gray-900 dark:text-white text-sm mb-1">
@@ -783,6 +878,7 @@ const PDV: React.FC = () => {
                   fullWidth
                   size="lg"
                   onClick={() => {
+                  disabled={!caixaPDV}
                     if (comandasSelecionada) {
                       finalizarComandaMesa(comandasSelecionada);
                     } else {
@@ -800,6 +896,22 @@ const PDV: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Modal de Controle do PDV */}
+      <PDVControlModal
+        isOpen={showPDVModal}
+        onClose={() => setShowPDVModal(false)}
+        mode={pdvModalMode}
+        caixaAtual={caixaPDV}
+        onCaixaChange={(caixa) => {
+          setCaixaPDV(caixa);
+          if (caixa) {
+            localStorage.setItem('pdvAtual', JSON.stringify(caixa));
+          } else {
+            localStorage.removeItem('pdvAtual');
+          }
+        }}
+      />
     </div>
   );
 };

@@ -427,6 +427,47 @@ export interface Database {
           updated_at?: string;
         };
       };
+      pdv_sessions: {
+        Row: {
+          id: string;
+          caixa_operador_id: string;
+          operador_id: string;
+          operador_nome: string;
+          total_vendas: number;
+          quantidade_vendas: number;
+          data_inicio: string;
+          data_fim: string | null;
+          status: 'ativo' | 'finalizado';
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          caixa_operador_id: string;
+          operador_id: string;
+          operador_nome: string;
+          total_vendas?: number;
+          quantidade_vendas?: number;
+          data_inicio?: string;
+          data_fim?: string | null;
+          status?: 'ativo' | 'finalizado';
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          caixa_operador_id?: string;
+          operador_id?: string;
+          operador_nome?: string;
+          total_vendas?: number;
+          quantidade_vendas?: number;
+          data_inicio?: string;
+          data_fim?: string | null;
+          status?: 'ativo' | 'finalizado';
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
     };
     insumos: {
       Row: {

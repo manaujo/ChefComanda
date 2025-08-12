@@ -54,6 +54,24 @@ class CaixaService {
     }
   }
 
+  // Verificar se operador tem caixa aberto
+  async getOperadorCaixaAberto(operadorId: string): Promise<CaixaOperador | null> {
+    try {
+      const { data, error } = await supabase
+        .from('caixas_operadores')
+        .select('*')
+        .eq('operador_id', operadorId)
+        .eq('status', 'aberto')
+        .maybeSingle();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error getting operator cash register:', error);
+      return null;
+    }
+  }
+
   // Abrir novo caixa
   async abrirCaixa(data: {
     restauranteId: string;
