@@ -8,6 +8,8 @@ import {
 import Button from '../components/ui/Button';
 import { formatarDinheiro } from '../utils/formatters';
 import { useRestaurante } from '../contexts/RestauranteContext';
+import RelatorioOperadorModal from '../components/caixa/RelatorioOperadorModal';
+import CaixaService from '../services/CaixaService';
 import toast from 'react-hot-toast';
 import { 
   BarChart as RechartsBarChart, 
@@ -76,9 +78,12 @@ const Relatorios: React.FC = () => {
   const [vendasDiarias, setVendasDiarias] = useState<VendaDiaria[]>([]);
   const [vendasProdutos, setVendasProdutos] = useState<VendaProduto[]>([]);
   const [vendasGarcons, setVendasGarcons] = useState<VendaGarcom[]>([]);
+  const [relatorioCaixa, setRelatorioCaixa] = useState<any[]>([]);
   const [metricas, setMetricas] = useState<MetricaComparativa[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [showOperadorModal, setShowOperadorModal] = useState(false);
+  const [operadorSelecionado, setOperadorSelecionado] = useState<{id: string, nome: string} | null>(null);
   
   useEffect(() => {
     loadReportData();
@@ -185,6 +190,42 @@ const Relatorios: React.FC = () => {
     } catch (error) {
       console.error('Error loading garçom data:', error);
       setVendasGarcons([]);
+    }
+  };
+
+  const loadRelatorioCaixa = async () => {
+    try {
+      if (!restaurante?.id) return;
+
+      const endDate = new Date().toISOString();
+      const startDate = new Date();
+      
+      switch (periodoSelecionado) {
+        case 'hoje':
+          startDate.setHours(0, 0, 0, 0);
+          break;
+        case '7dias':
+          startDate.setDate(startDate.getDate() - 7);
+          break;
+        case '30dias':
+          startDate.setDate(startDate.getDate() - 30);
+          break;
+        case 'mes':
+          startDate.setDate(1);
+          startDate.setHours(0, 0, 0, 0);
+          break;
+      }
+
+      const caixasDetalhados = await CaixaService.getCaixasPorPeriodo(
+        restaurante.id,
+        startDate.toISOString(),
+        endDate
+      );
+      
+      setRelatorioCaixa(caixasDetalhados);
+    } catch (error) {
+      console.error('Error loading cash register data:', error);
+      setRelatorioCaixa([]);
     }
   };
 
@@ -697,6 +738,175 @@ const Relatorios: React.FC = () => {
             </div>
           )}
 
+          {categoriaAtiva === 'caixa' && (
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Relatório de Caixa
+                </h2>
+                <div className="flex items-center space-x-3">
+                  <Button
+                    variant="ghost"
+                    icon={<RefreshCw size={18} />}
+                    onClick={loadRelatorioCaixa}
+                    isLoading={loading}
+                  >
+                    Atualizar
+                  </Button>
+                  <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
+                    <DollarSign size={16} className="mr-1" />
+                    <span>Operações de caixa</span>
+                  </div>
+                </div>
+              </div>
+
+              {relatorioCaixa.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead className="bg-gray-50 dark:bg-gray-700">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                          Operador
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                          Período
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                          Valor Inicial
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                          Entradas
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                          Saídas
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                          Saldo Calculado
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                          Valor Final
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                          Diferença
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                          Status
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                      {relatorioCaixa.map((caixa) => (
+                        <tr key={caixa.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div>
+                              <button
+                                onClick={() => {
+                                  setOperadorSelecionado({
+                                    id: caixa.operador_id,
+                                    nome: caixa.operador_nome
+                                  });
+                                  setShowOperadorModal(true);
+                                }}
+                                className="text-sm font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 hover:underline"
+                              >
+                                {caixa.operador_nome}
+                              </button>
+                              <div className="text-sm text-gray-500 dark:text-gray-400">
+                                {caixa.operador_tipo === 'funcionario' ? 'Funcionário' : 'Usuário Principal'}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                            <div>
+                              <div>
+                                {new Date(caixa.data_abertura).toLocaleDateString('pt-BR')}
+                              </div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400">
+                                {new Date(caixa.data_abertura).toLocaleTimeString('pt-BR', { 
+                                  hour: '2-digit', 
+                                  minute: '2-digit' 
+                                })}
+                                {caixa.data_fechamento && (
+                                  <> - {new Date(caixa.data_fechamento).toLocaleTimeString('pt-BR', { 
+                                    hour: '2-digit', 
+                                    minute: '2-digit' 
+                                  })}</>
+                                )}
+                              </div>
+                            </div>
+                            {caixa.tempo_operacao_horas && (
+                              <div className="text-xs text-gray-400">
+                                {caixa.tempo_operacao_horas.toFixed(1)}h de operação
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                            {formatarDinheiro(caixa.valor_inicial)}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600 dark:text-green-400">
+                            +{formatarDinheiro(caixa.entradas_total)}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-red-600 dark:text-red-400">
+                            -{formatarDinheiro(caixa.saidas_total)}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                            {formatarDinheiro(caixa.saldo_calculado)}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                            {caixa.valor_final !== null ? formatarDinheiro(caixa.valor_final) : '-'}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm">
+                            {caixa.diferenca !== 0 && caixa.valor_final !== null ? (
+                              <span className={`font-medium ${
+                                caixa.diferenca > 0 
+                                  ? 'text-green-600 dark:text-green-400' 
+                                  : 'text-red-600 dark:text-red-400'
+                              }`}>
+                                {caixa.diferenca > 0 ? '+' : ''}{formatarDinheiro(caixa.diferenca)}
+                              </span>
+                            ) : (
+                              <span className="text-gray-500 dark:text-gray-400">-</span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                              caixa.status === 'aberto' 
+                                ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                                : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
+                            }`}>
+                              {caixa.status === 'aberto' ? 'Aberto' : 'Fechado'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <div className="mx-auto w-24 h-24 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
+                    <DollarSign size={32} className="text-gray-400 dark:text-gray-500" />
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                    Nenhum registro de caixa encontrado
+                  </h3>
+                  <p className="text-gray-500 dark:text-gray-400 mb-6">
+                    Não há operações de caixa para o período selecionado.
+                  </p>
+                  <div className="flex justify-center space-x-3">
+                    <Button
+                      variant="ghost"
+                      icon={<RefreshCw size={18} />}
+                      onClick={loadRelatorioCaixa}
+                    >
+                      Tentar novamente
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Resumo Geral */}
           <div className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 rounded-xl shadow-lg p-6">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
@@ -741,6 +951,20 @@ const Relatorios: React.FC = () => {
             </div>
           </div>
         </>
+      )}
+
+      {/* Modal de Relatório do Operador */}
+      {showOperadorModal && operadorSelecionado && (
+        <RelatorioOperadorModal
+          isOpen={showOperadorModal}
+          onClose={() => {
+            setShowOperadorModal(false);
+            setOperadorSelecionado(null);
+          }}
+          operadorId={operadorSelecionado.id}
+          operadorNome={operadorSelecionado.nome}
+          restauranteId={restaurante?.id || ''}
+        />
       )}
     </div>
   );

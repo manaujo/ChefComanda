@@ -1,23 +1,64 @@
 import React, { useState, useEffect } from 'react';
 import { 
   CreditCard, DollarSign, Receipt, ArrowUpCircle, ArrowDownCircle,
-  Plus, Minus, FileSpreadsheet, Download, AlertTriangle, X
+  Plus, Minus, FileSpreadsheet, Download, AlertTriangle, X, User,
+  Clock, TrendingUp, BarChart3, Users
 } from 'lucide-react';
 import Button from '../components/ui/Button';
 import { formatarDinheiro } from '../utils/formatters';
 import { supabase } from '../services/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { useRestaurante } from '../contexts/RestauranteContext';
 import toast from 'react-hot-toast';
+
+interface CaixaOperador {
+  id: string;
+  restaurante_id: string;
+  operador_id: string;
+  operador_nome: string;
+  operador_tipo: 'funcionario' | 'usuario';
+  valor_inicial: number;
+  valor_final?: number;
+  valor_sistema: number;
+  status: 'aberto' | 'fechado';
+  data_abertura: string;
+  data_fechamento?: string;
+  observacao?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface MovimentacaoCaixa {
+  id: string;
+  caixa_id: string;
+  tipo: 'entrada' | 'saida';
+  valor: number;
+  motivo: string;
+  observacao?: string;
+  forma_pagamento?: string;
+  usuario_id: string;
+  created_at: string;
+}
+
+interface OperadorDisponivel {
+  id: string;
+  nome: string;
+  tipo: 'funcionario' | 'usuario';
+  role?: string;
+}
 
 const CaixaRegistradora: React.FC = () => {
   const { user } = useAuth();
+  const { restaurante, funcionarios } = useRestaurante();
   const [loading, setLoading] = useState(false);
-  const [caixaAtual, setCaixaAtual] = useState<Caixa | null>(null);
-  const [movimentacoes, setMovimentacoes] = useState<CaixaMovimentacao[]>([]);
+  const [caixaAtual, setCaixaAtual] = useState<CaixaOperador | null>(null);
+  const [movimentacoes, setMovimentacoes] = useState<MovimentacaoCaixa[]>([]);
+  const [operadoresDisponiveis, setOperadoresDisponiveis] = useState<OperadorDisponivel[]>([]);
   const [showAbrirModal, setShowAbrirModal] = useState(false);
   const [showMovimentacaoModal, setShowMovimentacaoModal] = useState(false);
   const [showFecharModal, setShowFecharModal] = useState(false);
   const [valorInicial, setValorInicial] = useState('');
+  const [operadorSelecionado, setOperadorSelecionado] = useState('');
   const [valorFinal, setValorFinal] = useState('');
   const [observacao, setObservacao] = useState('');
   const [novaMovimentacao, setNovaMovimentacao] = useState({
@@ -29,49 +70,50 @@ const CaixaRegistradora: React.FC = () => {
   });
 
   useEffect(() => {
-    if (user) {
+    if (user && restaurante) {
       loadCaixaAtual();
+      loadOperadoresDisponiveis();
     }
-  }, [user]);
+  }, [user, restaurante]);
+
+  const loadOperadoresDisponiveis = async () => {
+    try {
+      const operadores: OperadorDisponivel[] = [];
+      
+      // Adicionar o usuário atual como operador
+      operadores.push({
+        id: user?.id || '',
+        nome: user?.user_metadata?.name || 'Usuário Principal',
+        tipo: 'usuario'
+      });
+
+      // Adicionar funcionários com função de caixa
+      const funcionariosCaixa = funcionarios.filter(func => 
+        (func.role === 'cashier' || func.role === 'admin') && func.active
+      );
+
+      funcionariosCaixa.forEach(func => {
+        operadores.push({
+          id: func.id,
+          nome: func.name,
+          tipo: 'funcionario',
+          role: func.role
+        });
+      });
+
+      setOperadoresDisponiveis(operadores);
+    } catch (error) {
+      console.error('Error loading operators:', error);
+    }
+  };
 
   const loadCaixaAtual = async () => {
     try {
-      // Get or create user's restaurant
-      let { data: restaurante, error: restauranteError } = await supabase
-        .from('restaurantes')
-        .select('*')
-        .eq('user_id', user?.id)
-        .maybeSingle();
-
-      if (restauranteError && restauranteError.code !== 'PGRST116') {
-        console.error('Error getting restaurant:', restauranteError);
-        throw new Error('Restaurante não encontrado');
-      }
-
-      // Create restaurant if it doesn't exist
-      if (!restaurante) {
-        console.log('Creating restaurant for user:', user?.id);
-        const { data: newRestaurante, error: createError } = await supabase
-          .from('restaurantes')
-          .insert({
-            user_id: user?.id,
-            nome: `Restaurante de ${user?.user_metadata?.name || 'Usuário'}`,
-            telefone: ""
-          })
-          .select()
-          .single();
-
-        if (createError) {
-          console.error('Error creating restaurant:', createError);
-          throw new Error('Erro ao criar restaurante');
-        }
-        
-        restaurante = newRestaurante;
-      }
+      if (!restaurante?.id) return;
 
       // Get current open cash register
       const { data: caixa } = await supabase
-        .from('caixas')
+        .from('caixas_operadores')
         .select('*')
         .eq('restaurante_id', restaurante.id)
         .eq('status', 'aberto')
@@ -104,44 +146,23 @@ const CaixaRegistradora: React.FC = () => {
         throw new Error('Valor inicial inválido');
       }
 
-      // Get or create user's restaurant
-      let { data: restaurante, error: restauranteError } = await supabase
-        .from('restaurantes')
-        .select('*')
-        .eq('user_id', user?.id)
-        .maybeSingle();
-
-      if (restauranteError && restauranteError.code !== 'PGRST116') {
-        console.error('Error getting restaurant:', restauranteError);
-        throw new Error('Restaurante não encontrado');
+      if (!operadorSelecionado) {
+        throw new Error('Selecione um operador');
       }
 
-      // Create restaurant if it doesn't exist
-      if (!restaurante) {
-        const { data: newRestaurante, error: createError } = await supabase
-          .from('restaurantes')
-          .insert({
-            user_id: user?.id,
-            nome: `Restaurante de ${user?.user_metadata?.name || 'Usuário'}`,
-            telefone: ""
-          })
-          .select()
-          .single();
-
-        if (createError) {
-          console.error('Error creating restaurant:', createError);
-          throw new Error('Erro ao criar restaurante');
-        }
-        
-        restaurante = newRestaurante;
+      const operador = operadoresDisponiveis.find(op => op.id === operadorSelecionado);
+      if (!operador) {
+        throw new Error('Operador não encontrado');
       }
 
       // Create new cash register
       const { data: caixa, error } = await supabase
-        .from('caixas')
+        .from('caixas_operadores')
         .insert({
-          restaurante_id: restaurante.id,
-          usuario_id: user?.id,
+          restaurante_id: restaurante?.id,
+          operador_id: operador.id,
+          operador_nome: operador.nome,
+          operador_tipo: operador.tipo,
           valor_inicial: valor,
           valor_sistema: valor
         })
@@ -153,7 +174,8 @@ const CaixaRegistradora: React.FC = () => {
       setCaixaAtual(caixa);
       setShowAbrirModal(false);
       setValorInicial('');
-      toast.success('Caixa aberto com sucesso!');
+      setOperadorSelecionado('');
+      toast.success(`Caixa aberto por ${operador.nome}!`);
       
       // Salvar no localStorage para persistir entre navegações
       localStorage.setItem('caixaAtual', JSON.stringify(caixa));
@@ -193,7 +215,18 @@ const CaixaRegistradora: React.FC = () => {
 
       if (error) throw error;
 
-      // Reload movements
+      // Update sistema value
+      const novoValorSistema = caixaAtual?.valor_sistema || 0;
+      const valorAtualizado = novaMovimentacao.tipo === 'entrada' 
+        ? novoValorSistema + valor 
+        : novoValorSistema - valor;
+
+      await supabase
+        .from('caixas_operadores')
+        .update({ valor_sistema: valorAtualizado })
+        .eq('id', caixaAtual?.id);
+
+      // Reload data
       await loadCaixaAtual();
       setShowMovimentacaoModal(false);
       setNovaMovimentacao({
@@ -223,7 +256,7 @@ const CaixaRegistradora: React.FC = () => {
 
       // Close cash register
       const { error } = await supabase
-        .from('caixas')
+        .from('caixas_operadores')
         .update({
           valor_final: valor,
           status: 'fechado',
@@ -260,7 +293,7 @@ const CaixaRegistradora: React.FC = () => {
         // Verificar se o caixa ainda está aberto no banco de dados
         const checkCaixa = async () => {
           const { data } = await supabase
-            .from('caixas')
+            .from('caixas_operadores')
             .select('*')
             .eq('id', parsedCaixa.id)
             .eq('status', 'aberto')
@@ -310,6 +343,7 @@ const CaixaRegistradora: React.FC = () => {
   };
 
   const totais = calcularTotais();
+  const diferenca = caixaAtual?.valor_final ? (caixaAtual.valor_final - totais.saldo) : 0;
 
   return (
     <div className="space-y-6">
@@ -317,8 +351,17 @@ const CaixaRegistradora: React.FC = () => {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Caixa Registradora</h1>
           <p className="text-gray-500 mt-1">
-            Controle de entradas e saídas
+            Controle de entradas e saídas por operador
           </p>
+          {caixaAtual && (
+            <div className="mt-2 flex items-center text-sm text-blue-600">
+              <User size={16} className="mr-1" />
+              <span>Operador: {caixaAtual.operador_nome}</span>
+              <span className="mx-2">•</span>
+              <Clock size={16} className="mr-1" />
+              <span>Aberto em: {new Date(caixaAtual.data_abertura).toLocaleString('pt-BR')}</span>
+            </div>
+          )}
         </div>
         <div className="mt-4 md:mt-0 flex space-x-3">
           <Button
@@ -401,12 +444,14 @@ const CaixaRegistradora: React.FC = () => {
             <div className="bg-white rounded-lg shadow-sm p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-500">Valor Inicial</p>
-                  <p className="text-2xl font-bold mt-1">{formatarDinheiro(caixaAtual.valor_inicial)}</p>
-                  <p className="text-sm text-gray-500 mt-1">Abertura do caixa</p>
+                  <p className="text-sm text-gray-500">Operador</p>
+                  <p className="text-lg font-bold mt-1">{caixaAtual.operador_nome}</p>
+                  <p className="text-sm text-gray-500 mt-1">
+                    {caixaAtual.operador_tipo === 'funcionario' ? 'Funcionário' : 'Usuário Principal'}
+                  </p>
                 </div>
                 <div className="p-3 bg-purple-100 rounded-full">
-                  <Receipt size={24} className="text-purple-600" />
+                  <User size={24} className="text-purple-600" />
                 </div>
               </div>
             </div>
@@ -450,7 +495,7 @@ const CaixaRegistradora: React.FC = () => {
           {/* Lista de Movimentações */}
           <div className="bg-white rounded-lg shadow-sm overflow-hidden">
             <div className="p-6">
-              <h2 className="text-lg font-medium mb-6">Movimentações</h2>
+              <h2 className="text-lg font-medium mb-6">Movimentações do Caixa</h2>
               <div className="space-y-4">
                 {movimentacoes.map((mov) => (
                   <div
@@ -504,7 +549,7 @@ const CaixaRegistradora: React.FC = () => {
               Nenhum Caixa Aberto
             </h2>
             <p className="text-gray-500 mb-6">
-              Para iniciar as operações, abra um novo caixa informando o valor inicial.
+              Para iniciar as operações, abra um novo caixa selecionando o operador responsável.
             </p>
             <Button
               variant="primary"
@@ -531,15 +576,35 @@ const CaixaRegistradora: React.FC = () => {
                   <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 sm:mx-0 sm:h-10 sm:w-10">
                     <ArrowUpCircle className="h-6 w-6 text-blue-600" />
                   </div>
-                  <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                  <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
                     <h3 className="text-lg font-medium text-gray-900">
                       Abrir Caixa
                     </h3>
-                    <div className="mt-2">
+                    <div className="mt-2 space-y-4">
                       <p className="text-sm text-gray-500">
-                        Informe o valor inicial em dinheiro para abrir o caixa.
+                        Selecione o operador responsável e informe o valor inicial em dinheiro.
                       </p>
-                      <div className="mt-4">
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">
+                          Operador Responsável
+                        </label>
+                        <select
+                          value={operadorSelecionado}
+                          onChange={(e) => setOperadorSelecionado(e.target.value)}
+                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                          required
+                        >
+                          <option value="">Selecione um operador</option>
+                          {operadoresDisponiveis.map(operador => (
+                            <option key={operador.id} value={operador.id}>
+                              {operador.nome} ({operador.tipo === 'funcionario' ? 'Funcionário' : 'Usuário Principal'})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
                         <label className="block text-sm font-medium text-gray-700">
                           Valor Inicial
                         </label>
@@ -568,6 +633,7 @@ const CaixaRegistradora: React.FC = () => {
                   onClick={handleAbrirCaixa}
                   isLoading={loading}
                   className="w-full sm:w-auto sm:ml-3"
+                  disabled={!operadorSelecionado || !valorInicial}
                 >
                   Abrir Caixa
                 </Button>
@@ -729,9 +795,34 @@ const CaixaRegistradora: React.FC = () => {
                     </h3>
                     <div className="mt-2">
                       <p className="text-sm text-gray-500">
+                        Operador: <strong>{caixaAtual?.operador_nome}</strong>
+                      </p>
+                      <p className="text-sm text-gray-500 mb-4">
                         Informe o valor final em dinheiro para fechar o caixa.
                       </p>
-                      <div className="mt-4 space-y-4">
+                      
+                      <div className="bg-blue-50 p-4 rounded-md mb-4">
+                        <div className="text-sm">
+                          <div className="flex justify-between mb-1">
+                            <span>Valor inicial:</span>
+                            <span className="font-medium">{formatarDinheiro(caixaAtual?.valor_inicial || 0)}</span>
+                          </div>
+                          <div className="flex justify-between mb-1">
+                            <span>Saldo calculado:</span>
+                            <span className="font-medium">{formatarDinheiro(totais.saldo)}</span>
+                          </div>
+                          {diferenca !== 0 && (
+                            <div className={`flex justify-between font-medium ${
+                              diferenca > 0 ? 'text-green-600' : 'text-red-600'
+                            }`}>
+                              <span>Diferença:</span>
+                              <span>{diferenca > 0 ? '+' : ''}{formatarDinheiro(Math.abs(diferenca))}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-700">
                             Valor em Caixa

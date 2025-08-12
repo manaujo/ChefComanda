@@ -220,6 +220,56 @@ export interface Database {
           updated_at?: string;
         };
       };
+      caixas_operadores: {
+        Row: {
+          id: string;
+          restaurante_id: string;
+          operador_id: string;
+          operador_nome: string;
+          operador_tipo: 'funcionario' | 'usuario';
+          valor_inicial: number;
+          valor_final: number | null;
+          valor_sistema: number;
+          status: 'aberto' | 'fechado';
+          data_abertura: string;
+          data_fechamento: string | null;
+          observacao: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          restaurante_id: string;
+          operador_id: string;
+          operador_nome: string;
+          operador_tipo: 'funcionario' | 'usuario';
+          valor_inicial?: number;
+          valor_final?: number | null;
+          valor_sistema?: number;
+          status?: 'aberto' | 'fechado';
+          data_abertura?: string;
+          data_fechamento?: string | null;
+          observacao?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          restaurante_id?: string;
+          operador_id?: string;
+          operador_nome?: string;
+          operador_tipo?: 'funcionario' | 'usuario';
+          valor_inicial?: number;
+          valor_final?: number | null;
+          valor_sistema?: number;
+          status?: 'aberto' | 'fechado';
+          data_abertura?: string;
+          data_fechamento?: string | null;
+          observacao?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
       movimentacoes_caixa: {
         Row: {
           id: string;

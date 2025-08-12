@@ -186,7 +186,7 @@ export class DatabaseService {
   // Caixa
   static async getCaixaAtual(restauranteId: string) {
     const { data, error } = await supabase
-      .from('caixas')
+      .from('caixas_operadores')
       .select('*')
       .eq('restaurante_id', restauranteId)
       .eq('status', 'aberto')
@@ -196,9 +196,9 @@ export class DatabaseService {
     return data;
   }
 
-  static async createCaixa(caixa: Omit<Tables['caixas']['Insert'], 'id' | 'created_at' | 'updated_at'>) {
+  static async createCaixa(caixa: Omit<Tables['caixas_operadores']['Insert'], 'id' | 'created_at' | 'updated_at'>) {
     const { data, error } = await supabase
-      .from('caixas')
+      .from('caixas_operadores')
       .insert(caixa)
       .select()
       .single();
@@ -207,9 +207,9 @@ export class DatabaseService {
     return data;
   }
 
-  static async updateCaixa(id: string, updates: Partial<Tables['caixas']['Update']>) {
+  static async updateCaixa(id: string, updates: Partial<Tables['caixas_operadores']['Update']>) {
     const { data, error } = await supabase
-      .from('caixas')
+      .from('caixas_operadores')
       .update({ ...updates, updated_at: new Date().toISOString() })
       .eq('id', id)
       .select()
@@ -224,7 +224,7 @@ export class DatabaseService {
     const { data, error } = await supabase
       .from('movimentacoes_caixa')
       .select('*')
-      .eq('caixa_id', caixaId)
+      .eq('caixa_operador_id', caixaId)
       .order('created_at');
 
     if (error) throw error;

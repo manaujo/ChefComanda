@@ -133,7 +133,7 @@ class RealtimeService {
         {
           event: '*',
           schema: 'public',
-          table: 'caixas',
+          table: 'caixas_operadores',
           filter: `restaurante_id=eq.${restaurantId}`
         },
         callback
