@@ -878,7 +878,6 @@ const PDV: React.FC = () => {
                   fullWidth
                   size="lg"
                   onClick={() => {
-                  disabled={!caixaPDV}
                     if (comandasSelecionada) {
                       finalizarComandaMesa(comandasSelecionada);
                     } else {
@@ -887,6 +886,7 @@ const PDV: React.FC = () => {
                   }}
                   isLoading={loading}
                   disabled={!formaPagamento}
+                  disabled={!formaPagamento || !caixaPDV}
                   icon={<Receipt size={20} />}
                 >
                   Confirmar Pagamento

@@ -58,13 +58,6 @@ const PDVControlModal: React.FC<PDVControlModalProps> = ({
     try {
       const operadores: OperadorDisponivel[] = [];
       
-      // Adicionar o usuário atual como operador
-      operadores.push({
-        id: user?.id || '',
-        nome: user?.user_metadata?.name || 'Usuário Principal',
-        tipo: 'usuario'
-      });
-
       // Adicionar funcionários com função de caixa
       const funcionariosCaixa = funcionarios.filter(func => 
         (func.role === 'cashier' || func.role === 'admin') && func.active
