@@ -16,7 +16,8 @@ import {
   Activity,
   Eye,
   RefreshCw,
-  ClipboardList
+  ClipboardList,
+  Calculator
 } from "lucide-react";
 import { useRestaurante } from "../contexts/RestauranteContext";
 import { formatarDinheiro, formatarTempo } from "../utils/formatters";

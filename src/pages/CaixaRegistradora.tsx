@@ -2,43 +2,18 @@ import React, { useState, useEffect } from 'react';
 import { 
   CreditCard, DollarSign, Receipt, ArrowUpCircle, ArrowDownCircle,
   Plus, Minus, FileSpreadsheet, Download, AlertTriangle, X, User,
-  Clock, TrendingUp, BarChart3, Users
+  Clock, TrendingUp, BarChart3, Users, Calculator, CheckCircle
 } from 'lucide-react';
 import Button from '../components/ui/Button';
 import { formatarDinheiro } from '../utils/formatters';
 import { supabase } from '../services/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useRestaurante } from '../contexts/RestauranteContext';
+import CaixaService from '../services/CaixaService';
 import toast from 'react-hot-toast';
 
-interface CaixaOperador {
-  id: string;
-  restaurante_id: string;
-  operador_id: string;
-  operador_nome: string;
-  operador_tipo: 'funcionario' | 'usuario';
-  valor_inicial: number;
-  valor_final?: number;
-  valor_sistema: number;
-  status: 'aberto' | 'fechado';
-  data_abertura: string;
-  data_fechamento?: string;
-  observacao?: string;
-  created_at: string;
-  updated_at: string;
-}
-
-interface MovimentacaoCaixa {
-  id: string;
-  caixa_id: string;
-  tipo: 'entrada' | 'saida';
-  valor: number;
-  motivo: string;
-  observacao?: string;
-  forma_pagamento?: string;
-  usuario_id: string;
-  created_at: string;
-}
+type CaixaOperador = Database['public']['Tables']['caixas_operadores']['Row'];
+type MovimentacaoCaixa = Database['public']['Tables']['movimentacoes_caixa']['Row'];
 
 interface OperadorDisponivel {
   id: string;
@@ -111,25 +86,13 @@ const CaixaRegistradora: React.FC = () => {
     try {
       if (!restaurante?.id) return;
 
-      // Get current open cash register
-      const { data: caixa } = await supabase
-        .from('caixas_operadores')
-        .select('*')
-        .eq('restaurante_id', restaurante.id)
-        .eq('status', 'aberto')
-        .maybeSingle();
+      const caixa = await CaixaService.getCaixaAberto(restaurante.id);
 
       setCaixaAtual(caixa);
 
       if (caixa) {
-        // Load movements
-        const { data: movs } = await supabase
-          .from('movimentacoes_caixa')
-          .select('*')
-          .eq('caixa_id', caixa.id)
-          .order('created_at', { ascending: true });
-
-        setMovimentacoes(movs || []);
+        const movs = await CaixaService.getMovimentacoesCaixa(caixa.id);
+        setMovimentacoes(movs);
       }
     } catch (error) {
       console.error('Error loading cash register:', error);
@@ -155,21 +118,13 @@ const CaixaRegistradora: React.FC = () => {
         throw new Error('Operador não encontrado');
       }
 
-      // Create new cash register
-      const { data: caixa, error } = await supabase
-        .from('caixas_operadores')
-        .insert({
-          restaurante_id: restaurante?.id,
-          operador_id: operador.id,
-          operador_nome: operador.nome,
-          operador_tipo: operador.tipo,
-          valor_inicial: valor,
-          valor_sistema: valor
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
+      const caixa = await CaixaService.abrirCaixa({
+        restauranteId: restaurante?.id || '',
+        operadorId: operador.id,
+        operadorNome: operador.nome,
+        operadorTipo: operador.tipo,
+        valorInicial: valor
+      });
 
       setCaixaAtual(caixa);
       setShowAbrirModal(false);
@@ -200,31 +155,15 @@ const CaixaRegistradora: React.FC = () => {
         throw new Error('Informe o motivo');
       }
 
-      // Create new movement
-      const { error } = await supabase
-        .from('movimentacoes_caixa')
-        .insert({
-          caixa_id: caixaAtual?.id,
-          tipo: novaMovimentacao.tipo,
-          valor,
-          motivo: novaMovimentacao.motivo,
-          observacao: novaMovimentacao.observacao,
-          forma_pagamento: novaMovimentacao.formaPagamento,
-          usuario_id: user?.id
-        });
-
-      if (error) throw error;
-
-      // Update sistema value
-      const novoValorSistema = caixaAtual?.valor_sistema || 0;
-      const valorAtualizado = novaMovimentacao.tipo === 'entrada' 
-        ? novoValorSistema + valor 
-        : novoValorSistema - valor;
-
-      await supabase
-        .from('caixas_operadores')
-        .update({ valor_sistema: valorAtualizado })
-        .eq('id', caixaAtual?.id);
+      await CaixaService.adicionarMovimentacao({
+        caixaId: caixaAtual?.id || '',
+        tipo: novaMovimentacao.tipo,
+        valor,
+        motivo: novaMovimentacao.motivo,
+        observacao: novaMovimentacao.observacao,
+        formaPagamento: novaMovimentacao.formaPagamento,
+        usuarioId: user?.id || ''
+      });
 
       // Reload data
       await loadCaixaAtual();
@@ -254,18 +193,7 @@ const CaixaRegistradora: React.FC = () => {
         throw new Error('Valor final inválido');
       }
 
-      // Close cash register
-      const { error } = await supabase
-        .from('caixas_operadores')
-        .update({
-          valor_final: valor,
-          status: 'fechado',
-          data_fechamento: new Date().toISOString(),
-          observacao
-        })
-        .eq('id', caixaAtual?.id);
-
-      if (error) throw error;
+      await CaixaService.fecharCaixa(caixaAtual?.id || '', valor, observacao);
 
       setCaixaAtual(null);
       setMovimentacoes([]);
@@ -305,7 +233,7 @@ const CaixaRegistradora: React.FC = () => {
             const { data: movs } = await supabase
               .from('movimentacoes_caixa')
               .select('*')
-              .eq('caixa_id', data.id)
+              .eq('caixa_operador_id', data.id)
               .order('created_at', { ascending: true });
             
             setMovimentacoes(movs || []);

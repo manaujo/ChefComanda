@@ -273,7 +273,8 @@ export interface Database {
       movimentacoes_caixa: {
         Row: {
           id: string;
-          caixa_id: string;
+          caixa_id?: string;
+          caixa_operador_id?: string;
           tipo: 'entrada' | 'saida';
           valor: number;
           motivo: string;
@@ -284,7 +285,8 @@ export interface Database {
         };
         Insert: {
           id?: string;
-          caixa_id: string;
+          caixa_id?: string;
+          caixa_operador_id?: string;
           tipo: 'entrada' | 'saida';
           valor: number;
           motivo: string;
@@ -296,6 +298,7 @@ export interface Database {
         Update: {
           id?: string;
           caixa_id?: string;
+          caixa_operador_id?: string;
           tipo?: 'entrada' | 'saida';
           valor?: number;
           motivo?: string;

@@ -28,6 +28,12 @@ const Success: React.FC = () => {
       
       const subscriptionData = await StripeService.getUserSubscription();
       setSubscription(subscriptionData);
+      
+      // Refresh auth context subscription data
+      const { refreshSubscription } = await import('../../contexts/AuthContext');
+      if (refreshSubscription) {
+        refreshSubscription();
+      }
     } catch (error) {
       console.error('Error loading subscription:', error);
     } finally {
