@@ -1,14 +1,17 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { usePermissions } from '../hooks/useEmployeeAuth';
 
 interface PrivateRouteProps {
   children: React.ReactNode;
   allowedRoles?: ('admin' | 'kitchen' | 'waiter' | 'cashier' | 'stock')[];
+  requiredPermission?: string;
 }
 
-const PrivateRoute: React.FC<PrivateRouteProps> = ({ children, allowedRoles }) => {
+const PrivateRoute: React.FC<PrivateRouteProps> = ({ children, allowedRoles, requiredPermission }) => {
   const { user, userRole, loading, isEmployee } = useAuth();
+  const { hasPermission } = usePermissions();
   const location = useLocation();
 
   if (loading) {
@@ -23,8 +26,19 @@ const PrivateRoute: React.FC<PrivateRouteProps> = ({ children, allowedRoles }) =
     return <Navigate to="/landing" state={{ from: location }} replace />;
   }
 
-  if (allowedRoles && !allowedRoles.includes(userRole as any)) {
+  // Verificar permissões
+  if (requiredPermission && !hasPermission(requiredPermission)) {
     return <Navigate to="/dashboard" replace />;
+  }
+
+  // Verificar roles (manter compatibilidade)
+  if (allowedRoles && !allowedRoles.includes(userRole as any)) {
+    // Se é funcionário, verificar permissões específicas
+    if (isEmployee && requiredPermission && hasPermission(requiredPermission)) {
+      // Permitir acesso se tem a permissão específica
+    } else {
+      return <Navigate to="/dashboard" replace />;
+    }
   }
 
   return <>{children}</>;

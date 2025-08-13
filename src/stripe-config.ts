@@ -4,50 +4,55 @@ export interface StripeProduct {
   name: string;
   description: string;
   mode: 'payment' | 'subscription';
+  price: number;
+  currency: string;
+  interval?: 'month' | 'year';
+  features: string[];
+  popular?: boolean;
+  discount?: {
+    percentage: number;
+    savings: number;
+  };
 }
 
 export const stripeProducts: StripeProduct[] = [
   {
-    id: 'prod_SaXe9LDgiUdTTe',
-    priceId: 'price_1RfMZJBA36JNlLOk6eNWmlBq',
-    name: 'Starter Anual',
-    description: 'Sistema Anual de Ponto de venda e estoque',
-    mode: 'subscription'
+    id: 'prod_monthly_plan',
+    priceId: 'price_monthly_120', // Replace with your actual Stripe price ID
+    name: 'Plano Mensal',
+    description: 'Flexibilidade total',
+    mode: 'subscription',
+    price: 120.00,
+    currency: 'BRL',
+    interval: 'month',
+    features: [
+      'Todas as funcionalidades',
+      'Suporte técnico incluído',
+      'Atualizações automáticas',
+      'Backup automático'
+    ],
+    popular: false
   },
   {
-    id: 'prod_SaXdYpeW9gyNZE',
-    priceId: 'price_1RfMXsBA36JNlLOkegDT3eC3',
-    name: 'Básico Anual',
-    description: 'Básico Anual Ideal para começar',
-    mode: 'subscription'
-  },
-  {
-    id: 'prod_SaXbZC0Hg29hMb',
-    priceId: 'price_1RfMWVBA36JNlLOk9ycRNEDS',
-    name: 'Profissional Anual',
-    description: 'Profissional Anual Mais completo',
-    mode: 'subscription'
-  },
-  {
-    id: 'prod_SaXZHVTbsrfN2F',
-    priceId: 'price_1RfMUkBA36JNlLOktlTc97ak',
-    name: 'Profissional',
-    description: 'Profissional Mais completo',
-    mode: 'subscription'
-  },
-  {
-    id: 'prod_SaXYxRTAbyy6I3',
-    priceId: 'price_1RfMTMBA36JNlLOk6caSBKbG',
-    name: 'Básico',
-    description: 'BásicoIdeal para começar',
-    mode: 'subscription'
-  },
-  {
-    id: 'prod_SaXVY7srqNsr2z',
-    priceId: 'price_1RfMQwBA36JNlLOkMN6yuZ4K',
-    name: 'Starter',
-    description: 'Starter Sistema de Ponto de venda e estoque',
-    mode: 'subscription'
+    id: 'prod_annual_plan',
+    priceId: 'price_annual_1296', // Replace with your actual Stripe price ID
+    name: 'Plano Anual',
+    description: 'Melhor custo-benefício',
+    mode: 'subscription',
+    price: 1296.00,
+    currency: 'BRL',
+    interval: 'year',
+    features: [
+      'Todas as funcionalidades',
+      'Suporte prioritário',
+      'Relatórios avançados',
+      'Consultoria gratuita'
+    ],
+    popular: true,
+    discount: {
+      percentage: 10,
+      savings: 144
+    }
   }
 ];
 
@@ -59,4 +64,20 @@ export function getProductByPriceId(priceId: string): StripeProduct | undefined 
 // Helper function to get product by product ID
 export function getProductById(productId: string): StripeProduct | undefined {
   return stripeProducts.find(product => product.id === productId);
+}
+
+// Helper function to calculate monthly equivalent for annual plans
+export function getMonthlyEquivalent(product: StripeProduct): number {
+  if (product.interval === 'year') {
+    return product.price / 12;
+  }
+  return product.price;
+}
+
+// Helper function to format price
+export function formatPrice(amount: number, currency: string = 'BRL'): string {
+  return amount.toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: currency
+  });
 }

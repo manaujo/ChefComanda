@@ -626,6 +626,8 @@ export interface Database {
         cpf: string;
         role: string;
         active: boolean;
+        auth_user_id: string | null;
+        restaurant_id: string | null;
         created_at: string;
         updated_at: string;
       };
@@ -636,6 +638,8 @@ export interface Database {
         cpf: string;
         role: string;
         active?: boolean;
+        auth_user_id?: string | null;
+        restaurant_id?: string | null;
         created_at?: string;
         updated_at?: string;
       };
@@ -646,6 +650,8 @@ export interface Database {
         cpf?: string;
         role?: string;
         active?: boolean;
+        auth_user_id?: string | null;
+        restaurant_id?: string | null;
         created_at?: string;
         updated_at?: string;
       };

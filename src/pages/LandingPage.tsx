@@ -4,7 +4,7 @@ import {
   ChefHat, Coffee, BarChart3, ShoppingCart, Users, 
   Clock, Star, CheckCircle, ArrowRight, Menu, X,
   Utensils, CreditCard, Package, Globe, FileText,
-  TrendingUp, Shield, Headphones
+  TrendingUp, Shield, Headphones, Calendar, Award, Gift, Zap, Check
 } from 'lucide-react';
 import Button from '../components/ui/Button';
 
@@ -308,8 +308,15 @@ const LandingPage: React.FC = () => {
             {/* Monthly Plan */}
             <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-200 hover:shadow-2xl transition-all duration-300">
               <div className="bg-gradient-to-r from-red-600 to-red-700 px-8 py-6">
-                <h3 className="text-2xl font-bold text-white">Plano Mensal</h3>
-                <p className="text-red-100 mt-2">Flexibilidade total</p>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-2xl font-bold text-white">Plano Mensal</h3>
+                    <p className="text-red-100 mt-2">Flexibilidade total</p>
+                  </div>
+                  <div className="p-3 bg-white/20 rounded-full">
+                    <Calendar className="w-6 h-6 text-white" />
+                  </div>
+                </div>
               </div>
               <div className="p-8">
                 <div className="text-center mb-8">
@@ -322,19 +329,27 @@ const LandingPage: React.FC = () => {
                 
                 <ul className="space-y-4 mb-8">
                   <li className="flex items-center">
-                    <CheckCircle className="w-5 h-5 text-green-500 mr-3" />
+                    <div className="p-1 bg-green-100 rounded-full mr-3">
+                      <Check className="w-4 h-4 text-green-600" />
+                    </div>
                     <span className="text-gray-700">Todas as funcionalidades</span>
                   </li>
                   <li className="flex items-center">
-                    <CheckCircle className="w-5 h-5 text-green-500 mr-3" />
+                    <div className="p-1 bg-green-100 rounded-full mr-3">
+                      <Check className="w-4 h-4 text-green-600" />
+                    </div>
                     <span className="text-gray-700">Suporte técnico incluído</span>
                   </li>
                   <li className="flex items-center">
-                    <CheckCircle className="w-5 h-5 text-green-500 mr-3" />
+                    <div className="p-1 bg-green-100 rounded-full mr-3">
+                      <Check className="w-4 h-4 text-green-600" />
+                    </div>
                     <span className="text-gray-700">Atualizações automáticas</span>
                   </li>
                   <li className="flex items-center">
-                    <CheckCircle className="w-5 h-5 text-green-500 mr-3" />
+                    <div className="p-1 bg-green-100 rounded-full mr-3">
+                      <Check className="w-4 h-4 text-green-600" />
+                    </div>
                     <span className="text-gray-700">Backup automático</span>
                   </li>
                 </ul>
@@ -355,11 +370,21 @@ const LandingPage: React.FC = () => {
             {/* Annual Plan */}
             <div className="bg-white rounded-2xl shadow-xl overflow-hidden border-2 border-yellow-400 hover:shadow-2xl transition-all duration-300 relative">
               <div className="absolute top-0 right-0 bg-yellow-400 text-yellow-900 px-4 py-2 rounded-bl-lg font-semibold text-sm">
-                10% OFF
+                <div className="flex items-center">
+                  <Gift className="w-4 h-4 mr-1" />
+                  10% OFF
+                </div>
               </div>
               <div className="bg-gradient-to-r from-yellow-500 to-orange-500 px-8 py-6">
-                <h3 className="text-2xl font-bold text-white">Plano Anual</h3>
-                <p className="text-yellow-100 mt-2">Melhor custo-benefício</p>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-2xl font-bold text-white">Plano Anual</h3>
+                    <p className="text-yellow-100 mt-2">Melhor custo-benefício</p>
+                  </div>
+                  <div className="p-3 bg-white/20 rounded-full">
+                    <Award className="w-6 h-6 text-white" />
+                  </div>
+                </div>
               </div>
               <div className="p-8">
                 <div className="text-center mb-8">
@@ -369,25 +394,34 @@ const LandingPage: React.FC = () => {
                   </div>
                   <p className="text-gray-600">Equivalente a R$ 108/mês</p>
                   <div className="inline-block bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium mt-2">
+                    <TrendingUp className="w-4 h-4 inline mr-1" />
                     Economia de R$ 144/ano
                   </div>
                 </div>
                 
                 <ul className="space-y-4 mb-8">
                   <li className="flex items-center">
-                    <CheckCircle className="w-5 h-5 text-green-500 mr-3" />
+                    <div className="p-1 bg-green-100 rounded-full mr-3">
+                      <Check className="w-4 h-4 text-green-600" />
+                    </div>
                     <span className="text-gray-700">Todas as funcionalidades</span>
                   </li>
                   <li className="flex items-center">
-                    <CheckCircle className="w-5 h-5 text-green-500 mr-3" />
+                    <div className="p-1 bg-green-100 rounded-full mr-3">
+                      <Check className="w-4 h-4 text-green-600" />
+                    </div>
                     <span className="text-gray-700">Suporte prioritário</span>
                   </li>
                   <li className="flex items-center">
-                    <CheckCircle className="w-5 h-5 text-green-500 mr-3" />
+                    <div className="p-1 bg-green-100 rounded-full mr-3">
+                      <Check className="w-4 h-4 text-green-600" />
+                    </div>
                     <span className="text-gray-700">Relatórios avançados</span>
                   </li>
                   <li className="flex items-center">
-                    <CheckCircle className="w-5 h-5 text-green-500 mr-3" />
+                    <div className="p-1 bg-green-100 rounded-full mr-3">
+                      <Check className="w-4 h-4 text-green-600" />
+                    </div>
                     <span className="text-gray-700">Consultoria gratuita</span>
                   </li>
                 </ul>
@@ -398,6 +432,7 @@ const LandingPage: React.FC = () => {
                     fullWidth 
                     size="lg"
                     className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600"
+                    icon={<Zap size={20} />}
                   >
                     Teste Grátis 7 Dias
                   </Button>

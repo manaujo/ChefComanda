@@ -43,7 +43,7 @@ import { supabase } from "../services/supabase";
 import { useAuth } from "../contexts/AuthContext";
 
 const Dashboard: React.FC = () => {
-  const { user } = useAuth();
+  const { user, isEmployee, userRole } = useAuth();
   const {
     mesas,
     produtos,
@@ -60,6 +60,26 @@ const Dashboard: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [dataInitialized, setDataInitialized] = useState(false);
   const [insumosEstoqueBaixo, setInsumosEstoqueBaixo] = useState<any[]>([]);
+
+  // Redirecionar funcionários para suas páginas específicas
+  useEffect(() => {
+    if (isEmployee && userRole) {
+      switch (userRole) {
+        case 'waiter':
+          window.location.href = '/dashboard/mesas';
+          return;
+        case 'kitchen':
+          window.location.href = '/dashboard/comandas';
+          return;
+        case 'cashier':
+          window.location.href = '/dashboard/pdv';
+          return;
+        case 'stock':
+          window.location.href = '/dashboard/estoque';
+          return;
+      }
+    }
+  }, [isEmployee, userRole]);
 
   useEffect(() => {
     // Só carrega dados uma vez quando o componente monta
@@ -226,6 +246,18 @@ const Dashboard: React.FC = () => {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-500"></div>
+      </div>
+    );
+  }
+
+  // Se é funcionário, mostrar mensagem de redirecionamento
+  if (isEmployee) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">Redirecionando para sua área de trabalho...</p>
+        </div>
       </div>
     );
   }

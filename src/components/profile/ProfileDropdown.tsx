@@ -10,7 +10,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 const ProfileDropdown: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const { user, userRole, displayName, signOut, currentPlan } = useAuth();
+  const { user, userRole, displayName, signOut, currentPlan, isEmployee } = useAuth();
   const { theme, toggleTheme } = useTheme();
 
   useEffect(() => {
@@ -58,7 +58,7 @@ const ProfileDropdown: React.FC = () => {
 
       {isOpen && (
         <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg z-50">
-          {userRole === 'admin' && (
+          {userRole === 'admin' && !isEmployee && (
             <>
               <Link
                 to="/dashboard/profile/company"
@@ -88,7 +88,7 @@ const ProfileDropdown: React.FC = () => {
             Configurações
           </Link>
           
-          {userRole === 'admin' && (
+          {userRole === 'admin' && !isEmployee && (
             <Link
               to="/dashboard/profile/planos"
               className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"

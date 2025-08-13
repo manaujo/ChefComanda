@@ -83,13 +83,14 @@ function App() {
               }>
                 <Route index element={<Dashboard />} />
                 <Route path="mesas" element={<PrivateRoute allowedRoles={['admin', 'waiter', 'cashier']}><Mesas /></PrivateRoute>} />
-                <Route path="comandas" element={<PrivateRoute allowedRoles={['admin', 'kitchen', 'waiter', 'cashier']}><Comandas /></PrivateRoute>} />
-                <Route path="cardapio" element={<PrivateRoute allowedRoles={['admin', 'stock']}><Cardapio /></PrivateRoute>} />
-                <Route path="estoque" element={<PrivateRoute allowedRoles={['admin', 'stock']}><Estoque /></PrivateRoute>} />
+                <Route path="mesas" element={<PrivateRoute requiredPermission="mesas"><Mesas /></PrivateRoute>} />
+                <Route path="comandas" element={<PrivateRoute requiredPermission="comandas"><Comandas /></PrivateRoute>} />
+                <Route path="cardapio" element={<PrivateRoute requiredPermission="produtos"><Cardapio /></PrivateRoute>} />
+                <Route path="estoque" element={<PrivateRoute requiredPermission="estoque"><Estoque /></PrivateRoute>} />
                 <Route path="relatorios" element={<PrivateRoute allowedRoles={['admin', 'cashier']}><Relatorios /></PrivateRoute>} />
-                <Route path="ifood" element={<PrivateRoute allowedRoles={['admin', 'kitchen', 'cashier']}><IFoodPedidos /></PrivateRoute>} />
-                <Route path="caixa" element={<PrivateRoute allowedRoles={['admin', 'cashier']}><CaixaRegistradora /></PrivateRoute>} />
-                <Route path="pdv" element={<PrivateRoute allowedRoles={['admin', 'cashier']}><PDV /></PrivateRoute>} />
+                <Route path="ifood" element={<PrivateRoute requiredPermission="comandas"><IFoodPedidos /></PrivateRoute>} />
+                <Route path="caixa" element={<PrivateRoute requiredPermission="caixa"><CaixaRegistradora /></PrivateRoute>} />
+                <Route path="pdv" element={<PrivateRoute requiredPermission="pdv"><PDV /></PrivateRoute>} />
                 <Route path="cardapio-online" element={<PrivateRoute allowedRoles={['admin']}><CardapioOnline /></PrivateRoute>} />
                 <Route path="cardapio-online/editor" element={<PrivateRoute allowedRoles={['admin']}><CardapioOnlineEditor /></PrivateRoute>} />
                 <Route path="cmv" element={<PrivateRoute allowedRoles={['admin']}><CMV /></PrivateRoute>} />

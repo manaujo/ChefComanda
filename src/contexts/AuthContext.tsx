@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import { createClient, SupabaseClient, User } from "@supabase/supabase-js";
 import { DatabaseService } from "../services/database";
 import StripeService from "../services/StripeService";
+import EmployeeAuthService from "../services/EmployeeAuthService";
 import toast from "react-hot-toast";
 import { useNavigate, useLocation } from "react-router-dom";
 
@@ -12,6 +13,7 @@ interface AuthState {
   displayName: string | null;
   isEmployee: boolean;
   employeeData: any | null;
+  restaurantId: string | null;
   currentPlan: string | null;
 }
 
@@ -53,6 +55,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     displayName: null,
     isEmployee: false,
     employeeData: null,
+    restaurantId: null,
     currentPlan: null
   });
 
@@ -66,8 +69,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         if (session?.user) {
           loadUserData(session.user);
         } else {
-          // Check for employee session
-          checkEmployeeSession();
+          setState({
+            user: null,
+            userRole: null,
+            loading: false,
+            displayName: null,
+            isEmployee: false,
+            employeeData: null,
+            restaurantId: null,
+            currentPlan: null
+          });
         }
       })
       .catch(async (error) => {
@@ -85,6 +96,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           displayName: null,
           isEmployee: false,
           employeeData: null,
+          restaurantId: null,
           currentPlan: null
         });
       });
@@ -102,6 +114,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           displayName: null,
           isEmployee: false,
           employeeData: null,
+          restaurantId: null,
           currentPlan: null
         });
       }
@@ -112,55 +125,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     };
   }, []);
 
-  const checkEmployeeSession = async () => {
-    try {
-      const employeeToken = localStorage.getItem("employee_token");
-      if (employeeToken) {
-        const { data, error } = await supabase
-          .from("employee_sessions")
-          .select(
-            `
-            employee_id,
-            expires_at,
-            employees!inner(
-              id,
-              name,
-              role,
-              company_id,
-              company_profiles!inner(name)
-            )
-          `
-          )
-          .eq("token", employeeToken)
-          .gt("expires_at", new Date().toISOString())
-          .single();
-
-        if (error) throw error;
-
-        if (data) {
-          setState({
-            user: null,
-            userRole: data.employees.role as any,
-            loading: false,
-            displayName: data.employees.name,
-            isEmployee: true,
-            employeeData: data.employees,
-            currentPlan: null
-          });
-          return;
-        }
-      }
-    } catch (error) {
-      console.error("Error checking employee session:", error);
-      localStorage.removeItem("employee_token");
-    }
-
-    setState((prev) => ({ ...prev, loading: false }));
-  };
-
   const loadUserData = async (user: User) => {
     try {
       console.log("Loading user data for:", user.id);
+
+      // Verificar se é funcionário
+      const employeeData = await EmployeeAuthService.getCurrentEmployeeData(user.id);
+      
+      if (employeeData) {
+        // É funcionário - carregar dados específicos
+        setState({
+          user,
+          userRole: employeeData.role as any,
+          loading: false,
+          displayName: employeeData.name,
+          isEmployee: true,
+          employeeData,
+          restaurantId: employeeData.restaurant_id,
+          currentPlan: null
+        });
+
+        console.log("Employee data loaded successfully, role:", employeeData.role);
+        
+        // Redirect based on employee role
+        if (shouldRedirect()) {
+          redirectByRole(employeeData.role);
+        }
+        return;
+      }
 
       // Ensure user has a restaurant - create one if it doesn't exist
       let { data: restaurante, error: restauranteError } = await supabase
@@ -256,6 +248,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         displayName: profileData?.name || user.user_metadata?.name || null,
         isEmployee: false,
         employeeData: null,
+        restaurantId: restaurante?.id || null,
         currentPlan
       });
 
@@ -595,6 +588,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         displayName: null,
         isEmployee: false,
         employeeData: null,
+        restaurantId: null,
         currentPlan: null
       });
       toast.success("Logout realizado com sucesso!");

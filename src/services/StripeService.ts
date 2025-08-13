@@ -44,7 +44,7 @@ class StripeService {
     }
 
     const defaultSuccessUrl = `${window.location.origin}/checkout/success`;
-    const defaultCancelUrl = `${window.location.origin}/profile/planos`;
+    const defaultCancelUrl = `${window.location.origin}/dashboard/profile/planos`;
 
     const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout`, {
       method: 'POST',

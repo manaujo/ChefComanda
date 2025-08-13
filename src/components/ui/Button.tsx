@@ -28,8 +28,8 @@ const Button: React.FC<ButtonProps> = ({
     success: 'bg-green-500 hover:bg-green-600 text-white',
     danger: 'bg-red-500 hover:bg-red-600 text-white',
     warning: 'bg-orange-500 hover:bg-orange-600 text-white',
-    ghost: 'bg-transparent hover:bg-gray-100 text-gray-700 hover:text-gray-900',
-    outline: 'bg-transparent border border-gray-300 text-gray-700 hover:bg-gray-50',
+    ghost: 'bg-transparent hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100',
+    outline: 'bg-transparent border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700',
   };
 
   const sizeClasses = {
@@ -38,7 +38,7 @@ const Button: React.FC<ButtonProps> = ({
     lg: 'text-base px-6 py-3',
   };
 
-  const baseClasses = 'rounded-md font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-opacity-50 flex items-center justify-center';
+  const baseClasses = 'rounded-md font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-opacity-50 flex items-center justify-center';
   const widthClass = fullWidth ? 'w-full' : '';
   const disabledClass = disabled || isLoading ? 'opacity-50 cursor-not-allowed' : '';
   

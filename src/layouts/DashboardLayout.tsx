@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { usePermissions } from '../hooks/useEmployeeAuth';
 import ProfileDropdown from '../components/profile/ProfileDropdown';
 import NotificationDropdown from '../components/NotificationDropdown';
 
@@ -18,6 +19,7 @@ const DashboardLayout: React.FC = () => {
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
   const { userRole, isEmployee, user, loading } = useAuth();
+  const { hasPermission } = usePermissions();
   const isPDV = location.pathname === '/dashboard/pdv';
   const isComandas = location.pathname === '/dashboard/comandas';
 
@@ -31,22 +33,30 @@ const DashboardLayout: React.FC = () => {
   // Definir quais itens de menu cada função pode acessar
   const getRoleNavItems = () => {
     const allNavItems = [
-      { name: 'Dashboard', path: '/dashboard', icon: <LayoutDashboard size={20} />, roles: ['admin', 'cashier'] },
-      { name: 'Mesas', path: '/dashboard/mesas', icon: <Coffee size={20} />, roles: ['admin', 'waiter'] },
-      { name: 'Comandas', path: '/dashboard/comandas', icon: <ClipboardList size={20} />, roles: ['admin', 'kitchen', 'waiter'] },
-      { name: 'PDV', path: '/dashboard/pdv', icon: <CreditCard size={20} />, roles: ['admin', 'cashier'] },
-      { name: 'Cardápio', path: '/dashboard/cardapio', icon: <ShoppingBag size={20} />, roles: ['admin', 'stock'] },
-      { name: 'Estoque', path: '/dashboard/estoque', icon: <ShoppingBag size={20} />, roles: ['admin', 'stock'] },
-      { name: 'Pedidos iFood', path: '/dashboard/ifood', icon: <ShoppingBag size={20} />, roles: ['admin', 'kitchen'] },
-      { name: 'Relatórios', path: '/dashboard/relatorios', icon: <PieChart size={20} />, roles: ['admin', 'cashier'] },
-      { name: 'CMV', path: '/dashboard/cmv', icon: <Calculator size={20} />, roles: ['admin'] },
-      { name: 'Cardápio Online', path: '/dashboard/cardapio-online', icon: <QrCode size={20} />, roles: ['admin'] },
-      { name: 'Editor de Cardápio', path: '/dashboard/cardapio-online/editor', icon: <PenSquare size={20} />, roles: ['admin', 'stock'] },
-      { name: 'Suporte', path: '/dashboard/suporte', icon: <Headphones size={20} />, roles: ['admin', 'kitchen', 'waiter', 'cashier', 'stock'] },
+      { name: 'Dashboard', path: '/dashboard', icon: <LayoutDashboard size={20} />, permission: 'dashboard' },
+      { name: 'Mesas', path: '/dashboard/mesas', icon: <Coffee size={20} />, permission: 'mesas' },
+      { name: 'Comandas', path: '/dashboard/comandas', icon: <ClipboardList size={20} />, permission: 'comandas' },
+      { name: 'PDV', path: '/dashboard/pdv', icon: <CreditCard size={20} />, permission: 'pdv' },
+      { name: 'Cardápio', path: '/dashboard/cardapio', icon: <ShoppingBag size={20} />, permission: 'produtos' },
+      { name: 'Estoque', path: '/dashboard/estoque', icon: <ShoppingBag size={20} />, permission: 'estoque' },
+      { name: 'Pedidos iFood', path: '/dashboard/ifood', icon: <ShoppingBag size={20} />, permission: 'comandas' },
+      { name: 'Relatórios', path: '/dashboard/relatorios', icon: <PieChart size={20} />, permission: 'relatorios' },
+      { name: 'CMV', path: '/dashboard/cmv', icon: <Calculator size={20} />, permission: 'cmv' },
+      { name: 'Cardápio Online', path: '/dashboard/cardapio-online', icon: <QrCode size={20} />, permission: 'cardapio-online' },
+      { name: 'Editor de Cardápio', path: '/dashboard/cardapio-online/editor', icon: <PenSquare size={20} />, permission: 'produtos' },
+      { name: 'Suporte', path: '/dashboard/suporte', icon: <Headphones size={20} />, permission: 'suporte' },
     ];
 
-    // Filtrar itens com base na função do usuário
-    return allNavItems.filter(item => item.roles.includes(userRole || 'admin'));
+    // Filtrar itens com base nas permissões
+    return allNavItems.filter(item => {
+      // Admin sempre tem acesso (se não for funcionário)
+      if (userRole === 'admin' && !isEmployee) {
+        return true;
+      }
+      
+      // Verificar permissão específica
+      return hasPermission(item.permission);
+    });
   };
 
   const navItems = getRoleNavItems();

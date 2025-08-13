@@ -87,7 +87,7 @@ interface RestauranteProviderProps {
 }
 
 export const RestauranteProvider: React.FC<RestauranteProviderProps> = ({ children }) => {
-  const { user } = useAuth();
+  const { user, isEmployee, restaurantId: authRestaurantId } = useAuth();
   const [restaurante, setRestaurante] = useState<Restaurante | null>(null);
   const [mesas, setMesas] = useState<Mesa[]>([]);
   const [produtos, setProdutos] = useState<Produto[]>([]);
@@ -112,18 +112,32 @@ export const RestauranteProvider: React.FC<RestauranteProviderProps> = ({ childr
       setLoading(true);
       setError(null);
       
-      // Load or create restaurant
-      let restauranteData = await DatabaseService.getRestaurante(user.id);
+      let restauranteData: Restaurante | null = null;
       
-      if (!restauranteData) {
-        // Create restaurant if it doesn't exist
-        console.log("Creating restaurant for user:", user.id);
-        restauranteData = await DatabaseService.createRestaurante({
-          user_id: user.id,
-          nome: `Restaurante de ${user.user_metadata?.name || 'Usuário'}`,
-          telefone: ""
-        });
-        console.log("Restaurant created:", restauranteData.id);
+      if (isEmployee && authRestaurantId) {
+        // Se é funcionário, usar o restaurante do contexto de auth
+        const { data, error } = await supabase
+          .from('restaurantes')
+          .select('*')
+          .eq('id', authRestaurantId)
+          .single();
+        
+        if (error) throw error;
+        restauranteData = data;
+      } else {
+        // Load or create restaurant for owner
+        restauranteData = await DatabaseService.getRestaurante(user.id);
+        
+        if (!restauranteData) {
+          // Create restaurant if it doesn't exist
+          console.log("Creating restaurant for user:", user.id);
+          restauranteData = await DatabaseService.createRestaurante({
+            user_id: user.id,
+            nome: `Restaurante de ${user.user_metadata?.name || 'Usuário'}`,
+            telefone: ""
+          });
+          console.log("Restaurant created:", restauranteData.id);
+        }
       }
       
       setRestaurante(restauranteData);
