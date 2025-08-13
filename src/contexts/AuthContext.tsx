@@ -230,10 +230,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       let currentPlan = null;
       try {
         const subscription = await StripeService.getUserSubscription();
-        if (subscription?.price_id) {
+        if (subscription?.price_id && subscription.subscription_status !== 'canceled') {
           const { getProductByPriceId } = await import("../stripe-config");
           const product = getProductByPriceId(subscription.price_id);
-          currentPlan = product?.name || null;
+          
+          if (product) {
+            // Add status indicator for trial periods
+            if (subscription.subscription_status === 'trialing') {
+              currentPlan = `${product.name} (Teste Grátis)`;
+            } else {
+              currentPlan = product.name;
+            }
+          }
         }
       } catch (error) {
         console.error("Error loading subscription:", error);
@@ -314,10 +322,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       const subscription = await StripeService.getUserSubscription();
       let currentPlan = null;
 
-      if (subscription?.price_id) {
+      if (subscription?.price_id && subscription.subscription_status !== 'canceled') {
         const { getProductByPriceId } = await import("../stripe-config");
         const product = getProductByPriceId(subscription.price_id);
-        currentPlan = product?.name || null;
+        
+        if (product) {
+          // Add status indicator for trial periods
+          if (subscription.subscription_status === 'trialing') {
+            currentPlan = `${product.name} (Teste Grátis)`;
+          } else {
+            currentPlan = product.name;
+          }
+        }
       }
 
       setState((prev) => ({ ...prev, currentPlan }));

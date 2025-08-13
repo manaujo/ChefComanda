@@ -7,6 +7,7 @@ import {
   TrendingUp, Shield, Headphones, Calendar, Award, Gift, Zap, Check
 } from 'lucide-react';
 import Button from '../components/ui/Button';
+import { stripeProducts, formatPrice, getMonthlyEquivalent } from '../stripe-config';
 
 const LandingPage: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
@@ -340,9 +341,7 @@ const LandingPage: React.FC = () => {
                       index === 1 ? 'text-purple-100' :
                       'text-yellow-100'
                     }`}>
-                      {product.name === 'Plano Mensal' ? 'Flexibilidade total' :
-                       product.name === 'Plano Trimestral' ? 'Economia trimestral' :
-                       'Melhor custo-benefício'}
+                      {product.description}
                     </p>
                   </div>
                 </div>
@@ -388,11 +387,11 @@ const LandingPage: React.FC = () => {
                       className={`${
                         index === 0 ? 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800' :
                         index === 1 ? 'bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800' :
-                        'bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600'
+                        'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700'
                       } font-semibold`}
-                      icon={product.name.includes('Trimestral') || product.interval === 'year' ? <Zap size={18} /> : undefined}
+                      icon={product.name === 'Plano Trimestral' || product.interval === 'year' ? <Zap size={18} /> : undefined}
                     >
-                      {product.name.includes('Trimestral') || product.interval === 'year' ? 
+                      {product.name === 'Plano Trimestral' || product.interval === 'year' ? 
                         'Teste Grátis 7 Dias' : 'Começar Agora'}
                     </Button>
                   </Link>

@@ -29,7 +29,10 @@ export const stripeProducts: StripeProduct[] = [
       'Todas as funcionalidades',
       'Suporte técnico incluído',
       'Atualizações automáticas',
-      'Backup automático'
+      'Backup automático',
+      'Controle de mesas e comandas',
+      'PDV integrado',
+      'Relatórios básicos'
     ],
     popular: false
   },
@@ -47,7 +50,9 @@ export const stripeProducts: StripeProduct[] = [
       'Suporte técnico incluído',
       'Atualizações automáticas',
       'Backup automático',
-      'Economia trimestral'
+      'Economia trimestral',
+      'Controle avançado de estoque',
+      'Relatórios detalhados'
     ],
     popular: true
   },
@@ -64,7 +69,11 @@ export const stripeProducts: StripeProduct[] = [
       'Todas as funcionalidades',
       'Suporte prioritário',
       'Relatórios avançados',
-      'Consultoria gratuita'
+      'Consultoria gratuita',
+      'Backup automático',
+      'Integração com delivery',
+      'Análise de CMV',
+      'Cardápio online ilimitado'
     ],
     popular: false,
     discount: {
@@ -102,4 +111,36 @@ export function formatPrice(amount: number, currency: string = 'BRL'): string {
     style: 'currency',
     currency: currency
   });
+}
+
+// Helper function to get plan benefits based on price
+export function getPlanBenefits(price: number): string[] {
+  if (price >= 1000) {
+    return [
+      'Mesas ilimitadas',
+      'Funcionários ilimitados',
+      'Relatórios avançados',
+      'Suporte prioritário',
+      'Consultoria especializada',
+      'Backup automático',
+      'Integração completa'
+    ];
+  } else if (price >= 300) {
+    return [
+      'Até 20 mesas',
+      'Até 10 funcionários',
+      'Relatórios detalhados',
+      'Suporte técnico',
+      'Backup automático',
+      'Integrações básicas'
+    ];
+  } else {
+    return [
+      'Até 10 mesas',
+      'Até 5 funcionários',
+      'Relatórios básicos',
+      'Suporte por email',
+      'Backup semanal'
+    ];
+  }
 }

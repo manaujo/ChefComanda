@@ -32,8 +32,12 @@ const StripeCheckout: React.FC<StripeCheckoutProps> = ({
     try {
       setLoading(true);
       
-      // Show loading toast
-      toast.loading(`Preparando checkout para ${product.name}...`, { id: 'checkout-loading' });
+      // Show loading toast with better messaging
+      const loadingMessage = product.name === 'Plano Trimestral' || product.interval === 'year' 
+        ? `Preparando teste grátis de 7 dias para ${product.name}...`
+        : `Preparando checkout para ${product.name}...`;
+      
+      toast.loading(loadingMessage, { id: 'checkout-loading' });
       
       const { url } = await StripeService.createCheckoutSession({
         priceId: product.priceId,
@@ -47,7 +51,11 @@ const StripeCheckout: React.FC<StripeCheckoutProps> = ({
       
       if (url) {
         // Show success message before redirect
-        toast.success(`Redirecionando para o pagamento do ${product.name}...`, { duration: 2000 });
+        const successMessage = product.name === 'Plano Trimestral' || product.interval === 'year'
+          ? `Redirecionando para iniciar seu teste grátis...`
+          : `Redirecionando para o pagamento do ${product.name}...`;
+        
+        toast.success(successMessage, { duration: 2000 });
         
         // Small delay to show the success message
         setTimeout(() => {
@@ -86,10 +94,11 @@ const StripeCheckout: React.FC<StripeCheckoutProps> = ({
       >
         {children || (
           <div className="flex items-center justify-center">
-            {product.interval === 'year' && !loading && (
+            {(product.name === 'Plano Trimestral' || product.interval === 'year') && !loading && (
               <Zap className="w-4 h-4 mr-2" />
             )}
-            {loading ? 'Processando...' : 'Assinar Agora'}
+            {loading ? 'Processando...' : 
+             (product.name === 'Plano Trimestral' || product.interval === 'year') ? 'Teste Grátis 7 Dias' : 'Assinar Agora'}
           </div>
         )}
       </Button>

@@ -196,24 +196,20 @@ const Planos: React.FC = () => {
               index === 1 ? 'bg-gradient-to-r from-purple-600 to-purple-700' :
               'bg-gradient-to-r from-yellow-500 to-orange-500'
             }`}>
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-2xl font-bold text-white">{product.name}</h3>
-                  <p className={`mt-1 ${
-                    index === 0 ? 'text-blue-100' :
-                    index === 1 ? 'text-purple-100' :
-                    'text-yellow-100'
-                  }`}>
-                    {product.name === 'Plano Mensal' ? 'Flexibilidade total' :
-                     product.name === 'Plano Trimestral' ? 'Economia trimestral' :
-                     'Melhor custo-benefício'}
-                  </p>
-                </div>
-                <div className="p-3 bg-white/20 rounded-full">
+              <div className="text-center">
+                <div className="p-3 bg-white/20 rounded-full w-fit mx-auto mb-4">
                   {index === 0 ? <Calendar className="w-6 h-6 text-white" /> :
                    index === 1 ? <Star className="w-6 h-6 text-white" /> :
                    <Award className="w-6 h-6 text-white" />}
                 </div>
+                <h3 className="text-2xl font-bold text-white">{product.name}</h3>
+                <p className={`mt-2 text-sm ${
+                  index === 0 ? 'text-blue-100' :
+                  index === 1 ? 'text-purple-100' :
+                  'text-yellow-100'
+                }`}>
+                  {product.description}
+                </p>
               </div>
             </div>
             
@@ -226,7 +222,7 @@ const Planos: React.FC = () => {
                       product.name.includes('Trimestral') ? 'trimestre' : 'mês'}
                   </span>
                 </div>
-                {product.interval === 'year' && (
+                {(product.interval === 'year' || product.name === 'Plano Trimestral') && (
                   <>
                     <p className="text-gray-600 dark:text-gray-400 mb-2">
                       Equivalente a {formatPrice(getMonthlyEquivalent(product))}/mês
@@ -238,11 +234,6 @@ const Planos: React.FC = () => {
                       </div>
                     )}
                   </>
-                )}
-                {product.name.includes('Trimestral') && (
-                  <p className="text-gray-600 dark:text-gray-400 mb-2">
-                    Equivalente a {formatPrice(getMonthlyEquivalent(product))}/mês
-                  </p>
                 )}
               </div>
               
@@ -278,10 +269,10 @@ const Planos: React.FC = () => {
                   className={`w-full font-semibold py-4 text-lg ${
                     index === 0 ? 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800' :
                     index === 1 ? 'bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800' :
-                    'bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600'
+                    'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700'
                   } text-white`}
                 >
-                  {product.name.includes('Trimestral') || product.interval === 'year' ? (
+                  {product.name === 'Plano Trimestral' || product.interval === 'year' ? (
                     <div className="flex items-center justify-center">
                       <Zap className="w-5 h-5 mr-2" />
                       Teste Grátis 7 Dias

@@ -80,6 +80,10 @@ class StripeService {
         return null;
       }
 
+      // Return null if subscription is canceled or incomplete
+      if (data && (data.subscription_status === 'canceled' || data.subscription_status === 'incomplete')) {
+        return null;
+      }
       return data;
     } catch (error) {
       console.error('Error fetching user subscription:', error);

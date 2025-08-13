@@ -67,9 +67,22 @@ const Success: React.FC = () => {
               Pagamento Realizado com Sucesso!
             </h2>
             
-            <p className="text-gray-600 mb-6">
-              Obrigado por escolher o ChefComanda. Sua assinatura foi ativada com sucesso.
-            </p>
+            {loading ? (
+              <p className="text-gray-600 mb-6">
+                Processando sua assinatura...
+              </p>
+            ) : subscription ? (
+              <p className="text-gray-600 mb-6">
+                {subscription.subscription_status === 'trialing' 
+                  ? 'Seu período de teste gratuito foi iniciado com sucesso!'
+                  : 'Obrigado por escolher o ChefComanda. Sua assinatura foi ativada com sucesso.'
+                }
+              </p>
+            ) : (
+              <p className="text-gray-600 mb-6">
+                Obrigado por escolher o ChefComanda. Sua assinatura está sendo processada.
+              </p>
+            )}
 
             {loading ? (
               <div className="mb-6">
@@ -96,10 +109,14 @@ const Success: React.FC = () => {
                 )}
                 <p className="text-blue-600 text-sm">
                   Status: {subscription.subscription_status === 'active' ? 'Ativo' : 'Processando'}
+                           subscription.subscription_status === 'trialing' ? 'Teste Grátis' :
                 </p>
                 {subscription.current_period_end && (
                   <p className="text-blue-600 text-sm">
-                    Próxima cobrança: {new Date(subscription.current_period_end * 1000).toLocaleDateString('pt-BR')}
+                    {subscription.subscription_status === 'trialing' 
+                      ? `Teste grátis até: ${new Date(subscription.current_period_end * 1000).toLocaleDateString('pt-BR')}`
+                      : `Próxima cobrança: ${new Date(subscription.current_period_end * 1000).toLocaleDateString('pt-BR')}`
+                    }
                   </p>
                 )}
                 {subscription.subscription_status === 'trialing' && (
