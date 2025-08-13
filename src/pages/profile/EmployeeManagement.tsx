@@ -2,14 +2,17 @@ import React, { useState, useEffect } from "react";
 import { Search, Plus, Edit, Trash2, Eye, EyeOff } from "lucide-react";
 import Button from "../../components/ui/Button";
 import { useAuth } from "../../contexts/AuthContext";
-import { supabase } from "../../supabase";
+import EmployeeAuthService from "../../services/EmployeeAuthService";
+import { supabase } from "../../services/supabase";
 
 interface Employee {
   id: string;
+  company_id: string;
   name: string;
   cpf: string;
   role: string;
-  password: string;
+  auth_user_id: string | null;
+  active: boolean;
 }
 
 const EmployeeManagement: React.FC = () => {
@@ -17,6 +20,7 @@ const EmployeeManagement: React.FC = () => {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [cpf, setCpf] = useState("");
   const [role, setRole] = useState("");
   const [password, setPassword] = useState("");
@@ -24,61 +28,109 @@ const EmployeeManagement: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState(""); // <-- agora está no lugar certo
   const [loading, setLoading] = useState(false);
+  const [companyId, setCompanyId] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchEmployees();
-  }, []);
+    fetchCompanyId();
+  }, [user]);
 
-  const fetchEmployees = async () => {
+  useEffect(() => {
+    if (companyId) {
+      fetchEmployees();
+    }
+  }, [companyId]);
+
+  const fetchCompanyId = async () => {
+    if (!user?.id) return;
+
     const { data, error } = await supabase
-      .from("employees")
-      .select("*")
-      .eq("user_id", user?.id);
+      .from("company_profiles")
+      .select("id")
+      .eq("user_id", user.id)
+      .single();
 
     if (error) {
-      console.error(error);
+      console.error("Error fetching company:", error);
     } else {
-      setEmployees(data || []);
+      setCompanyId(data.id);
+    }
+  };
+
+  const fetchEmployees = async () => {
+    if (!companyId) return;
+
+    try {
+      const employeesData = await EmployeeAuthService.getEmployeesWithAuth(companyId);
+      setEmployees(employeesData);
+    } catch (error) {
+      console.error("Error fetching employees:", error);
     }
   };
 
   const handleSave = async () => {
-    if (!name || !cpf || !role || !password) {
-      setError("Preencha todos os campos.");
+    if (!name || !cpf || !role) {
+      setError("Preencha todos os campos obrigatórios.");
       return;
     }
+
+    if (!editingId && !email) {
+      setError("Email é obrigatório para novos funcionários.");
+      return;
+    }
+
+    if (!editingId && !password) {
+      setError("Senha é obrigatória para novos funcionários.");
+      return;
+    }
+
+    if (!companyId) {
+      setError("Empresa não encontrada.");
+      return;
+    }
+
     setError("");
     setLoading(true);
 
-    if (editingId) {
-      const { error } = await supabase
-        .from("employees")
-        .update({ name, cpf, role, password })
-        .eq("id", editingId);
-      if (!error) {
-        fetchEmployees();
-        clearForm();
-      }
-    } else {
-      const { error } = await supabase.from("employees").insert([
-        {
+    try {
+      if (editingId) {
+        // Atualizar funcionário existente
+        const { error } = await supabase
+          .from("employees")
+          .update({ name, cpf, role })
+          .eq("id", editingId);
+
+        if (error) throw error;
+
+        // Atualizar senha se fornecida
+        if (password) {
+          const employee = employees.find(emp => emp.id === editingId);
+          if (employee?.auth_user_id) {
+            await EmployeeAuthService.updateEmployeePassword(employee.auth_user_id, password);
+          }
+        }
+      } else {
+        // Criar novo funcionário
+        await EmployeeAuthService.createEmployeeWithAuth(companyId, {
           name,
+          email,
           cpf,
-          role,
+          role: role as 'waiter' | 'cashier' | 'stock' | 'kitchen',
           password,
-          user_id: user?.id,
-        },
-      ]);
-      if (!error) {
-        fetchEmployees();
-        clearForm();
+        });
       }
+
+      fetchEmployees();
+      clearForm();
+    } catch (error: any) {
+      setError(error.message || "Erro ao salvar funcionário.");
     }
+
     setLoading(false);
   };
 
   const clearForm = () => {
     setName("");
+    setEmail("");
     setCpf("");
     setRole("");
     setPassword("");
@@ -89,14 +141,16 @@ const EmployeeManagement: React.FC = () => {
     setName(employee.name);
     setCpf(employee.cpf);
     setRole(employee.role);
-    setPassword(employee.password);
+    setPassword(""); // Clear password for security
     setEditingId(employee.id);
   };
 
   const handleDelete = async (id: string) => {
-    const { error } = await supabase.from("employees").delete().eq("id", id);
-    if (!error) {
+    try {
+      await EmployeeAuthService.deleteEmployee(id);
       fetchEmployees();
+    } catch (error: any) {
+      setError(error.message || "Erro ao excluir funcionário.");
     }
   };
 
@@ -132,6 +186,15 @@ const EmployeeManagement: React.FC = () => {
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
+        {!editingId && (
+          <input
+            type="email"
+            placeholder="Email"
+            className="border p-2 rounded"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+        )}
         <input
           type="text"
           placeholder="CPF"
@@ -139,17 +202,20 @@ const EmployeeManagement: React.FC = () => {
           value={cpf}
           onChange={(e) => setCpf(e.target.value)}
         />
-        <input
-          type="text"
-          placeholder="Função"
-          className="border p-2 rounded"
+        <select
           value={role}
           onChange={(e) => setRole(e.target.value)}
-        />
+          className="border p-2 rounded"
+        >
+          <option value="">Selecione a função</option>
+          <option value="waiter">Garçom</option>
+          <option value="cashier">Caixa</option>
+          <option value="stock">Estoque</option>
+        </select>
         <div className="flex items-center border p-2 rounded">
           <input
             type={showPassword ? "text" : "password"}
-            placeholder="Senha"
+            placeholder={editingId ? "Nova senha (opcional)" : "Senha"}
             className="flex-1 outline-none"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -189,13 +255,19 @@ const EmployeeManagement: React.FC = () => {
                   <td className="border p-2 flex gap-2">
                     <button
                       onClick={() => handleEdit(employee)}
-                      className="text-blue-500"
+                      className="text-blue-500 hover:text-blue-700 p-1"
                     >
                       <Edit />
                     </button>
                     <button
-                      onClick={() => handleDelete(employee.id)}
-                      className="text-red-500"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (window.confirm('Tem certeza que deseja excluir este funcionário?')) {
+                          handleDelete(employee.id);
+                        }
+                      }}
+                      className="text-red-500 hover:text-red-700 p-1"
                     >
                       <Trash2 />
                     </button>

@@ -275,12 +275,9 @@ class EmployeeAuthService {
         .select('*')
         .eq('auth_user_id', userId)
         .eq('active', true)
-        .single();
+        .maybeSingle();
 
       if (error) {
-        if (error.code === 'PGRST116') {
-          return null; // Não é funcionário
-        }
         throw error;
       }
 
