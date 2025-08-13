@@ -34,82 +34,34 @@ class EmployeeAuthService {
     employeeData: CreateEmployeeData
   ): Promise<EmployeeWithAuth> {
     try {
-      // 1. Criar usuário no auth.users usando Admin API
-      const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
-        email: employeeData.email,
-        password: employeeData.password,
-        email_confirm: true, // Confirmar email automaticamente
-        user_metadata: {
+      // Call Edge Function to create employee with auth
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-employee-user`;
+      
+      const headers = {
+        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json',
+      };
+
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          companyId,
           name: employeeData.name,
+          email: employeeData.email,
+          password: employeeData.password,
           role: employeeData.role,
-          is_employee: true
-        }
+          cpf: employeeData.cpf
+        })
       });
 
-      if (authError) {
-        console.error('Error creating auth user:', authError);
-        throw new Error(`Erro ao criar usuário: ${authError.message}`);
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Erro ao criar funcionário');
       }
 
-      if (!authUser.user) {
-        throw new Error('Usuário não foi criado');
-      }
-
-      // 2. Criar registro na tabela employees
-      const { data: employee, error: employeeError } = await supabase
-        .from('employees')
-        .insert({
-          company_id: companyId,
-          name: employeeData.name,
-          cpf: employeeData.cpf,
-          role: employeeData.role,
-          auth_user_id: authUser.user.id,
-          active: true
-        })
-        .select()
-        .single();
-
-      if (employeeError) {
-        // Se falhar ao criar funcionário, remover usuário criado
-        try {
-          await supabase.auth.admin.deleteUser(authUser.user.id);
-        } catch (deleteError) {
-          console.error('Error cleaning up auth user:', deleteError);
-        }
-        throw new Error(`Erro ao criar funcionário: ${employeeError.message}`);
-      }
-
-      // 3. Criar perfil do funcionário
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          id: authUser.user.id,
-          name: employeeData.name,
-          cpf: employeeData.cpf
-        });
-
-      if (profileError) {
-        console.error('Error creating employee profile:', profileError);
-        // Não falhar por causa do perfil, apenas logar o erro
-      }
-
-      // 4. Criar role do funcionário
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .insert({
-          user_id: authUser.user.id,
-          role: employeeData.role
-        });
-
-      if (roleError) {
-        console.error('Error creating employee role:', roleError);
-        // Não falhar por causa da role, apenas logar o erro
-      }
-
-      return {
-        ...employee,
-        has_auth: true
-      };
+      return result.employee;
     } catch (error) {
       console.error('Error in createEmployeeWithAuth:', error);
       throw error;
