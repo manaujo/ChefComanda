@@ -173,171 +173,127 @@ const Planos: React.FC = () => {
 
       {/* Plans Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-5xl mx-auto mb-12">
-        {/* Monthly Plan */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden border border-gray-200 dark:border-gray-700 hover:shadow-2xl transition-all duration-300">
-          <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-8 py-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-2xl font-bold text-white">Plano Mensal</h3>
-                <p className="text-blue-100 mt-1">Flexibilidade total</p>
+        {stripeProducts.map((product, index) => (
+          <div 
+            key={product.id}
+            className={`bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden border hover:shadow-2xl transition-all duration-300 relative ${
+              product.popular 
+                ? 'border-2 border-yellow-400' 
+                : 'border border-gray-200 dark:border-gray-700'
+            }`}
+          >
+            {product.popular && (
+              <div className="absolute top-0 right-0 bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-6 py-2 rounded-bl-2xl font-bold text-sm shadow-lg">
+                <div className="flex items-center">
+                  <Gift className="w-4 h-4 mr-1" />
+                  POPULAR
+                </div>
               </div>
-              <div className="p-3 bg-white/20 rounded-full">
-                <Calendar className="w-6 h-6 text-white" />
-              </div>
-            </div>
-          </div>
-          
-          <div className="p-8">
-            <div className="text-center mb-8">
-              <div className="text-5xl font-bold text-gray-900 dark:text-white mb-2">
-                R$ 120
-                <span className="text-lg font-normal text-gray-500 dark:text-gray-400">/mês</span>
-              </div>
-              <p className="text-gray-600 dark:text-gray-400">Faturamento mensal</p>
-            </div>
-            
-            <ul className="space-y-4 mb-8">
-              <li className="flex items-center">
-                <div className="p-1 bg-green-100 dark:bg-green-900 rounded-full mr-3">
-                  <Check className="w-4 h-4 text-green-600 dark:text-green-400" />
-                </div>
-                <span className="text-gray-700 dark:text-gray-300">Todas as funcionalidades</span>
-              </li>
-              <li className="flex items-center">
-                <div className="p-1 bg-green-100 dark:bg-green-900 rounded-full mr-3">
-                  <Check className="w-4 h-4 text-green-600 dark:text-green-400" />
-                </div>
-                <span className="text-gray-700 dark:text-gray-300">Suporte técnico incluído</span>
-              </li>
-              <li className="flex items-center">
-                <div className="p-1 bg-green-100 dark:bg-green-900 rounded-full mr-3">
-                  <Check className="w-4 h-4 text-green-600 dark:text-green-400" />
-                </div>
-                <span className="text-gray-700 dark:text-gray-300">Atualizações automáticas</span>
-              </li>
-              <li className="flex items-center">
-                <div className="p-1 bg-green-100 dark:bg-green-900 rounded-full mr-3">
-                  <Check className="w-4 h-4 text-green-600 dark:text-green-400" />
-                </div>
-                <span className="text-gray-700 dark:text-gray-300">Backup automático</span>
-              </li>
-            </ul>
-
-            {isCurrentPlan(stripeProducts[0]) ? (
-              <Button 
-                variant="ghost" 
-                fullWidth 
-                size="lg"
-                disabled
-                className="bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
-              >
-                Plano Atual
-              </Button>
-            ) : (
-              <StripeCheckout
-                product={stripeProducts[0]}
-                onSuccess={() => {
-                  toast.success('Redirecionando para o checkout...');
-                  refreshSubscription();
-                }}
-                onError={(error) => toast.error(error)}
-                className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-4 text-lg"
-              >
-                Começar Agora
-              </StripeCheckout>
             )}
-          </div>
-        </div>
-
-        {/* Annual Plan */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden border-2 border-yellow-400 hover:shadow-2xl transition-all duration-300 relative">
-          <div className="absolute top-0 right-0 bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-6 py-2 rounded-bl-2xl font-bold text-sm shadow-lg">
-            <div className="flex items-center">
-              <Gift className="w-4 h-4 mr-1" />
-              10% OFF
-            </div>
-          </div>
-          
-          <div className="bg-gradient-to-r from-yellow-500 to-orange-500 px-8 py-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-2xl font-bold text-white">Plano Anual</h3>
-                <p className="text-yellow-100 mt-1">Melhor custo-benefício</p>
-              </div>
-              <div className="p-3 bg-white/20 rounded-full">
-                <Award className="w-6 h-6 text-white" />
-              </div>
-            </div>
-          </div>
-          
-          <div className="p-8">
-            <div className="text-center mb-8">
-              <div className="text-5xl font-bold text-gray-900 dark:text-white mb-2">
-                R$ 1.296
-                <span className="text-lg font-normal text-gray-500 dark:text-gray-400">/ano</span>
-              </div>
-              <p className="text-gray-600 dark:text-gray-400 mb-2">Equivalente a R$ 108/mês</p>
-              <div className="inline-block bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-4 py-2 rounded-full text-sm font-medium">
-                <TrendingUp className="w-4 h-4 inline mr-1" />
-                Economia de R$ 144/ano
+            
+            <div className={`px-8 py-6 ${
+              index === 0 ? 'bg-gradient-to-r from-blue-600 to-blue-700' :
+              index === 1 ? 'bg-gradient-to-r from-purple-600 to-purple-700' :
+              'bg-gradient-to-r from-yellow-500 to-orange-500'
+            }`}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-2xl font-bold text-white">{product.name}</h3>
+                  <p className={`mt-1 ${
+                    index === 0 ? 'text-blue-100' :
+                    index === 1 ? 'text-purple-100' :
+                    'text-yellow-100'
+                  }`}>
+                    {product.name === 'Plano Mensal' ? 'Flexibilidade total' :
+                     product.name === 'Plano Trimestral' ? 'Economia trimestral' :
+                     'Melhor custo-benefício'}
+                  </p>
+                </div>
+                <div className="p-3 bg-white/20 rounded-full">
+                  {index === 0 ? <Calendar className="w-6 h-6 text-white" /> :
+                   index === 1 ? <Star className="w-6 h-6 text-white" /> :
+                   <Award className="w-6 h-6 text-white" />}
+                </div>
               </div>
             </div>
             
-            <ul className="space-y-4 mb-8">
-              <li className="flex items-center">
-                <div className="p-1 bg-green-100 dark:bg-green-900 rounded-full mr-3">
-                  <Check className="w-4 h-4 text-green-600 dark:text-green-400" />
+            <div className="p-8">
+              <div className="text-center mb-8">
+                <div className="text-5xl font-bold text-gray-900 dark:text-white mb-2">
+                  {formatPrice(product.price)}
+                  <span className="text-lg font-normal text-gray-500 dark:text-gray-400">
+                    /{product.interval === 'year' ? 'ano' : 
+                      product.name.includes('Trimestral') ? 'trimestre' : 'mês'}
+                  </span>
                 </div>
-                <span className="text-gray-700 dark:text-gray-300">Todas as funcionalidades</span>
-              </li>
-              <li className="flex items-center">
-                <div className="p-1 bg-green-100 dark:bg-green-900 rounded-full mr-3">
-                  <Check className="w-4 h-4 text-green-600 dark:text-green-400" />
-                </div>
-                <span className="text-gray-700 dark:text-gray-300">Suporte prioritário</span>
-              </li>
-              <li className="flex items-center">
-                <div className="p-1 bg-green-100 dark:bg-green-900 rounded-full mr-3">
-                  <Check className="w-4 h-4 text-green-600 dark:text-green-400" />
-                </div>
-                <span className="text-gray-700 dark:text-gray-300">Relatórios avançados</span>
-              </li>
-              <li className="flex items-center">
-                <div className="p-1 bg-green-100 dark:bg-green-900 rounded-full mr-3">
-                  <Check className="w-4 h-4 text-green-600 dark:text-green-400" />
-                </div>
-                <span className="text-gray-700 dark:text-gray-300">Consultoria gratuita</span>
-              </li>
-            </ul>
+                {product.interval === 'year' && (
+                  <>
+                    <p className="text-gray-600 dark:text-gray-400 mb-2">
+                      Equivalente a {formatPrice(getMonthlyEquivalent(product))}/mês
+                    </p>
+                    {product.discount && (
+                      <div className="inline-block bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-4 py-2 rounded-full text-sm font-medium">
+                        <TrendingUp className="w-4 h-4 inline mr-1" />
+                        Economia de {formatPrice(product.discount.savings)}/ano
+                      </div>
+                    )}
+                  </>
+                )}
+                {product.name.includes('Trimestral') && (
+                  <p className="text-gray-600 dark:text-gray-400 mb-2">
+                    Equivalente a {formatPrice(getMonthlyEquivalent(product))}/mês
+                  </p>
+                )}
+              </div>
+              
+              <ul className="space-y-4 mb-8">
+                {product.features.map((feature, featureIndex) => (
+                  <li key={featureIndex} className="flex items-center">
+                    <div className="p-1 bg-green-100 dark:bg-green-900 rounded-full mr-3">
+                      <Check className="w-4 h-4 text-green-600 dark:text-green-400" />
+                    </div>
+                    <span className="text-gray-700 dark:text-gray-300">{feature}</span>
+                  </li>
+                ))}
+              </ul>
 
-            {isCurrentPlan(stripeProducts[1]) ? (
-              <Button 
-                variant="ghost" 
-                fullWidth 
-                size="lg"
-                disabled
-                className="bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
-              >
-                Plano Atual
-              </Button>
-            ) : (
-              <StripeCheckout
-                product={stripeProducts[1]}
-                onSuccess={() => {
-                  toast.success('Redirecionando para o checkout...');
-                  refreshSubscription();
-                }}
-                onError={(error) => toast.error(error)}
-                className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white font-semibold py-4 text-lg"
-              >
-                <div className="flex items-center justify-center">
-                  <Zap className="w-5 h-5 mr-2" />
-                  Teste Grátis 7 Dias
-                </div>
-              </StripeCheckout>
-            )}
+              {isCurrentPlan(product) ? (
+                <Button 
+                  variant="ghost" 
+                  fullWidth 
+                  size="lg"
+                  disabled
+                  className="bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
+                >
+                  Plano Atual
+                </Button>
+              ) : (
+                <StripeCheckout
+                  product={product}
+                  onSuccess={() => {
+                    toast.success('Redirecionando para o checkout...');
+                    refreshSubscription();
+                  }}
+                  onError={(error) => toast.error(error)}
+                  className={`w-full font-semibold py-4 text-lg ${
+                    index === 0 ? 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800' :
+                    index === 1 ? 'bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800' :
+                    'bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600'
+                  } text-white`}
+                >
+                  {product.name.includes('Trimestral') || product.interval === 'year' ? (
+                    <div className="flex items-center justify-center">
+                      <Zap className="w-5 h-5 mr-2" />
+                      Teste Grátis 7 Dias
+                    </div>
+                  ) : (
+                    'Começar Agora'
+                  )}
+                </StripeCheckout>
+              )}
+            </div>
           </div>
-        </div>
+        ))}
       </div>
 
       {/* Features Comparison */}

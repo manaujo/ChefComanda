@@ -89,6 +89,11 @@ const Success: React.FC = () => {
                 <p className="text-blue-800 font-semibold">
                   {getSubscriptionProduct()?.name || 'Plano Ativo'}
                 </p>
+                {getSubscriptionProduct()?.description && (
+                  <p className="text-blue-700 text-sm mt-1">
+                    {getSubscriptionProduct()?.description}
+                  </p>
+                )}
                 <p className="text-blue-600 text-sm">
                   Status: {subscription.subscription_status === 'active' ? 'Ativo' : 'Processando'}
                 </p>

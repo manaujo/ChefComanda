@@ -304,141 +304,101 @@ const LandingPage: React.FC = () => {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-4xl mx-auto">
-            {/* Monthly Plan */}
-            <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-200 hover:shadow-2xl transition-all duration-300">
-              <div className="bg-gradient-to-r from-red-600 to-red-700 px-8 py-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-2xl font-bold text-white">Plano Mensal</h3>
-                    <p className="text-red-100 mt-2">Flexibilidade total</p>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
+            {stripeProducts.map((product, index) => (
+              <div 
+                key={product.id}
+                className={`bg-white rounded-2xl shadow-xl overflow-hidden border hover:shadow-2xl transition-all duration-300 relative ${
+                  product.popular 
+                    ? 'border-2 border-yellow-400 transform scale-105' 
+                    : 'border border-gray-200'
+                }`}
+              >
+                {product.popular && (
+                  <div className="absolute top-0 right-0 bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-4 py-2 rounded-bl-lg font-bold text-sm">
+                    <div className="flex items-center">
+                      <Gift className="w-4 h-4 mr-1" />
+                      POPULAR
+                    </div>
                   </div>
-                  <div className="p-3 bg-white/20 rounded-full">
-                    <Calendar className="w-6 h-6 text-white" />
-                  </div>
-                </div>
-              </div>
-              <div className="p-8">
-                <div className="text-center mb-8">
-                  <div className="text-5xl font-bold text-gray-900 mb-2">
-                    R$ 120
-                    <span className="text-lg font-normal text-gray-500">/mês</span>
-                  </div>
-                  <p className="text-gray-600">Faturamento mensal</p>
-                </div>
+                )}
                 
-                <ul className="space-y-4 mb-8">
-                  <li className="flex items-center">
-                    <div className="p-1 bg-green-100 rounded-full mr-3">
-                      <Check className="w-4 h-4 text-green-600" />
+                <div className={`px-6 py-6 ${
+                  index === 0 ? 'bg-gradient-to-r from-blue-600 to-blue-700' :
+                  index === 1 ? 'bg-gradient-to-r from-purple-600 to-purple-700' :
+                  'bg-gradient-to-r from-yellow-500 to-orange-500'
+                }`}>
+                  <div className="text-center">
+                    <div className="p-3 bg-white/20 rounded-full w-fit mx-auto mb-4">
+                      {index === 0 ? <Calendar className="w-6 h-6 text-white" /> :
+                       index === 1 ? <Star className="w-6 h-6 text-white" /> :
+                       <Award className="w-6 h-6 text-white" />}
                     </div>
-                    <span className="text-gray-700">Todas as funcionalidades</span>
-                  </li>
-                  <li className="flex items-center">
-                    <div className="p-1 bg-green-100 rounded-full mr-3">
-                      <Check className="w-4 h-4 text-green-600" />
-                    </div>
-                    <span className="text-gray-700">Suporte técnico incluído</span>
-                  </li>
-                  <li className="flex items-center">
-                    <div className="p-1 bg-green-100 rounded-full mr-3">
-                      <Check className="w-4 h-4 text-green-600" />
-                    </div>
-                    <span className="text-gray-700">Atualizações automáticas</span>
-                  </li>
-                  <li className="flex items-center">
-                    <div className="p-1 bg-green-100 rounded-full mr-3">
-                      <Check className="w-4 h-4 text-green-600" />
-                    </div>
-                    <span className="text-gray-700">Backup automático</span>
-                  </li>
-                </ul>
-
-                <Link to="/signup">
-                  <Button 
-                    variant="primary" 
-                    fullWidth 
-                    size="lg"
-                    className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800"
-                  >
-                    Começar Agora
-                  </Button>
-                </Link>
-              </div>
-            </div>
-
-            {/* Annual Plan */}
-            <div className="bg-white rounded-2xl shadow-xl overflow-hidden border-2 border-yellow-400 hover:shadow-2xl transition-all duration-300 relative">
-              <div className="absolute top-0 right-0 bg-yellow-400 text-yellow-900 px-4 py-2 rounded-bl-lg font-semibold text-sm">
-                <div className="flex items-center">
-                  <Gift className="w-4 h-4 mr-1" />
-                  10% OFF
-                </div>
-              </div>
-              <div className="bg-gradient-to-r from-yellow-500 to-orange-500 px-8 py-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-2xl font-bold text-white">Plano Anual</h3>
-                    <p className="text-yellow-100 mt-2">Melhor custo-benefício</p>
-                  </div>
-                  <div className="p-3 bg-white/20 rounded-full">
-                    <Award className="w-6 h-6 text-white" />
-                  </div>
-                </div>
-              </div>
-              <div className="p-8">
-                <div className="text-center mb-8">
-                  <div className="text-5xl font-bold text-gray-900 mb-2">
-                    R$ 1.296
-                    <span className="text-lg font-normal text-gray-500">/ano</span>
-                  </div>
-                  <p className="text-gray-600">Equivalente a R$ 108/mês</p>
-                  <div className="inline-block bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium mt-2">
-                    <TrendingUp className="w-4 h-4 inline mr-1" />
-                    Economia de R$ 144/ano
+                    <h3 className="text-xl font-bold text-white">{product.name}</h3>
+                    <p className={`mt-2 text-sm ${
+                      index === 0 ? 'text-blue-100' :
+                      index === 1 ? 'text-purple-100' :
+                      'text-yellow-100'
+                    }`}>
+                      {product.name === 'Plano Mensal' ? 'Flexibilidade total' :
+                       product.name === 'Plano Trimestral' ? 'Economia trimestral' :
+                       'Melhor custo-benefício'}
+                    </p>
                   </div>
                 </div>
                 
-                <ul className="space-y-4 mb-8">
-                  <li className="flex items-center">
-                    <div className="p-1 bg-green-100 rounded-full mr-3">
-                      <Check className="w-4 h-4 text-green-600" />
+                <div className="p-6">
+                  <div className="text-center mb-6">
+                    <div className="text-3xl font-bold text-gray-900 mb-2">
+                      {formatPrice(product.price)}
+                      <span className="text-sm font-normal text-gray-500">
+                        /{product.interval === 'year' ? 'ano' : 
+                          product.name.includes('Trimestral') ? 'trimestre' : 'mês'}
+                      </span>
                     </div>
-                    <span className="text-gray-700">Todas as funcionalidades</span>
-                  </li>
-                  <li className="flex items-center">
-                    <div className="p-1 bg-green-100 rounded-full mr-3">
-                      <Check className="w-4 h-4 text-green-600" />
-                    </div>
-                    <span className="text-gray-700">Suporte prioritário</span>
-                  </li>
-                  <li className="flex items-center">
-                    <div className="p-1 bg-green-100 rounded-full mr-3">
-                      <Check className="w-4 h-4 text-green-600" />
-                    </div>
-                    <span className="text-gray-700">Relatórios avançados</span>
-                  </li>
-                  <li className="flex items-center">
-                    <div className="p-1 bg-green-100 rounded-full mr-3">
-                      <Check className="w-4 h-4 text-green-600" />
-                    </div>
-                    <span className="text-gray-700">Consultoria gratuita</span>
-                  </li>
-                </ul>
+                    {(product.interval === 'year' || product.name.includes('Trimestral')) && (
+                      <p className="text-gray-600 text-sm">
+                        Equivalente a {formatPrice(getMonthlyEquivalent(product))}/mês
+                      </p>
+                    )}
+                    {product.discount && (
+                      <div className="inline-block bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-medium mt-2">
+                        <TrendingUp className="w-3 h-3 inline mr-1" />
+                        Economia de {formatPrice(product.discount.savings)}/ano
+                      </div>
+                    )}
+                  </div>
+                  
+                  <ul className="space-y-3 mb-6">
+                    {product.features.slice(0, 4).map((feature, featureIndex) => (
+                      <li key={featureIndex} className="flex items-center text-sm">
+                        <div className="p-1 bg-green-100 rounded-full mr-3">
+                          <Check className="w-3 h-3 text-green-600" />
+                        </div>
+                        <span className="text-gray-700">{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
 
-                <Link to="/signup">
-                  <Button 
-                    variant="primary" 
-                    fullWidth 
-                    size="lg"
-                    className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600"
-                    icon={<Zap size={20} />}
-                  >
-                    Teste Grátis 7 Dias
-                  </Button>
-                </Link>
+                  <Link to="/signup">
+                    <Button 
+                      variant="primary" 
+                      fullWidth 
+                      size="lg"
+                      className={`${
+                        index === 0 ? 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800' :
+                        index === 1 ? 'bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800' :
+                        'bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600'
+                      } font-semibold`}
+                      icon={product.name.includes('Trimestral') || product.interval === 'year' ? <Zap size={18} /> : undefined}
+                    >
+                      {product.name.includes('Trimestral') || product.interval === 'year' ? 
+                        'Teste Grátis 7 Dias' : 'Começar Agora'}
+                    </Button>
+                  </Link>
+                </div>
               </div>
-            </div>
+            ))}
           </div>
         </div>
       </section>

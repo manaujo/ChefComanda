@@ -33,7 +33,7 @@ const StripeCheckout: React.FC<StripeCheckoutProps> = ({
       setLoading(true);
       
       // Show loading toast
-      toast.loading('Preparando checkout...', { id: 'checkout-loading' });
+      toast.loading(`Preparando checkout para ${product.name}...`, { id: 'checkout-loading' });
       
       const { url } = await StripeService.createCheckoutSession({
         priceId: product.priceId,
@@ -47,7 +47,7 @@ const StripeCheckout: React.FC<StripeCheckoutProps> = ({
       
       if (url) {
         // Show success message before redirect
-        toast.success('Redirecionando para o pagamento seguro...', { duration: 2000 });
+        toast.success(`Redirecionando para o pagamento do ${product.name}...`, { duration: 2000 });
         
         // Small delay to show the success message
         setTimeout(() => {
