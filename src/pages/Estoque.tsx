@@ -1,7 +1,22 @@
-import React, { useState, useContext, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Search, Package, AlertTriangle, TrendingDown, Edit, Trash2 } from 'lucide-react';
-import RestauranteContext from '../contexts/RestauranteContext';
+import { useAuth } from '../contexts/AuthContext';
 import { useEmployeeAuth } from '../hooks/useEmployeeAuth';
+import { CRUDService } from '../services/CRUDService';
+import { supabase } from '../services/supabase';
+import toast from 'react-hot-toast';
+
+interface Insumo {
+  id: string;
+  nome: string;
+  categoria: string;
+  quantidade_atual: number;
+  quantidade_minima: number;
+  unidade_medida: string;
+  preco_unitario: number;
+  fornecedor?: string;
+  restaurante_id: string;
+}
 
 interface SaidaEstoque {
   id: string;
@@ -22,13 +37,15 @@ const motivosSaida = [
 ];
 
 export default function Estoque() {
-  const { insumos, adicionarInsumo, editarInsumo, removerInsumo } = useContext(RestauranteContext);
+  const { user } = useAuth();
   const { employee } = useEmployeeAuth();
+  const [insumos, setInsumos] = useState<Insumo[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [showSaidaModal, setShowSaidaModal] = useState(false);
-  const [editingInsumo, setEditingInsumo] = useState(null);
-  const [selectedInsumo, setSelectedInsumo] = useState(null);
+  const [editingInsumo, setEditingInsumo] = useState<Insumo | null>(null);
+  const [selectedInsumo, setSelectedInsumo] = useState<Insumo | null>(null);
   const [saidaForm, setSaidaForm] = useState({
     quantidade: '',
     motivo: '',
@@ -45,6 +62,27 @@ export default function Estoque() {
     fornecedor: ''
   });
 
+  useEffect(() => {
+    if (user?.restaurante_id) {
+      loadInsumos();
+    }
+  }, [user?.restaurante_id]);
+
+  const loadInsumos = async () => {
+    try {
+      setLoading(true);
+      const data = await CRUDService.read('insumos', { 
+        restaurante_id: user?.restaurante_id 
+      });
+      setInsumos(data || []);
+    } catch (error) {
+      console.error('Error loading insumos:', error);
+      toast.error('Erro ao carregar insumos');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const filteredInsumos = insumos.filter(insumo =>
     insumo.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
     insumo.categoria.toLowerCase().includes(searchTerm.toLowerCase())
@@ -54,54 +92,66 @@ export default function Estoque() {
     insumo => insumo.quantidade_atual <= insumo.quantidade_minima
   );
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (editingInsumo) {
-      editarInsumo(editingInsumo.id, {
+    try {
+      const insumoData = {
         ...novoInsumo,
         quantidade_atual: parseFloat(novoInsumo.quantidade_atual),
         quantidade_minima: parseFloat(novoInsumo.quantidade_minima),
-        preco_unitario: parseFloat(novoInsumo.preco_unitario)
-      });
-    } else {
-      adicionarInsumo({
-        ...novoInsumo,
-        quantidade_atual: parseFloat(novoInsumo.quantidade_atual),
-        quantidade_minima: parseFloat(novoInsumo.quantidade_minima),
-        preco_unitario: parseFloat(novoInsumo.preco_unitario)
-      });
+        preco_unitario: parseFloat(novoInsumo.preco_unitario),
+        restaurante_id: user?.restaurante_id
+      };
+
+      if (editingInsumo) {
+        await CRUDService.update('insumos', editingInsumo.id, insumoData);
+        toast.success('Insumo atualizado com sucesso!');
+      } else {
+        await CRUDService.create('insumos', insumoData);
+        toast.success('Insumo adicionado com sucesso!');
+      }
+      
+      await loadInsumos();
+      resetForm();
+    } catch (error) {
+      console.error('Error saving insumo:', error);
+      toast.error('Erro ao salvar insumo');
     }
-    resetForm();
   };
 
-  const handleSaidaSubmit = (e) => {
+  const handleSaidaSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const quantidade = parseFloat(saidaForm.quantidade);
     
-    if (quantidade > selectedInsumo.quantidade_atual) {
-      alert('Quantidade de saída não pode ser maior que o estoque atual');
+    if (quantidade > selectedInsumo!.quantidade_atual) {
+      toast.error('Quantidade de saída não pode ser maior que o estoque atual');
       return;
     }
 
-    // Registrar saída e atualizar estoque
-    const novaQuantidade = selectedInsumo.quantidade_atual - quantidade;
-    editarInsumo(selectedInsumo.id, {
-      ...selectedInsumo,
-      quantidade_atual: novaQuantidade
-    });
+    try {
+      // Registrar movimentação de estoque
+      await supabase.rpc('registrar_movimentacao_estoque', {
+        p_insumo_id: selectedInsumo!.id,
+        p_quantidade: quantidade,
+        p_tipo: 'saida',
+        p_motivo: saidaForm.motivo,
+        p_observacoes: saidaForm.observacoes,
+        p_funcionario_id: employee?.id
+      });
 
-    // Aqui você pode adicionar lógica para salvar o histórico de saída
-    console.log('Saída registrada:', {
-      insumo: selectedInsumo.nome,
-      quantidade,
-      motivo: saidaForm.motivo,
-      observacoes: saidaForm.observacoes,
-      funcionario: employee?.nome,
-      data: new Date().toISOString()
-    });
+      // Atualizar estoque local
+      const novaQuantidade = selectedInsumo!.quantidade_atual - quantidade;
+      await CRUDService.update('insumos', selectedInsumo!.id, {
+        quantidade_atual: novaQuantidade
+      });
 
-    resetSaidaForm();
-    alert('Saída registrada com sucesso!');
+      await loadInsumos();
+      resetSaidaForm();
+      toast.success('Saída registrada com sucesso!');
+    } catch (error) {
+      console.error('Error registering stock movement:', error);
+      toast.error('Erro ao registrar saída');
+    }
   };
 
   const resetForm = () => {
@@ -128,7 +178,7 @@ export default function Estoque() {
     setShowSaidaModal(false);
   };
 
-  const handleEdit = (insumo) => {
+  const handleEdit = (insumo: Insumo) => {
     setEditingInsumo(insumo);
     setNovoInsumo({
       nome: insumo.nome,
@@ -142,10 +192,34 @@ export default function Estoque() {
     setShowModal(true);
   };
 
-  const handleSaida = (insumo) => {
+  const handleSaida = (insumo: Insumo) => {
     setSelectedInsumo(insumo);
     setShowSaidaModal(true);
   };
+
+  const handleRemove = async (id: string) => {
+    if (window.confirm('Tem certeza que deseja remover este insumo?')) {
+      try {
+        await CRUDService.delete('insumos', id);
+        await loadInsumos();
+        toast.success('Insumo removido com sucesso!');
+      } catch (error) {
+        console.error('Error removing insumo:', error);
+        toast.error('Erro ao remover insumo');
+      }
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="p-6 max-w-7xl mx-auto">
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <span className="ml-2 text-gray-600">Carregando insumos...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
@@ -311,7 +385,7 @@ export default function Estoque() {
                         <Edit className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => removerInsumo(insumo.id)}
+                        onClick={() => handleRemove(insumo.id)}
                         className="text-red-600 hover:text-red-900 p-1 rounded"
                         title="Remover"
                       >
@@ -325,7 +399,7 @@ export default function Estoque() {
           </table>
         </div>
 
-        {filteredInsumos.length === 0 && (
+        {filteredInsumos.length === 0 && !loading && (
           <div className="text-center py-12">
             <Package className="w-12 h-12 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum insumo encontrado</h3>

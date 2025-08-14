@@ -83,13 +83,24 @@ const CardapioPublico: React.FC = () => {
         .from("restaurantes")
         .select("*")
         .eq("id", restauranteId)
-        .single();
+        .maybeSingle();
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error loading restaurant data:", error);
+        toast.error("Erro ao carregar dados do restaurante");
+        return;
+      }
+
+      if (!data) {
+        setRestaurante(null);
+        toast.error("Restaurante não encontrado");
+        return;
+      }
+
       setRestaurante(data);
     } catch (error) {
       console.error("Error loading restaurant data:", error);
-      toast.error("Restaurante não encontrado");
+      toast.error("Erro ao carregar dados do restaurante");
     }
   };
 
