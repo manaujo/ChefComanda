@@ -134,6 +134,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       
       if (employeeData) {
         // É funcionário - carregar dados específicos
+        
+        // Check if employee has a valid restaurant_id
+        if (!employeeData.restaurant_id) {
+          setState({
+            user,
+            userRole: null,
+            loading: false,
+            displayName: employeeData.name,
+            isEmployee: true,
+            employeeData,
+            restaurantId: null,
+            currentPlan: null
+          });
+          
+          toast.error('Funcionário não está associado a um restaurante. Contate o administrador.');
+          console.error('Employee has no restaurant_id assigned:', employeeData);
+          return;
+        }
+        
         setState({
           user,
           userRole: employeeData.role as any,
