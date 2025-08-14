@@ -211,6 +211,7 @@ const EmployeeManagement: React.FC = () => {
           <option value="waiter">Garçom</option>
           <option value="cashier">Caixa</option>
           <option value="stock">Estoque</option>
+          <option value="kitchen">Cozinha</option>
         </select>
         <div className="flex items-center border p-2 rounded">
           <input

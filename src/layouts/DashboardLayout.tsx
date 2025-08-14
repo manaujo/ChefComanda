@@ -43,7 +43,7 @@ const DashboardLayout: React.FC = () => {
       { name: 'Relatórios', path: '/dashboard/relatorios', icon: <PieChart size={20} />, permission: 'relatorios' },
       { name: 'CMV', path: '/dashboard/cmv', icon: <Calculator size={20} />, permission: 'cmv' },
       { name: 'Cardápio Online', path: '/dashboard/cardapio-online', icon: <QrCode size={20} />, permission: 'cardapio-online' },
-      { name: 'Editor de Cardápio', path: '/dashboard/cardapio-online/editor', icon: <PenSquare size={20} />, permission: 'produtos' },
+      { name: 'Editor de Cardápio', path: '/dashboard/cardapio-online/editor', icon: <PenSquare size={20} />, permission: 'cardapio-online-editor' },
       { name: 'Suporte', path: '/dashboard/suporte', icon: <Headphones size={20} />, permission: 'suporte' },
     ];
 

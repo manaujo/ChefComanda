@@ -1,4 +1,4 @@
-type UserRole = 'admin' | 'cashier' | 'kitchen' | 'waiter';
+type UserRole = 'admin' | 'cashier' | 'kitchen' | 'waiter' | 'stock';
 
 type ThemeMode = 'light' | 'dark';
 

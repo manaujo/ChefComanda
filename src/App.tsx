@@ -88,11 +88,11 @@ function App() {
                 <Route path="cardapio" element={<PrivateRoute requiredPermission="produtos"><Cardapio /></PrivateRoute>} />
                 <Route path="estoque" element={<PrivateRoute requiredPermission="estoque"><Estoque /></PrivateRoute>} />
                 <Route path="relatorios" element={<PrivateRoute allowedRoles={['admin', 'cashier']}><Relatorios /></PrivateRoute>} />
-                <Route path="ifood" element={<PrivateRoute requiredPermission="caixa"><IFoodPedidos /></PrivateRoute>} />
+                <Route path="ifood" element={<PrivateRoute requiredPermission="ifood"><IFoodPedidos /></PrivateRoute>} />
                 <Route path="caixa" element={<PrivateRoute requiredPermission="caixa"><CaixaRegistradora /></PrivateRoute>} />
                 <Route path="pdv" element={<PrivateRoute requiredPermission="pdv"><PDV /></PrivateRoute>} />
                 <Route path="cardapio-online" element={<PrivateRoute allowedRoles={['admin']}><CardapioOnline /></PrivateRoute>} />
-                <Route path="cardapio-online/editor" element={<PrivateRoute requiredPermission="produtos"><CardapioOnlineEditor /></PrivateRoute>} />
+                <Route path="cardapio-online/editor" element={<PrivateRoute requiredPermission="cardapio-online-editor"><CardapioOnlineEditor /></PrivateRoute>} />
                 <Route path="cmv" element={<PrivateRoute allowedRoles={['admin']}><CMV /></PrivateRoute>} />
                 <Route path="suporte" element={<PrivateRoute><Suporte /></PrivateRoute>} />
                 

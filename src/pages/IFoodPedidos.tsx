@@ -69,7 +69,7 @@ const DeliveryPedidos: React.FC = () => {
   const [loading, setLoading] = useState(false);
 
   // Verificar se o usuário tem permissão para acessar pedidos iFood
-  const temPermissao = hasPermission('caixa') || (userRole === 'admin' && !isEmployee);
+  const temPermissao = hasPermission('ifood') || (userRole === 'admin' && !isEmployee);
 
   if (!temPermissao) {
     return (

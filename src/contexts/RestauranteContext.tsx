@@ -215,11 +215,33 @@ export const RestauranteProvider: React.FC<RestauranteProviderProps> = ({ childr
     try {
       if (!user) return;
 
-      const { data: companyData } = await supabase
-        .from('company_profiles')
-        .select('id')
-        .eq('user_id', user.id)
-        .maybeSingle();
+      let companyData = null;
+      
+      if (isEmployee && authRestaurantId) {
+        // Se é funcionário, buscar empresa através do restaurante
+        const { data: restauranteData } = await supabase
+          .from('restaurantes')
+          .select('user_id')
+          .eq('id', authRestaurantId)
+          .single();
+        
+        if (restauranteData) {
+          const { data: company } = await supabase
+            .from('company_profiles')
+            .select('id')
+            .eq('user_id', restauranteData.user_id)
+            .maybeSingle();
+          companyData = company;
+        }
+      } else {
+        // Se é proprietário, buscar empresa diretamente
+        const { data: company } = await supabase
+          .from('company_profiles')
+          .select('id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        companyData = company;
+      }
 
       if (companyData) {
         const { data: funcionariosData, error } = await supabase
@@ -238,7 +260,7 @@ export const RestauranteProvider: React.FC<RestauranteProviderProps> = ({ childr
           has_auth: !!emp.employee_auth?.id
         }));
         
-        setFuncionarios(funcionariosData || []);
+        setFuncionarios(formattedFuncionarios || []);
       }
     } catch (error) {
       console.error('Error loading funcionarios:', error);
