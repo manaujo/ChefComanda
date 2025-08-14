@@ -23,17 +23,15 @@ interface OperadorDisponivel {
 }
 
 const CaixaRegistradora: React.FC = () => {
-  const { user } = useAuth();
+  const { user, isEmployee, employeeData, displayName } = useAuth();
   const { restaurante, funcionarios } = useRestaurante();
   const [loading, setLoading] = useState(false);
   const [caixaAtual, setCaixaAtual] = useState<CaixaOperador | null>(null);
   const [movimentacoes, setMovimentacoes] = useState<MovimentacaoCaixa[]>([]);
-  const [operadoresDisponiveis, setOperadoresDisponiveis] = useState<OperadorDisponivel[]>([]);
   const [showAbrirModal, setShowAbrirModal] = useState(false);
   const [showMovimentacaoModal, setShowMovimentacaoModal] = useState(false);
   const [showFecharModal, setShowFecharModal] = useState(false);
   const [valorInicial, setValorInicial] = useState('');
-  const [operadorSelecionado, setOperadorSelecionado] = useState('');
   const [valorFinal, setValorFinal] = useState('');
   const [observacao, setObservacao] = useState('');
   const [novaMovimentacao, setNovaMovimentacao] = useState({
@@ -47,31 +45,23 @@ const CaixaRegistradora: React.FC = () => {
   useEffect(() => {
     if (user && restaurante) {
       loadCaixaAtual();
-      loadOperadoresDisponiveis();
     }
   }, [user, restaurante]);
 
-  const loadOperadoresDisponiveis = async () => {
-    try {
-      const operadores: OperadorDisponivel[] = [];
-      
-      // Adicionar funcionários com função de caixa
-      const funcionariosCaixa = funcionarios.filter(func => 
-        (func.role === 'cashier' || func.role === 'admin') && func.active
-      );
-
-      funcionariosCaixa.forEach(func => {
-        operadores.push({
-          id: func.id,
-          nome: func.name,
-          tipo: 'funcionario',
-          role: func.role
-        });
-      });
-
-      setOperadoresDisponiveis(operadores);
-    } catch (error) {
-      console.error('Error loading operators:', error);
+  // Obter dados do operador atual
+  const getOperadorAtual = () => {
+    if (isEmployee && employeeData) {
+      return {
+        id: employeeData.id,
+        nome: employeeData.name,
+        tipo: 'funcionario' as const
+      };
+    } else {
+      return {
+        id: user?.id || '',
+        nome: displayName || user?.user_metadata?.name || 'Usuário',
+        tipo: 'usuario' as const
+      };
     }
   };
 
@@ -97,22 +87,19 @@ const CaixaRegistradora: React.FC = () => {
     try {
       setLoading(true);
 
+      if (!restaurante?.id) {
+        throw new Error('Restaurante não encontrado. Faça login novamente.');
+      }
+
       const valor = parseFloat(valorInicial);
       if (isNaN(valor) || valor < 0) {
         throw new Error('Valor inicial inválido');
       }
 
-      if (!operadorSelecionado) {
-        throw new Error('Selecione um operador');
-      }
-
-      const operador = operadoresDisponiveis.find(op => op.id === operadorSelecionado);
-      if (!operador) {
-        throw new Error('Operador não encontrado');
-      }
+      const operador = getOperadorAtual();
 
       const caixa = await CaixaService.abrirCaixa({
-        restauranteId: restaurante?.id || '',
+        restauranteId: restaurante.id,
         operadorId: operador.id,
         operadorNome: operador.nome,
         operadorTipo: operador.tipo,
@@ -122,7 +109,6 @@ const CaixaRegistradora: React.FC = () => {
       setCaixaAtual(caixa);
       setShowAbrirModal(false);
       setValorInicial('');
-      setOperadorSelecionado('');
       toast.success(`Caixa aberto por ${operador.nome}!`);
       
       // Salvar no localStorage para persistir entre navegações
@@ -503,26 +489,19 @@ const CaixaRegistradora: React.FC = () => {
                     </h3>
                     <div className="mt-2 space-y-4">
                       <p className="text-sm text-gray-500">
-                        Selecione o operador responsável e informe o valor inicial em dinheiro.
+                        Informe o valor inicial em dinheiro para abrir o caixa.
                       </p>
                       
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">
-                          Operador Responsável
-                        </label>
-                        <select
-                          value={operadorSelecionado}
-                          onChange={(e) => setOperadorSelecionado(e.target.value)}
-                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                          required
-                        >
-                          <option value="">Selecione um operador</option>
-                          {operadoresDisponiveis.map(operador => (
-                            <option key={operador.id} value={operador.id}>
-                              {operador.nome} ({operador.tipo === 'funcionario' ? 'Funcionário' : 'Usuário Principal'})
-                            </option>
-                          ))}
-                        </select>
+                      <div className="bg-gray-50 p-4 rounded-lg">
+                        <div className="flex items-center">
+                          <User className="h-5 w-5 text-gray-500 mr-2" />
+                          <div>
+                            <p className="text-sm font-medium text-gray-700">Operador</p>
+                            <p className="text-sm text-gray-600">
+                              {getOperadorAtual().nome} ({getOperadorAtual().tipo === 'funcionario' ? 'Funcionário' : 'Usuário Principal'})
+                            </p>
+                          </div>
+                        </div>
                       </div>
 
                       <div>
@@ -554,7 +533,7 @@ const CaixaRegistradora: React.FC = () => {
                   onClick={handleAbrirCaixa}
                   isLoading={loading}
                   className="w-full sm:w-auto sm:ml-3"
-                  disabled={!operadorSelecionado || !valorInicial}
+                  disabled={!valorInicial || !restaurante?.id}
                 >
                   Abrir Caixa
                 </Button>

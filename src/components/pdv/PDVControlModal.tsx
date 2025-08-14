@@ -15,13 +15,6 @@ interface PDVControlModalProps {
   onCaixaChange: (caixa: any) => void;
 }
 
-interface OperadorDisponivel {
-  id: string;
-  nome: string;
-  tipo: 'funcionario' | 'usuario';
-  role?: string;
-}
-
 const PDVControlModal: React.FC<PDVControlModalProps> = ({
   isOpen,
   onClose,
@@ -29,12 +22,10 @@ const PDVControlModal: React.FC<PDVControlModalProps> = ({
   caixaAtual,
   onCaixaChange
 }) => {
-  const { user } = useAuth();
+  const { user, isEmployee, employeeData, displayName } = useAuth();
   const { restaurante, funcionarios } = useRestaurante();
   const [loading, setLoading] = useState(false);
-  const [operadoresDisponiveis, setOperadoresDisponiveis] = useState<OperadorDisponivel[]>([]);
   const [formData, setFormData] = useState({
-    operadorSelecionado: '',
     valorInicial: '',
     valorFinal: '',
     observacao: ''
@@ -42,39 +33,30 @@ const PDVControlModal: React.FC<PDVControlModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
-      loadOperadoresDisponiveis();
       if (mode === 'fechar' && caixaAtual) {
         // Pre-fill with current cash register data
         setFormData(prev => ({
           ...prev,
-          operadorSelecionado: caixaAtual.operador_id,
           valorFinal: ''
         }));
       }
     }
   }, [isOpen, mode, caixaAtual]);
 
-  const loadOperadoresDisponiveis = async () => {
-    try {
-      const operadores: OperadorDisponivel[] = [];
-      
-      // Adicionar funcionários com função de caixa
-      const funcionariosCaixa = funcionarios.filter(func => 
-        (func.role === 'cashier' || func.role === 'admin') && func.active
-      );
-
-      funcionariosCaixa.forEach(func => {
-        operadores.push({
-          id: func.id,
-          nome: func.name,
-          tipo: 'funcionario',
-          role: func.role
-        });
-      });
-
-      setOperadoresDisponiveis(operadores);
-    } catch (error) {
-      console.error('Error loading operators:', error);
+  // Obter dados do operador atual
+  const getOperadorAtual = () => {
+    if (isEmployee && employeeData) {
+      return {
+        id: employeeData.id,
+        nome: employeeData.name,
+        tipo: 'funcionario' as const
+      };
+    } else {
+      return {
+        id: user?.id || '',
+        nome: displayName || user?.user_metadata?.name || 'Usuário',
+        tipo: 'usuario' as const
+      };
     }
   };
 
@@ -87,14 +69,7 @@ const PDVControlModal: React.FC<PDVControlModalProps> = ({
         throw new Error('Valor inicial inválido');
       }
 
-      if (!formData.operadorSelecionado) {
-        throw new Error('Selecione um operador');
-      }
-
-      const operador = operadoresDisponiveis.find(op => op.id === formData.operadorSelecionado);
-      if (!operador) {
-        throw new Error('Operador não encontrado');
-      }
+      const operador = getOperadorAtual();
 
       const caixa = await CaixaService.abrirCaixa({
         restauranteId: restaurante?.id || '',
@@ -165,7 +140,6 @@ const PDVControlModal: React.FC<PDVControlModalProps> = ({
 
   const resetForm = () => {
     setFormData({
-      operadorSelecionado: '',
       valorInicial: '',
       valorFinal: '',
       observacao: ''
@@ -173,6 +147,8 @@ const PDVControlModal: React.FC<PDVControlModalProps> = ({
   };
 
   if (!isOpen) return null;
+
+  const operadorAtual = getOperadorAtual();
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-black bg-opacity-50">
@@ -202,29 +178,22 @@ const PDVControlModal: React.FC<PDVControlModalProps> = ({
                     <div>
                       <h4 className="text-sm font-medium text-blue-800">Abertura do PDV</h4>
                       <p className="text-sm text-blue-600">
-                        Selecione o operador responsável e informe o valor inicial em dinheiro.
+                        Informe o valor inicial em dinheiro para abrir o PDV.
                       </p>
                     </div>
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Operador Responsável
-                  </label>
-                  <select
-                    value={formData.operadorSelecionado}
-                    onChange={(e) => setFormData({ ...formData, operadorSelecionado: e.target.value })}
-                    className="w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                    required
-                  >
-                    <option value="">Selecione um operador</option>
-                    {operadoresDisponiveis.map(operador => (
-                      <option key={operador.id} value={operador.id}>
-                        {operador.nome} ({operador.tipo === 'funcionario' ? 'Funcionário' : 'Usuário Principal'})
-                      </option>
-                    ))}
-                  </select>
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <div className="flex items-center">
+                    <User className="h-5 w-5 text-gray-500 mr-2" />
+                    <div>
+                      <p className="text-sm font-medium text-gray-700">Operador</p>
+                      <p className="text-sm text-gray-600">
+                        {operadorAtual.nome} ({operadorAtual.tipo === 'funcionario' ? 'Funcionário' : 'Usuário Principal'})
+                      </p>
+                    </div>
+                  </div>
                 </div>
 
                 <div>
@@ -340,7 +309,7 @@ const PDVControlModal: React.FC<PDVControlModalProps> = ({
               isLoading={loading}
               disabled={
                 mode === 'abrir' 
-                  ? !formData.operadorSelecionado || !formData.valorInicial
+                  ? !formData.valorInicial
                   : !formData.valorFinal
               }
             >

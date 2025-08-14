@@ -1,768 +1,555 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Plus, Search, Filter, Edit2, Trash2, Upload, Download, 
-  FileSpreadsheet, AlertTriangle, MoreVertical, X
-} from 'lucide-react';
-import Button from '../components/ui/Button';
-import { useRestaurante } from '../contexts/RestauranteContext';
-import { useAuth } from '../contexts/AuthContext';
-import { formatarDinheiro } from '../utils/formatters';
-import { supabase } from '../services/supabase';
-import toast from 'react-hot-toast';
+import React, { useState, useContext, useEffect } from 'react';
+import { Plus, Search, Package, AlertTriangle, TrendingDown, Edit, Trash2 } from 'lucide-react';
+import RestauranteContext from '../contexts/RestauranteContext';
+import { useEmployeeAuth } from '../hooks/useEmployeeAuth';
 
-interface Insumo {
+interface SaidaEstoque {
   id: string;
-  nome: string;
-  descricao?: string;
-  unidade_medida: string;
+  insumo_id: string;
   quantidade: number;
-  quantidade_minima: number;
-  data_validade?: string;
-  preco_unitario?: number;
-  ativo: boolean;
+  motivo: string;
+  observacoes?: string;
+  funcionario_id: string;
+  data_saida: string;
 }
 
-const Estoque: React.FC = () => {
-  const { user } = useAuth();
-  const [insumos, setInsumos] = useState<Insumo[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [busca, setBusca] = useState('');
-  const [filtroStatus, setFiltroStatus] = useState<'todos' | 'ativos' | 'vencidos' | 'proximos'>('todos');
-  const [visualizacao, setVisualizacao] = useState<'cards' | 'tabela'>('cards');
+const motivosSaida = [
+  'Uso na cozinha',
+  'Vencimento',
+  'Perda/Quebra',
+  'Transferência',
+  'Outros'
+];
+
+export default function Estoque() {
+  const { insumos, adicionarInsumo, editarInsumo, removerInsumo } = useContext(RestauranteContext);
+  const { employee } = useEmployeeAuth();
+  const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [selectedInsumo, setSelectedInsumo] = useState<Insumo | null>(null);
-  const [formData, setFormData] = useState({
-    nome: '',
-    descricao: '',
-    unidade_medida: 'un',
-    quantidade: 0,
-    quantidade_minima: 0,
-    data_validade: '',
-    preco_unitario: 0
+  const [showSaidaModal, setShowSaidaModal] = useState(false);
+  const [editingInsumo, setEditingInsumo] = useState(null);
+  const [selectedInsumo, setSelectedInsumo] = useState(null);
+  const [saidaForm, setSaidaForm] = useState({
+    quantidade: '',
+    motivo: '',
+    observacoes: ''
   });
 
-  useEffect(() => {
-    loadInsumos();
-  }, []);
+  const [novoInsumo, setNovoInsumo] = useState({
+    nome: '',
+    categoria: '',
+    quantidade_atual: '',
+    quantidade_minima: '',
+    unidade_medida: '',
+    preco_unitario: '',
+    fornecedor: ''
+  });
 
-  const loadInsumos = async () => {
-    try {
-      setLoading(true);
-      
-      // Get or create user's restaurant
-      let { data: restaurante, error: restauranteError } = await supabase
-        .from('restaurantes')
-        .select('*')
-        .eq('user_id', user?.id)
-        .maybeSingle();
+  const filteredInsumos = insumos.filter(insumo =>
+    insumo.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    insumo.categoria.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
-      if (restauranteError && restauranteError.code !== 'PGRST116') {
-        console.error('Error getting restaurant:', restauranteError);
-        throw new Error('Restaurante não encontrado');
-      }
+  const insumosComEstoqueBaixo = insumos.filter(
+    insumo => insumo.quantidade_atual <= insumo.quantidade_minima
+  );
 
-      // Create restaurant if it doesn't exist
-      if (!restaurante) {
-        console.log('Creating restaurant for user:', user?.id);
-        const { data: newRestaurante, error: createError } = await supabase
-          .from('restaurantes')
-          .insert({
-            user_id: user?.id,
-            nome: `Restaurante de ${user?.user_metadata?.name || 'Usuário'}`,
-            telefone: ""
-          })
-          .select()
-          .single();
-
-        if (createError) {
-          console.error('Error creating restaurant:', createError);
-          throw new Error('Erro ao criar restaurante');
-        }
-        
-        restaurante = newRestaurante;
-      }
-
-      const { data, error } = await supabase
-        .from('insumos')
-        .select('*')
-        .eq('restaurante_id', restaurante.id)
-        .order('nome');
-
-      if (error) throw error;
-      setInsumos(data || []);
-    } catch (error) {
-      console.error('Error loading insumos:', error);
-      toast.error('Erro ao carregar insumos');
-    } finally {
-      setLoading(false);
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (editingInsumo) {
+      editarInsumo(editingInsumo.id, {
+        ...novoInsumo,
+        quantidade_atual: parseFloat(novoInsumo.quantidade_atual),
+        quantidade_minima: parseFloat(novoInsumo.quantidade_minima),
+        preco_unitario: parseFloat(novoInsumo.preco_unitario)
+      });
+    } else {
+      adicionarInsumo({
+        ...novoInsumo,
+        quantidade_atual: parseFloat(novoInsumo.quantidade_atual),
+        quantidade_minima: parseFloat(novoInsumo.quantidade_minima),
+        preco_unitario: parseFloat(novoInsumo.preco_unitario)
+      });
     }
+    resetForm();
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSaidaSubmit = (e) => {
     e.preventDefault();
-    setLoading(true);
-
-    try {
-      if (!formData.nome || !formData.unidade_medida) {
-        throw new Error('Preencha os campos obrigatórios');
-      }
-
-      // Get or create user's restaurant
-      let { data: restaurante, error: restauranteError } = await supabase
-        .from('restaurantes')
-        .select('*')
-        .eq('user_id', user?.id)
-        .maybeSingle();
-
-      if (restauranteError && restauranteError.code !== 'PGRST116') {
-        console.error('Error getting restaurant:', restauranteError);
-        throw new Error('Restaurante não encontrado');
-      }
-
-      // Create restaurant if it doesn't exist
-      if (!restaurante) {
-        const { data: newRestaurante, error: createError } = await supabase
-          .from('restaurantes')
-          .insert({
-            user_id: user?.id,
-            nome: `Restaurante de ${user?.user_metadata?.name || 'Usuário'}`,
-            telefone: ""
-          })
-          .select()
-          .single();
-
-        if (createError) {
-          console.error('Error creating restaurant:', createError);
-          throw new Error('Erro ao criar restaurante');
-        }
-        
-        restaurante = newRestaurante;
-      }
-
-      if (selectedInsumo) {
-        // Update existing insumo
-        const { data, error } = await supabase
-          .from('insumos')
-          .update({
-            nome: formData.nome,
-            descricao: formData.descricao,
-            unidade_medida: formData.unidade_medida,
-            quantidade: formData.quantidade,
-            quantidade_minima: formData.quantidade_minima,
-            data_validade: formData.data_validade || null,
-            preco_unitario: formData.preco_unitario || null,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', selectedInsumo.id)
-          .select()
-          .single();
-
-        if (error) throw error;
-
-        // Update local state
-        setInsumos(prev => prev.map(insumo => 
-          insumo.id === selectedInsumo.id ? data : insumo
-        ));
-        toast.success('Insumo atualizado com sucesso!');
-      } else {
-        // Create new insumo
-        const { data, error } = await supabase
-          .from('insumos')
-          .insert({
-            ...formData,
-            restaurante_id: restaurante.id
-          })
-          .select()
-          .single();
-
-        if (error) throw error;
-
-        // Update local state
-        setInsumos(prev => [...prev, data]);
-        toast.success('Insumo cadastrado com sucesso!');
-      }
-
-      setShowModal(false);
-      resetForm();
-    } catch (error) {
-      console.error('Error saving insumo:', error);
-      toast.error(error instanceof Error ? error.message : 'Erro ao salvar insumo');
-    } finally {
-      setLoading(false);
+    const quantidade = parseFloat(saidaForm.quantidade);
+    
+    if (quantidade > selectedInsumo.quantidade_atual) {
+      alert('Quantidade de saída não pode ser maior que o estoque atual');
+      return;
     }
+
+    // Registrar saída e atualizar estoque
+    const novaQuantidade = selectedInsumo.quantidade_atual - quantidade;
+    editarInsumo(selectedInsumo.id, {
+      ...selectedInsumo,
+      quantidade_atual: novaQuantidade
+    });
+
+    // Aqui você pode adicionar lógica para salvar o histórico de saída
+    console.log('Saída registrada:', {
+      insumo: selectedInsumo.nome,
+      quantidade,
+      motivo: saidaForm.motivo,
+      observacoes: saidaForm.observacoes,
+      funcionario: employee?.nome,
+      data: new Date().toISOString()
+    });
+
+    resetSaidaForm();
+    alert('Saída registrada com sucesso!');
   };
 
   const resetForm = () => {
-    setFormData({
+    setNovoInsumo({
       nome: '',
-      descricao: '',
-      unidade_medida: 'un',
-      quantidade: 0,
-      quantidade_minima: 0,
-      data_validade: '',
-      preco_unitario: 0
+      categoria: '',
+      quantidade_atual: '',
+      quantidade_minima: '',
+      unidade_medida: '',
+      preco_unitario: '',
+      fornecedor: ''
     });
-    setSelectedInsumo(null);
+    setEditingInsumo(null);
+    setShowModal(false);
   };
 
-  const handleEdit = (insumo: Insumo) => {
-    setSelectedInsumo(insumo);
-    setFormData({
+  const resetSaidaForm = () => {
+    setSaidaForm({
+      quantidade: '',
+      motivo: '',
+      observacoes: ''
+    });
+    setSelectedInsumo(null);
+    setShowSaidaModal(false);
+  };
+
+  const handleEdit = (insumo) => {
+    setEditingInsumo(insumo);
+    setNovoInsumo({
       nome: insumo.nome,
-      descricao: insumo.descricao || '',
+      categoria: insumo.categoria,
+      quantidade_atual: insumo.quantidade_atual.toString(),
+      quantidade_minima: insumo.quantidade_minima.toString(),
       unidade_medida: insumo.unidade_medida,
-      quantidade: insumo.quantidade,
-      quantidade_minima: insumo.quantidade_minima,
-      data_validade: insumo.data_validade || '',
-      preco_unitario: insumo.preco_unitario || 0
+      preco_unitario: insumo.preco_unitario.toString(),
+      fornecedor: insumo.fornecedor || ''
     });
     setShowModal(true);
   };
 
-  const handleDelete = async () => {
-    if (!selectedInsumo) return;
-    
-    setLoading(true);
-    try {
-      const { error } = await supabase
-        .from('insumos')
-        .update({ ativo: false })
-        .eq('id', selectedInsumo.id);
-
-      if (error) throw error;
-
-      // Update local state
-      setInsumos(prev => prev.map(insumo => 
-        insumo.id === selectedInsumo.id ? { ...insumo, ativo: false } : insumo
-      ));
-
-      toast.success('Insumo desativado com sucesso!');
-      setShowDeleteModal(false);
-      setSelectedInsumo(null);
-    } catch (error) {
-      console.error('Error deactivating insumo:', error);
-      toast.error('Erro ao desativar insumo');
-    } finally {
-      setLoading(false);
-    }
+  const handleSaida = (insumo) => {
+    setSelectedInsumo(insumo);
+    setShowSaidaModal(true);
   };
-
-  const isVencido = (data_validade?: string) => {
-    if (!data_validade) return false;
-    return new Date(data_validade) < new Date();
-  };
-
-  const isProximoVencer = (data_validade?: string) => {
-    if (!data_validade) return false;
-    const hoje = new Date();
-    const validade = new Date(data_validade);
-    const diasRestantes = Math.ceil((validade.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
-    return diasRestantes <= 7 && diasRestantes > 0;
-  };
-
-  const getStatusColor = (insumo: Insumo) => {
-    if (isVencido(insumo.data_validade)) return 'border-red-500 bg-red-50';
-    if (isProximoVencer(insumo.data_validade)) return 'border-yellow-500 bg-yellow-50';
-    if (insumo.quantidade <= insumo.quantidade_minima) return 'border-orange-500 bg-orange-50';
-    return 'border-green-500 bg-green-50';
-  };
-
-  const insumosFiltrados = insumos.filter(insumo => {
-    const matchBusca = insumo.nome.toLowerCase().includes(busca.toLowerCase()) ||
-                      insumo.descricao?.toLowerCase().includes(busca.toLowerCase());
-    
-    const matchStatus = filtroStatus === 'todos' ||
-      (filtroStatus === 'ativos' && insumo.ativo) ||
-      (filtroStatus === 'vencidos' && isVencido(insumo.data_validade)) ||
-      (filtroStatus === 'proximos' && isProximoVencer(insumo.data_validade));
-
-    return matchBusca && matchStatus;
-  });
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
+    <div className="p-6 max-w-7xl mx-auto">
+      <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Controle de Estoque</h1>
-          <p className="text-gray-500 mt-1">
-            Gerenciamento de insumos e matéria-prima
-          </p>
+          <h1 className="text-3xl font-bold text-gray-900">Controle de Estoque</h1>
+          <p className="text-gray-600 mt-1">Gerencie insumos e matérias-primas</p>
         </div>
-        <div className="mt-4 md:mt-0 flex flex-wrap gap-2">
-          <Button 
-            variant="ghost"
-            icon={<FileSpreadsheet size={18} />}
-            onClick={() => toast.success('Relatório exportado em Excel!')}
-          >
-            Excel
-          </Button>
-          <Button 
-            variant="ghost"
-            icon={<Download size={18} />}
-            onClick={() => toast.success('Relatório exportado em PDF!')}
-          >
-            PDF
-          </Button>
-          <Button 
-            variant="primary"
-            icon={<Plus size={18} />}
-            onClick={() => {
-              resetForm();
-              setShowModal(true);
-            }}
-          >
-            Novo Insumo
-          </Button>
+        <button
+          onClick={() => setShowModal(true)}
+          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+        >
+          <Plus className="w-4 h-4" />
+          Novo Insumo
+        </button>
+      </div>
+
+      {/* Resumo */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <div className="bg-white p-6 rounded-lg shadow-sm border">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Total de Insumos</p>
+              <p className="text-2xl font-bold text-gray-900">{insumos.length}</p>
+            </div>
+            <Package className="w-8 h-8 text-blue-600" />
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-lg shadow-sm border">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Estoque Baixo</p>
+              <p className="text-2xl font-bold text-red-600">{insumosComEstoqueBaixo.length}</p>
+            </div>
+            <AlertTriangle className="w-8 h-8 text-red-600" />
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-lg shadow-sm border">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Insumos Ativos</p>
+              <p className="text-2xl font-bold text-green-600">
+                {insumos.filter(i => i.quantidade_atual > 0).length}
+              </p>
+            </div>
+            <Package className="w-8 h-8 text-green-600" />
+          </div>
         </div>
       </div>
 
-      {/* Filtros */}
-      <div className="bg-white rounded-lg shadow-sm p-4">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-            <input
-              type="text"
-              placeholder="Buscar insumos..."
-              value={busca}
-              onChange={(e) => setBusca(e.target.value)}
-              className="pl-10 w-full rounded-lg border border-gray-300 py-2 px-4 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
+      {/* Alertas de Estoque Baixo */}
+      {insumosComEstoqueBaixo.length > 0 && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+          <div className="flex items-center gap-2 mb-2">
+            <AlertTriangle className="w-5 h-5 text-red-600" />
+            <h3 className="font-semibold text-red-800">Atenção: Estoque Baixo</h3>
           </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+            {insumosComEstoqueBaixo.map(insumo => (
+              <div key={insumo.id} className="text-sm text-red-700">
+                <span className="font-medium">{insumo.nome}</span>: {insumo.quantidade_atual} {insumo.unidade_medida}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
-          <div>
-            <select
-              value={filtroStatus}
-              onChange={(e) => setFiltroStatus(e.target.value as typeof filtroStatus)}
-              className="w-full border border-gray-300 rounded-md py-2 pl-3 pr-10 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="todos">Todos os status</option>
-              <option value="ativos">Ativos</option>
-              <option value="vencidos">Vencidos</option>
-              <option value="proximos">Próximos do vencimento</option>
-            </select>
-          </div>
-
-          <div className="md:col-span-2">
-            <div className="flex rounded-md shadow-sm">
-              <button
-                onClick={() => setVisualizacao('cards')}
-                className={`flex-1 px-4 py-2 text-sm font-medium rounded-l-md ${
-                  visualizacao === 'cards'
-                    ? 'bg-blue-50 text-blue-600 border-blue-500'
-                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                } border`}
-              >
-                Cards
-              </button>
-              <button
-                onClick={() => setVisualizacao('tabela')}
-                className={`flex-1 px-4 py-2 text-sm font-medium rounded-r-md ${
-                  visualizacao === 'tabela'
-                    ? 'bg-blue-50 text-blue-600 border-blue-500'
-                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                } border`}
-              >
-                Tabela
-              </button>
-            </div>
-          </div>
+      {/* Busca */}
+      <div className="mb-6">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+          <input
+            type="text"
+            placeholder="Buscar insumos..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
         </div>
       </div>
 
       {/* Lista de Insumos */}
-      {visualizacao === 'cards' ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {insumosFiltrados.map((insumo) => (
-            <div
-              key={insumo.id}
-              className={`bg-white rounded-lg shadow-sm overflow-hidden border-l-4 ${getStatusColor(insumo)}`}
-            >
-              <div className="p-4">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="font-medium text-gray-900">{insumo.nome}</h3>
-                    <p className="text-sm text-gray-500">{insumo.descricao}</p>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <button
-                      onClick={() => handleEdit(insumo)}
-                      className="p-1 text-gray-400 hover:text-gray-600"
-                    >
-                      <Edit2 size={18} />
-                    </button>
-                    <button
-                      onClick={() => {
-                        setSelectedInsumo(insumo);
-                        setShowDeleteModal(true);
-                      }}
-                      className="p-1 text-gray-400 hover:text-gray-600"
-                    >
-                      <Trash2 size={18} />
-                    </button>
-                  </div>
-                </div>
-
-                <div className="mt-4 space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-500">Quantidade</span>
-                    <span className={`font-medium ${
-                      insumo.quantidade <= insumo.quantidade_minima
-                        ? 'text-red-600'
-                        : 'text-gray-900'
-                    }`}>
-                      {insumo.quantidade} {insumo.unidade_medida}
-                    </span>
-                  </div>
-
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-500">Mínimo</span>
-                    <span className="text-sm text-gray-900">
-                      {insumo.quantidade_minima} {insumo.unidade_medida}
-                    </span>
-                  </div>
-
-                  {insumo.data_validade && (
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-500">Validade</span>
-                      <span className={`text-sm ${
-                        isVencido(insumo.data_validade)
-                          ? 'text-red-600'
-                          : isProximoVencer(insumo.data_validade)
-                            ? 'text-yellow-600'
-                            : 'text-gray-900'
-                      }`}>
-                        {new Date(insumo.data_validade).toLocaleDateString()}
-                      </span>
-                    </div>
-                  )}
-
-                  {insumo.preco_unitario && (
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-500">Preço Unitário</span>
-                      <span className="text-sm text-gray-900">
-                        {formatarDinheiro(insumo.preco_unitario)}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
+      <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
             <thead className="bg-gray-50">
               <tr>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Produto
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Insumo
                 </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Quantidade
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Categoria
                 </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Validade
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Estoque Atual
                 </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Estoque Mínimo
                 </th>
-                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Preço Unitário
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Ações
                 </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {insumosFiltrados.map((insumo) => (
-                <tr key={insumo.id}>
+              {filteredInsumos.map((insumo) => (
+                <tr key={insumo.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div>
-                      <div className="text-sm font-medium text-gray-900">
-                        {insumo.nome}
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        {insumo.descricao}
+                    <div className="flex items-center">
+                      <Package className="w-5 h-5 text-gray-400 mr-3" />
+                      <div>
+                        <div className="text-sm font-medium text-gray-900">{insumo.nome}</div>
+                        {insumo.fornecedor && (
+                          <div className="text-sm text-gray-500">{insumo.fornecedor}</div>
+                        )}
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className={`text-sm ${
-                      insumo.quantidade <= insumo.quantidade_minima
-                        ? 'text-red-600 font-medium'
-                        : 'text-gray-900'
-                    }`}>
-                      {insumo.quantidade} {insumo.unidade_medida}
-                      {insumo.quantidade <= insumo.quantidade_minima && (
-                        <span className="ml-2 text-xs bg-red-100 text-red-800 px-2 py-0.5 rounded-full">
-                          Abaixo do mínimo
-                        </span>
+                    <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                      {insumo.categoria}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <span className={`text-sm font-medium ${
+                        insumo.quantidade_atual <= insumo.quantidade_minima 
+                          ? 'text-red-600' 
+                          : 'text-gray-900'
+                      }`}>
+                        {insumo.quantidade_atual} {insumo.unidade_medida}
+                      </span>
+                      {insumo.quantidade_atual <= insumo.quantidade_minima && (
+                        <AlertTriangle className="w-4 h-4 text-red-500 ml-2" />
                       )}
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {insumo.data_validade && (
-                      <div className={`text-sm ${
-                        isVencido(insumo.data_validade)
-                          ? 'text-red-600'
-                          : isProximoVencer(insumo.data_validade)
-                            ? 'text-yellow-600'
-                            : 'text-gray-900'
-                      }`}>
-                        {new Date(insumo.data_validade).toLocaleDateString()}
-                      </div>
-                    )}
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {insumo.quantidade_minima} {insumo.unidade_medida}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      isVencido(insumo.data_validade)
-                        ? 'bg-red-100 text-red-800'
-                        : isProximoVencer(insumo.data_validade)
-                          ? 'bg-yellow-100 text-yellow-800'
-                          : 'bg-green-100 text-green-800'
-                    }`}>
-                      {isVencido(insumo.data_validade)
-                        ? 'Vencido'
-                        : isProximoVencer(insumo.data_validade)
-                          ? 'Próximo ao vencimento'
-                          : 'OK'}
-                    </span>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    R$ {insumo.preco_unitario?.toFixed(2) || '0,00'}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      icon={<Edit2 size={16} />}
-                      onClick={() => handleEdit(insumo)}
-                      className="mr-2"
-                    >
-                      Editar
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-red-600 hover:text-red-700"
-                      icon={<Trash2 size={16} />}
-                      onClick={() => {
-                        setSelectedInsumo(insumo);
-                        setShowDeleteModal(true);
-                      }}
-                    >
-                      Excluir
-                    </Button>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleSaida(insumo)}
+                        className="text-orange-600 hover:text-orange-900 p-1 rounded"
+                        title="Registrar Saída"
+                      >
+                        <TrendingDown className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleEdit(insumo)}
+                        className="text-indigo-600 hover:text-indigo-900 p-1 rounded"
+                        title="Editar"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => removerInsumo(insumo.id)}
+                        className="text-red-600 hover:text-red-900 p-1 rounded"
+                        title="Remover"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-      )}
 
-      {/* Modal de Novo/Editar Insumo */}
+        {filteredInsumos.length === 0 && (
+          <div className="text-center py-12">
+            <Package className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum insumo encontrado</h3>
+            <p className="text-gray-500">
+              {searchTerm ? 'Tente ajustar sua busca' : 'Comece adicionando um novo insumo'}
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Modal Novo/Editar Insumo */}
       {showModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 transition-opacity" aria-hidden="true">
-              <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
-            </div>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <h2 className="text-xl font-bold mb-4">
+              {editingInsumo ? 'Editar Insumo' : 'Novo Insumo'}
+            </h2>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Nome do Insumo
+                </label>
+                <input
+                  type="text"
+                  value={novoInsumo.nome}
+                  onChange={(e) => setNovoInsumo({...novoInsumo, nome: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required
+                />
+              </div>
 
-            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-              <form onSubmit={handleSubmit}>
-                <div className="px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">
-                    {selectedInsumo ? 'Editar Insumo' : 'Novo Insumo'}
-                  </h3>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Categoria
+                </label>
+                <input
+                  type="text"
+                  value={novoInsumo.categoria}
+                  onChange={(e) => setNovoInsumo({...novoInsumo, categoria: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required
+                />
+              </div>
 
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">
-                        Nome do Insumo
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.nome}
-                        onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                        required
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">
-                        Descrição
-                      </label>
-                      <textarea
-                        value={formData.descricao}
-                        onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
-                        rows={3}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">
-                          Unidade de Medida
-                        </label>
-                        <select
-                          value={formData.unidade_medida}
-                          onChange={(e) => setFormData({ ...formData, unidade_medida: e.target.value })}
-                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                        >
-                          <option value="un">Unidade</option>
-                          <option value="kg">Quilograma</option>
-                          <option value="g">Grama</option>
-                          <option value="l">Litro</option>
-                          <option value="ml">Mililitro</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">
-                          Quantidade Atual
-                        </label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={formData.quantidade}
-                          onChange={(e) => setFormData({ ...formData, quantidade: parseFloat(e.target.value) })}
-                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">
-                          Quantidade Mínima
-                        </label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={formData.quantidade_minima}
-                          onChange={(e) => setFormData({ ...formData, quantidade_minima: parseFloat(e.target.value) })}
-                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                          required
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">
-                          Preço Unitário
-                        </label>
-                        <div className="mt-1 relative rounded-md shadow-sm">
-                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <span className="text-gray-500 sm:text-sm">R$</span>
-                          </div>
-                          <input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            value={formData.preco_unitario}
-                            onChange={(e) => setFormData({ ...formData, preco_unitario: parseFloat(e.target.value) })}
-                            className="pl-8 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">
-                        Data de Validade
-                      </label>
-                      <input
-                        type="date"
-                        value={formData.data_validade}
-                        onChange={(e) => setFormData({ ...formData, data_validade: e.target.value })}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                      />
-                    </div>
-                  </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Quantidade Atual
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={novoInsumo.quantidade_atual}
+                    onChange={(e) => setNovoInsumo({...novoInsumo, quantidade_atual: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  />
                 </div>
 
-                <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                  <Button
-                    type="submit"
-                    variant="primary"
-                    isLoading={loading}
-                    className="w-full sm:w-auto sm:ml-3"
-                  >
-                    {selectedInsumo ? 'Atualizar' : 'Cadastrar'}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => {
-                      setShowModal(false);
-                      setSelectedInsumo(null);
-                      resetForm();
-                    }}
-                    className="w-full sm:w-auto mt-3 sm:mt-0"
-                  >
-                    Cancelar
-                  </Button>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Quantidade Mínima
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={novoInsumo.quantidade_minima}
+                    onChange={(e) => setNovoInsumo({...novoInsumo, quantidade_minima: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  />
                 </div>
-              </form>
-            </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Unidade de Medida
+                  </label>
+                  <select
+                    value={novoInsumo.unidade_medida}
+                    onChange={(e) => setNovoInsumo({...novoInsumo, unidade_medida: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  >
+                    <option value="">Selecione</option>
+                    <option value="kg">Quilograma (kg)</option>
+                    <option value="g">Grama (g)</option>
+                    <option value="l">Litro (l)</option>
+                    <option value="ml">Mililitro (ml)</option>
+                    <option value="un">Unidade (un)</option>
+                    <option value="cx">Caixa (cx)</option>
+                    <option value="pct">Pacote (pct)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Preço Unitário
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={novoInsumo.preco_unitario}
+                    onChange={(e) => setNovoInsumo({...novoInsumo, preco_unitario: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Fornecedor (opcional)
+                </label>
+                <input
+                  type="text"
+                  value={novoInsumo.fornecedor}
+                  onChange={(e) => setNovoInsumo({...novoInsumo, fornecedor: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={resetForm}
+                  className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors"
+                >
+                  {editingInsumo ? 'Salvar' : 'Adicionar'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
 
-      {/* Modal de Confirmação de Exclusão */}
-      {showDeleteModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 transition-opacity" aria-hidden="true">
-              <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
+      {/* Modal Saída de Estoque */}
+      {showSaidaModal && selectedInsumo && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <h2 className="text-xl font-bold mb-4">Registrar Saída de Estoque</h2>
+            
+            <div className="bg-gray-50 p-4 rounded-lg mb-4">
+              <h3 className="font-medium text-gray-900">{selectedInsumo.nome}</h3>
+              <p className="text-sm text-gray-600">
+                Estoque atual: {selectedInsumo.quantidade_atual} {selectedInsumo.unidade_medida}
+              </p>
             </div>
 
-            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-              <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                <div className="sm:flex sm:items-start">
-                  <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
-                    <AlertTriangle className="h-6 w-6 text-red-600" />
-                  </div>
-                  <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
-                    <h3 className="text-lg font-medium text-gray-900">
-                      Desativar Insumo
-                    </h3>
-                    <div className="mt-2">
-                      <p className="text-sm text-gray-500">
-                        Tem certeza que deseja desativar este insumo? Esta ação pode ser revertida posteriormente.
-                      </p>
-                    </div>
-                  </div>
-                </div>
+            <form onSubmit={handleSaidaSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Quantidade de Saída
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  max={selectedInsumo.quantidade_atual}
+                  value={saidaForm.quantidade}
+                  onChange={(e) => setSaidaForm({...saidaForm, quantidade: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Máximo: {selectedInsumo.quantidade_atual} {selectedInsumo.unidade_medida}
+                </p>
               </div>
-              <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                <Button
-                  variant="danger"
-                  onClick={handleDelete}
-                  isLoading={loading}
-                  className="w-full sm:w-auto sm:ml-3"
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Motivo da Saída
+                </label>
+                <select
+                  value={saidaForm.motivo}
+                  onChange={(e) => setSaidaForm({...saidaForm, motivo: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required
                 >
-                  Desativar
-                </Button>
-                <Button
-                  variant="ghost"
-                  onClick={() => {
-                    setShowDeleteModal(false);
-                    setSelectedInsumo(null);
-                  }}
-                  className="w-full sm:w-auto mt-3 sm:mt-0"
+                  <option value="">Selecione o motivo</option>
+                  {motivosSaida.map(motivo => (
+                    <option key={motivo} value={motivo}>{motivo}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Observações (opcional)
+                </label>
+                <textarea
+                  value={saidaForm.observacoes}
+                  onChange={(e) => setSaidaForm({...saidaForm, observacoes: e.target.value})}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Detalhes adicionais sobre a saída..."
+                />
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={resetSaidaForm}
+                  className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
                 >
                   Cancelar
-                </Button>
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-md transition-colors"
+                >
+                  Registrar Saída
+                </button>
               </div>
-            </div>
+            </form>
           </div>
         </div>
       )}
     </div>
   );
-};
-
-export default Estoque;
+}

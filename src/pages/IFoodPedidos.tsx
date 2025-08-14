@@ -5,6 +5,8 @@ import {
 } from 'lucide-react';
 import Button from '../components/ui/Button';
 import { formatarDinheiro } from '../utils/formatters';
+import { useAuth } from '../contexts/AuthContext';
+import { usePermissions } from '../hooks/useEmployeeAuth';
 import toast from 'react-hot-toast';
 
 interface DeliveryPedido {
@@ -59,11 +61,29 @@ const mockPedidos: DeliveryPedido[] = [
 ];
 
 const DeliveryPedidos: React.FC = () => {
+  const { userRole, isEmployee } = useAuth();
+  const { hasPermission } = usePermissions();
   const [pedidos, setPedidos] = useState<DeliveryPedido[]>(mockPedidos);
   const [filtroStatus, setFiltroStatus] = useState<string>('todos');
   const [busca, setBusca] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // Verificar se o usuário tem permissão para acessar pedidos iFood
+  const temPermissao = hasPermission('caixa') || (userRole === 'admin' && !isEmployee);
+
+  if (!temPermissao) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <AlertTriangle size={48} className="mx-auto text-red-500 mb-4" />
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Acesso Restrito</h2>
+          <p className="text-gray-600">
+            Apenas funcionários do caixa têm acesso aos pedidos de delivery.
+          </p>
+        </div>
+      </div>
+    );
+  }
   const atualizarPedidos = async () => {
     setLoading(true);
     try {
