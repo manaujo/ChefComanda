@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { Database } from '../types/database';
+import { useAuth } from '../contexts/AuthContext';
 
 type CaixaOperador = Database['public']['Tables']['caixas_operadores']['Row'];
 type MovimentacaoCaixa = Database['public']['Tables']['movimentacoes_caixa']['Row'];
@@ -37,20 +38,44 @@ class CaixaService {
   }
 
   // Obter caixa aberto atual
-  async getCaixaAberto(restauranteId: string): Promise<CaixaOperador | null> {
+  async getCaixaAberto(restauranteId: string, operadorId?: string): Promise<CaixaOperador | null> {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('caixas_operadores')
         .select('*')
         .eq('restaurante_id', restauranteId)
-        .eq('status', 'aberto')
-        .maybeSingle();
+        .eq('status', 'aberto');
+
+      // Se operadorId for fornecido, filtrar por operador específico
+      if (operadorId) {
+        query = query.eq('operador_id', operadorId);
+      }
+
+      const { data, error } = await query.maybeSingle();
 
       if (error) throw error;
       return data;
     } catch (error) {
       console.error('Error getting open cash register:', error);
       return null;
+    }
+  }
+
+  // Obter todos os caixas abertos de um restaurante
+  async getTodosCaixasAbertos(restauranteId: string): Promise<CaixaOperador[]> {
+    try {
+      const { data, error } = await supabase
+        .from('caixas_operadores')
+        .select('*')
+        .eq('restaurante_id', restauranteId)
+        .eq('status', 'aberto')
+        .order('data_abertura', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error getting all open cash registers:', error);
+      return [];
     }
   }
 
@@ -81,6 +106,12 @@ class CaixaService {
     valorInicial: number;
   }): Promise<CaixaOperador> {
     try {
+      // Verificar se o operador já tem um caixa aberto
+      const caixaExistente = await this.getOperadorCaixaAberto(data.operadorId);
+      if (caixaExistente) {
+        throw new Error('Este operador já possui um caixa aberto');
+      }
+
       const { data: caixa, error } = await supabase
         .from('caixas_operadores')
         .insert({

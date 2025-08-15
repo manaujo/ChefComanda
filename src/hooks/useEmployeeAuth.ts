@@ -44,9 +44,9 @@ export const useEmployeeAuth = (): EmployeeAuthData => {
 
   const getPermissions = (role: string): string[] => {
     const rolePermissions: Record<string, string[]> = {
-      waiter: ['mesas', 'comandas'],
-      cashier: ['pdv', 'comandas', 'caixa', 'ifood'],
-      stock: ['produtos', 'estoque', 'cardapio-online', 'cardapio-online-editor'],
+      waiter: ['mesas', 'comandas', 'cardapio-online'],
+      cashier: ['pdv', 'comandas', 'caixa', 'mesas', 'produtos'],
+      stock: ['produtos', 'estoque', 'cardapio-online', 'cardapio-online-editor', 'cmv'],
       kitchen: ['comandas'],
       admin: ['all'] // Admin tem acesso a tudo
     };
@@ -82,9 +82,9 @@ export const usePermissions = () => {
     // Se não é funcionário nem admin, verificar role do usuário
     const userPermissions: Record<string, string[]> = {
       admin: ['all'],
-      waiter: ['mesas', 'comandas'],
-      cashier: ['pdv', 'comandas', 'caixa', 'ifood'],
-      stock: ['produtos', 'estoque', 'cardapio-online', 'cardapio-online-editor'],
+      waiter: ['mesas', 'comandas', 'cardapio-online'],
+      cashier: ['pdv', 'comandas', 'caixa', 'mesas', 'produtos'],
+      stock: ['produtos', 'estoque', 'cardapio-online', 'cardapio-online-editor', 'cmv'],
       kitchen: ['comandas']
     };
 

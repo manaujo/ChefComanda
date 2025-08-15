@@ -69,10 +69,20 @@ const PDVControlModal: React.FC<PDVControlModalProps> = ({
         throw new Error('Valor inicial inválido');
       }
 
+      if (!restaurante?.id) {
+        throw new Error('Restaurante não encontrado');
+      }
+
       const operador = getOperadorAtual();
 
+      // Verificar se o operador já tem um caixa aberto
+      const caixaExistente = await CaixaService.getOperadorCaixaAberto(operador.id);
+      if (caixaExistente) {
+        throw new Error('Você já possui um caixa aberto. Feche o caixa atual antes de abrir um novo.');
+      }
+
       const caixa = await CaixaService.abrirCaixa({
-        restauranteId: restaurante?.id || '',
+        restauranteId: restaurante.id,
         operadorId: operador.id,
         operadorNome: operador.nome,
         operadorTipo: operador.tipo,

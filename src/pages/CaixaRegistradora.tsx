@@ -48,6 +48,26 @@ const CaixaRegistradora: React.FC = () => {
     }
   }, [user, restaurante]);
 
+  // Carregar todos os caixas abertos se for administrador
+  const [todosCaixasAbertos, setTodosCaixasAbertos] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (user && restaurante && !isEmployee) {
+      loadTodosCaixasAbertos();
+    }
+  }, [user, restaurante, isEmployee]);
+
+  const loadTodosCaixasAbertos = async () => {
+    try {
+      if (!restaurante?.id) return;
+
+      const caixas = await CaixaService.getTodosCaixasAbertos(restaurante.id);
+      setTodosCaixasAbertos(caixas);
+    } catch (error) {
+      console.error('Error loading all open cash registers:', error);
+    }
+  };
+
   // Obter dados do operador atual
   const getOperadorAtual = () => {
     if (isEmployee && employeeData) {
@@ -69,13 +89,19 @@ const CaixaRegistradora: React.FC = () => {
     try {
       if (!restaurante?.id) return;
 
-      const caixa = await CaixaService.getCaixaAberto(restaurante.id);
+      const operadorAtual = getOperadorAtual();
+      const caixa = await CaixaService.getCaixaAberto(restaurante.id, operadorAtual.id);
 
       setCaixaAtual(caixa);
 
       if (caixa) {
         const movs = await CaixaService.getMovimentacoesCaixa(caixa.id);
         setMovimentacoes(movs);
+      }
+
+      // Se for administrador, carregar todos os caixas abertos
+      if (!isEmployee) {
+        await loadTodosCaixasAbertos();
       }
     } catch (error) {
       console.error('Error loading cash register:', error);
@@ -307,6 +333,42 @@ const CaixaRegistradora: React.FC = () => {
 
       {caixaAtual ? (
         <>
+          {/* Mostrar outros caixas abertos se for administrador */}
+          {!isEmployee && todosCaixasAbertos.length > 1 && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+              <h3 className="text-sm font-medium text-blue-800 mb-3">
+                Outros Caixas Abertos no Restaurante
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {todosCaixasAbertos
+                  .filter(caixa => caixa.id !== caixaAtual.id)
+                  .map(caixa => (
+                    <div key={caixa.id} className="bg-white rounded-lg p-3 border border-blue-200">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">
+                            {caixa.operador_nome}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {caixa.operador_tipo === 'funcionario' ? 'Funcionário' : 'Usuário'}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            Aberto: {new Date(caixa.data_abertura).toLocaleTimeString('pt-BR')}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-medium text-gray-900">
+                            {formatarDinheiro(caixa.valor_sistema)}
+                          </p>
+                          <p className="text-xs text-gray-500">Saldo</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
+
           {/* Cards de Resumo */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div className="bg-white rounded-lg shadow-sm p-6">

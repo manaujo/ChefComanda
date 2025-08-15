@@ -83,8 +83,9 @@ const PDV: React.FC = () => {
     try {
       if (!restaurante?.id) return;
 
-      // Verificar se há um caixa aberto
-      const caixa = await CaixaService.getCaixaAberto(restaurante.id);
+      // Verificar se há um caixa aberto para o operador atual
+      const operadorAtual = isEmployee && employeeData ? employeeData.id : user?.id;
+      const caixa = await CaixaService.getCaixaAberto(restaurante.id, operadorAtual);
       setCaixaPDV(caixa);
 
       // Verificar localStorage também
@@ -92,11 +93,12 @@ const PDV: React.FC = () => {
       if (savedCaixa && !caixa) {
         try {
           const parsedCaixa = JSON.parse(savedCaixa);
-          // Verificar se ainda está aberto no banco
+          // Verificar se ainda está aberto no banco e pertence ao operador atual
           const { data } = await supabase
             .from('caixas_operadores')
             .select('*')
             .eq('id', parsedCaixa.id)
+            .eq('operador_id', operadorAtual)
             .eq('status', 'aberto')
             .maybeSingle();
           

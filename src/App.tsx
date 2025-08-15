@@ -83,17 +83,16 @@ function App() {
               }>
                 <Route index element={<Dashboard />} />
                 <Route path="mesas" element={<PrivateRoute allowedRoles={['admin', 'waiter', 'cashier']}><Mesas /></PrivateRoute>} />
-                <Route path="mesas" element={<PrivateRoute requiredPermission="mesas"><Mesas /></PrivateRoute>} />
                 <Route path="comandas" element={<PrivateRoute requiredPermission="comandas"><Comandas /></PrivateRoute>} />
                 <Route path="cardapio" element={<PrivateRoute requiredPermission="produtos"><Cardapio /></PrivateRoute>} />
                 <Route path="estoque" element={<PrivateRoute requiredPermission="estoque"><Estoque /></PrivateRoute>} />
-                <Route path="relatorios" element={<PrivateRoute allowedRoles={['admin', 'cashier']}><Relatorios /></PrivateRoute>} />
-                <Route path="ifood" element={<PrivateRoute requiredPermission="ifood"><IFoodPedidos /></PrivateRoute>} />
+                <Route path="relatorios" element={<PrivateRoute allowedRoles={['admin']}><Relatorios /></PrivateRoute>} />
+                <Route path="ifood" element={<PrivateRoute requiredPermission="pdv"><IFoodPedidos /></PrivateRoute>} />
                 <Route path="caixa" element={<PrivateRoute requiredPermission="caixa"><CaixaRegistradora /></PrivateRoute>} />
                 <Route path="pdv" element={<PrivateRoute requiredPermission="pdv"><PDV /></PrivateRoute>} />
-                <Route path="cardapio-online" element={<PrivateRoute allowedRoles={['admin']}><CardapioOnline /></PrivateRoute>} />
+                <Route path="cardapio-online" element={<PrivateRoute requiredPermission="cardapio-online"><CardapioOnline /></PrivateRoute>} />
                 <Route path="cardapio-online/editor" element={<PrivateRoute requiredPermission="cardapio-online-editor"><CardapioOnlineEditor /></PrivateRoute>} />
-                <Route path="cmv" element={<PrivateRoute allowedRoles={['admin']}><CMV /></PrivateRoute>} />
+                <Route path="cmv" element={<PrivateRoute requiredPermission="cmv"><CMV /></PrivateRoute>} />
                 <Route path="suporte" element={<PrivateRoute><Suporte /></PrivateRoute>} />
                 
                 {/* Profile Routes */}

@@ -69,7 +69,7 @@ const DeliveryPedidos: React.FC = () => {
   const [loading, setLoading] = useState(false);
 
   // Verificar se o usuário tem permissão para acessar pedidos iFood
-  const temPermissao = hasPermission('ifood') || (userRole === 'admin' && !isEmployee);
+  const temPermissao = hasPermission('pdv') || hasPermission('caixa') || (userRole === 'admin' && !isEmployee);
 
   if (!temPermissao) {
     return (
@@ -78,7 +78,7 @@ const DeliveryPedidos: React.FC = () => {
           <AlertTriangle size={48} className="mx-auto text-red-500 mb-4" />
           <h2 className="text-xl font-bold text-gray-900 mb-2">Acesso Restrito</h2>
           <p className="text-gray-600">
-            Apenas funcionários do caixa têm acesso aos pedidos de delivery.
+            Apenas funcionários do caixa e PDV têm acesso aos pedidos de delivery.
           </p>
         </div>
       </div>
