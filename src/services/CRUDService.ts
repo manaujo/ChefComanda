@@ -145,6 +145,29 @@ export class CRUDService {
     return data;
   }
 
+  // Obter todas as comandas de um restaurante (para funcionários da cozinha)
+  static async getComandasByRestaurante(restauranteId: string) {
+    const { data, error } = await supabase
+      .from('comandas')
+      .select(`
+        *,
+        mesa:mesas!inner(
+          numero,
+          restaurante_id
+        ),
+        itens:itens_comanda(
+          *,
+          produto:produtos(*)
+        )
+      `)
+      .eq('mesa.restaurante_id', restauranteId)
+      .eq('status', 'aberta')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  }
+
   // Itens Comanda
   static async getItensByComanda(comandaId: string) {
     const { data, error } = await supabase

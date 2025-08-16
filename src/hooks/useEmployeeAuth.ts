@@ -44,7 +44,7 @@ export const useEmployeeAuth = (): EmployeeAuthData => {
 
   const getPermissions = (role: string): string[] => {
     const rolePermissions: Record<string, string[]> = {
-      waiter: ['mesas', 'comandas', 'cardapio-online'],
+      waiter: ['mesas', 'comandas', 'cardapio-online', 'produtos'],
       cashier: ['pdv', 'comandas', 'caixa', 'mesas', 'produtos'],
       stock: ['produtos', 'estoque', 'cardapio-online', 'cardapio-online-editor', 'cmv'],
       kitchen: ['comandas'],

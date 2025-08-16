@@ -13,6 +13,7 @@ import CaixaService from '../services/CaixaService';
 import { useRestaurante } from '../contexts/RestauranteContext';
 import { formatarDinheiro } from '../utils/formatters';
 import { Database } from '../types/database';
+import { useEmployeeAuth } from '../hooks/useEmployeeAuth';
 import toast from 'react-hot-toast';
 import { usePageActive } from '../hooks/usePageVisibility';
 import { usePreventReload } from '../hooks/usePreventReload';
@@ -42,6 +43,8 @@ interface ComandaMesa {
 }
 
 const PDV: React.FC = () => {
+  const { user, isEmployee, displayName } = useAuth();
+  const { employeeData } = useEmployeeAuth();
   const { produtos, refreshData, mesas, itensComanda, finalizarPagamento, liberarMesa, restaurante } = useRestaurante();
   const [itensVenda, setItensVenda] = useState<ItemVenda[]>([]);
   const [busca, setBusca] = useState('');
@@ -66,6 +69,23 @@ const PDV: React.FC = () => {
   const isPageActive = usePageActive();
   const { currentRoute } = usePreventReload();
 
+  // Verificar se é funcionário e obter dados corretos
+  const getOperadorAtual = () => {
+    if (isEmployee && (employeeData)) {
+      return {
+        id: employeeData.id,
+        nome: employeeData.name,
+        tipo: 'funcionario' as const
+      };
+    } else {
+      return {
+        id: user?.id || '',
+        nome: displayName || user?.user_metadata?.name || 'Usuário',
+        tipo: 'usuario' as const
+      };
+    }
+  };
+
   useEffect(() => {
     // Só carrega dados uma vez quando o componente monta
     if (!dataInitialized) {
@@ -83,8 +103,7 @@ const PDV: React.FC = () => {
     try {
       if (!restaurante?.id) return;
 
-      // Verificar se há um caixa aberto para o operador atual
-      const operadorAtual = isEmployee && employeeData ? employeeData.id : user?.id;
+      const operadorAtual = getOperadorAtual();
       const caixa = await CaixaService.getCaixaAberto(restaurante.id, operadorAtual);
       setCaixaPDV(caixa);
 
@@ -98,7 +117,7 @@ const PDV: React.FC = () => {
             .from('caixas_operadores')
             .select('*')
             .eq('id', parsedCaixa.id)
-            .eq('operador_id', operadorAtual)
+            .eq('operador_id', operadorAtual.id)
             .eq('status', 'aberto')
             .maybeSingle();
           

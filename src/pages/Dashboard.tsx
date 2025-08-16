@@ -64,20 +64,8 @@ const Dashboard: React.FC = () => {
   // Redirecionar funcionários para suas páginas específicas
   useEffect(() => {
     if (isEmployee && userRole) {
-      switch (userRole) {
-        case 'waiter':
-          window.location.href = '/dashboard/mesas';
-          return;
-        case 'kitchen':
-          window.location.href = '/dashboard/comandas';
-          return;
-        case 'cashier':
-          window.location.href = '/dashboard/pdv';
-          return;
-        case 'stock':
-          window.location.href = '/dashboard/estoque';
-          return;
-      }
+      // Não redirecionar automaticamente, deixar funcionários navegarem livremente
+      // entre as páginas que têm permissão
     }
   }, [isEmployee, userRole]);
 

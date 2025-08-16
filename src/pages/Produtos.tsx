@@ -3,6 +3,7 @@ import { Plus, Search, Edit, Trash2, Package, DollarSign, Tag, Image, Upload, X,
 import Button from '../components/ui/Button';
 import { CRUDService } from '../services/CRUDService';
 import { useAuth } from '../contexts/AuthContext';
+import { useEmployeeAuth } from '../hooks/useEmployeeAuth';
 import { supabase } from '../services/supabase';
 import toast from 'react-hot-toast';
 
@@ -27,7 +28,8 @@ interface Categoria {
 }
 
 export default function Produtos() {
-  const { user } = useAuth();
+  const { user, isEmployee } = useAuth();
+  const { employeeData } = useEmployeeAuth();
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [loading, setLoading] = useState(true);
@@ -58,47 +60,56 @@ export default function Produtos() {
   useEffect(() => {
     loadProdutos();
     loadCategorias();
-  }, []);
+  }, [user]);
 
   const loadProdutos = async () => {
     try {
       setLoading(true);
       
-      // Get or create user's restaurant
-      let { data: restaurante, error: restauranteError } = await supabase
-        .from('restaurantes')
-        .select('*')
-        .eq('user_id', user?.id)
-        .maybeSingle();
-
-      if (restauranteError && restauranteError.code !== 'PGRST116') {
-        console.error('Error getting restaurant:', restauranteError);
-        throw new Error('Restaurante não encontrado');
+      // Se é funcionário, usar o restaurante do contexto
+      if (isEmployee && employeeData?.restaurant_id) {
+        const data = await CRUDService.getProdutosByRestaurante(employeeData.restaurant_id);
+        setProdutos(data || []);
+        return;
       }
 
-      // Create restaurant if it doesn't exist
-      if (!restaurante) {
-        console.log('Creating restaurant for user:', user?.id);
-        const { data: newRestaurante, error: createError } = await supabase
+      // Para proprietários, buscar ou criar restaurante
+      if (!isEmployee) {
+        let { data: restaurante, error: restauranteError } = await supabase
           .from('restaurantes')
-          .insert({
-            user_id: user?.id,
-            nome: `Restaurante de ${user?.user_metadata?.name || 'Usuário'}`,
-            telefone: ""
-          })
-          .select()
-          .single();
+          .select('*')
+          .eq('user_id', user?.id)
+          .maybeSingle();
 
-        if (createError) {
-          console.error('Error creating restaurant:', createError);
+        if (restauranteError && restauranteError.code !== 'PGRST116') {
+          console.error('Error getting restaurant:', restauranteError);
           throw new Error('Erro ao criar restaurante');
         }
-        
-        restaurante = newRestaurante;
-      }
 
-      const data = await CRUDService.getProdutosByRestaurante(restaurante.id);
-      setProdutos(data || []);
+        // Create restaurant if it doesn't exist
+        if (!restaurante) {
+          console.log('Creating restaurant for user:', user?.id);
+          const { data: newRestaurante, error: createError } = await supabase
+            .from('restaurantes')
+            .insert({
+              user_id: user?.id,
+              nome: `Restaurante de ${user?.user_metadata?.name || 'Usuário'}`,
+              telefone: ""
+            })
+            .select()
+            .single();
+
+          if (createError) {
+            console.error('Error creating restaurant:', createError);
+            throw new Error('Erro ao criar restaurante');
+          }
+          
+          restaurante = newRestaurante;
+        }
+
+        const data = await CRUDService.getProdutosByRestaurante(restaurante.id);
+        setProdutos(data || []);
+      }
     } catch (error) {
       console.error('Erro ao carregar produtos:', error);
       toast.error('Erro ao carregar produtos');
@@ -109,40 +120,48 @@ export default function Produtos() {
 
   const loadCategorias = async () => {
     try {
-      // Get or create user's restaurant
-      let { data: restaurante, error: restauranteError } = await supabase
-        .from('restaurantes')
-        .select('*')
-        .eq('user_id', user?.id)
-        .maybeSingle();
-
-      if (restauranteError && restauranteError.code !== 'PGRST116') {
-        console.error('Error getting restaurant:', restauranteError);
-        throw new Error('Restaurante não encontrado');
+      // Se é funcionário, usar o restaurante do contexto
+      if (isEmployee && employeeData?.restaurant_id) {
+        const data = await CRUDService.getCategoriasByRestaurante(employeeData.restaurant_id);
+        setCategorias(data || []);
+        return;
       }
 
-      // Create restaurant if it doesn't exist
-      if (!restaurante) {
-        const { data: newRestaurante, error: createError } = await supabase
+      // Para proprietários
+      if (!isEmployee) {
+        let { data: restaurante, error: restauranteError } = await supabase
           .from('restaurantes')
-          .insert({
-            user_id: user?.id,
-            nome: `Restaurante de ${user?.user_metadata?.name || 'Usuário'}`,
-            telefone: ""
-          })
-          .select()
-          .single();
+          .select('*')
+          .eq('user_id', user?.id)
+          .maybeSingle();
 
-        if (createError) {
-          console.error('Error creating restaurant:', createError);
+        if (restauranteError && restauranteError.code !== 'PGRST116') {
+          console.error('Error getting restaurant:', restauranteError);
           throw new Error('Erro ao criar restaurante');
         }
-        
-        restaurante = newRestaurante;
-      }
 
-      const data = await CRUDService.getCategoriasByRestaurante(restaurante.id);
-      setCategorias(data || []);
+        if (!restaurante) {
+          const { data: newRestaurante, error: createError } = await supabase
+            .from('restaurantes')
+            .insert({
+              user_id: user?.id,
+              nome: `Restaurante de ${user?.user_metadata?.name || 'Usuário'}`,
+              telefone: ""
+            })
+            .select()
+            .single();
+
+          if (createError) {
+            console.error('Error creating restaurant:', createError);
+            throw new Error('Erro ao criar restaurante');
+          }
+          
+          restaurante = newRestaurante;
+        }
+
+        const data = await CRUDService.getCategoriasByRestaurante(restaurante.id);
+        setCategorias(data || []);
+      }
     } catch (error) {
       console.error('Erro ao carregar categorias:', error);
       toast.error('Erro ao carregar categorias');
@@ -153,42 +172,51 @@ export default function Produtos() {
     e.preventDefault();
     
     try {
-      // Get or create restaurant ID first
-      let { data: restaurante, error: restauranteError } = await supabase
-        .from('restaurantes')
-        .select('*')
-        .eq('user_id', user?.id)
-        .maybeSingle();
-
-      if (restauranteError && restauranteError.code !== 'PGRST116') {
-        console.error('Error getting restaurant:', restauranteError);
-        throw new Error('Restaurante não encontrado');
-      }
-
-      // Create restaurant if it doesn't exist
-      if (!restaurante) {
-        const { data: newRestaurante, error: createError } = await supabase
+      let restauranteId: string;
+      
+      // Se é funcionário, usar o restaurante do contexto
+      if (isEmployee && employeeData?.restaurant_id) {
+        restauranteId = employeeData.restaurant_id;
+      } else {
+        // Para proprietários, buscar ou criar restaurante
+        let { data: restaurante, error: restauranteError } = await supabase
           .from('restaurantes')
-          .insert({
-            user_id: user?.id,
-            nome: `Restaurante de ${user?.user_metadata?.name || 'Usuário'}`,
-            telefone: ""
-          })
-          .select()
-          .single();
+          .select('*')
+          .eq('user_id', user?.id)
+          .maybeSingle();
 
-        if (createError) {
-          console.error('Error creating restaurant:', createError);
-          throw new Error('Erro ao criar restaurante');
+        if (restauranteError && restauranteError.code !== 'PGRST116') {
+          console.error('Error getting restaurant:', restauranteError);
+          throw new Error('Restaurante não encontrado');
+        }
+
+        // Create restaurant if it doesn't exist
+        if (!restaurante) {
+          const { data: newRestaurante, error: createError } = await supabase
+            .from('restaurantes')
+            .insert({
+              user_id: user?.id,
+              nome: `Restaurante de ${user?.user_metadata?.name || 'Usuário'}`,
+              telefone: ""
+            })
+            .select()
+            .single();
+
+          if (createError) {
+            console.error('Error creating restaurant:', createError);
+            throw new Error('Erro ao criar restaurante');
+          }
+          
+          restaurante = newRestaurante;
         }
         
-        restaurante = newRestaurante;
+        restauranteId = restaurante.id;
       }
 
       const productData = {
         ...formData,
         preco: parseFloat(formData.preco),
-        restaurante_id: restaurante.id
+        restaurante_id: restauranteId
       };
 
       if (editingProduct) {
@@ -209,41 +237,49 @@ export default function Produtos() {
     e.preventDefault();
     
     try {
-      // Get or create restaurant ID first
-      let { data: restaurante, error: restauranteError } = await supabase
-        .from('restaurantes')
-        .select('*')
-        .eq('user_id', user?.id)
-        .maybeSingle();
-
-      if (restauranteError && restauranteError.code !== 'PGRST116') {
-        console.error('Error getting restaurant:', restauranteError);
-        throw new Error('Restaurante não encontrado');
-      }
-
-      // Create restaurant if it doesn't exist
-      if (!restaurante) {
-        const { data: newRestaurante, error: createError } = await supabase
+      let restauranteId: string;
+      
+      // Se é funcionário, usar o restaurante do contexto
+      if (isEmployee && employeeData?.restaurant_id) {
+        restauranteId = employeeData.restaurant_id;
+      } else {
+        // Para proprietários, buscar ou criar restaurante
+        let { data: restaurante, error: restauranteError } = await supabase
           .from('restaurantes')
-          .insert({
-            user_id: user?.id,
-            nome: `Restaurante de ${user?.user_metadata?.name || 'Usuário'}`,
-            telefone: ""
-          })
-          .select()
-          .single();
+          .select('*')
+          .eq('user_id', user?.id)
+          .maybeSingle();
 
-        if (createError) {
-          console.error('Error creating restaurant:', createError);
-          throw new Error('Erro ao criar restaurante');
+        if (restauranteError && restauranteError.code !== 'PGRST116') {
+          console.error('Error getting restaurant:', restauranteError);
+          throw new Error('Restaurante não encontrado');
+        }
+
+        if (!restaurante) {
+          const { data: newRestaurante, error: createError } = await supabase
+            .from('restaurantes')
+            .insert({
+              user_id: user?.id,
+              nome: `Restaurante de ${user?.user_metadata?.name || 'Usuário'}`,
+              telefone: ""
+            })
+            .select()
+            .single();
+
+          if (createError) {
+            console.error('Error creating restaurant:', createError);
+            throw new Error('Erro ao criar restaurante');
+          }
+          
+          restaurante = newRestaurante;
         }
         
-        restaurante = newRestaurante;
+        restauranteId = restaurante.id;
       }
 
       const categoryData = {
         ...categoryFormData,
-        restaurante_id: restaurante.id
+        restaurante_id: restauranteId
       };
 
       if (editingCategory) {

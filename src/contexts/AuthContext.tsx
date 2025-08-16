@@ -167,9 +167,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         console.log("Employee data loaded successfully, role:", employeeData.role);
         
         // Redirect based on employee role
-        if (shouldRedirect()) {
-          redirectByRole(employeeData.role);
-        }
+        // Não redirecionar automaticamente funcionários, deixar eles navegarem
         return;
       }
 

@@ -9,7 +9,7 @@ import { usePageActive } from '../hooks/usePageVisibility';
 import { usePreventReload } from '../hooks/usePreventReload';
 
 const Mesas: React.FC = () => {
-  const { mesas, refreshData } = useRestaurante();
+  const { mesas, refreshData, loading: contextLoading } = useRestaurante();
   const [filtro, setFiltro] = useState<string>('todas');
   const [modalAberto, setModalAberto] = useState(false);
   const [dataInitialized, setDataInitialized] = useState(false);
@@ -19,12 +19,12 @@ const Mesas: React.FC = () => {
   
   useEffect(() => {
     // Só carrega dados uma vez quando o componente monta
-    if (!dataInitialized) {
+    if (!dataInitialized && !contextLoading) {
       refreshData().then(() => {
         setDataInitialized(true);
       });
     }
-  }, [dataInitialized]);
+  }, [dataInitialized, contextLoading]);
 
   // Salvar estado do filtro
   useEffect(() => {

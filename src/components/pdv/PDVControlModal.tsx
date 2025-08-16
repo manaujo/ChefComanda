@@ -4,6 +4,7 @@ import Button from '../ui/Button';
 import { formatarDinheiro } from '../../utils/formatters';
 import { useAuth } from '../../contexts/AuthContext';
 import { useRestaurante } from '../../contexts/RestauranteContext';
+import { useEmployeeAuth } from '../../hooks/useEmployeeAuth';
 import CaixaService from '../../services/CaixaService';
 import toast from 'react-hot-toast';
 
@@ -23,6 +24,7 @@ const PDVControlModal: React.FC<PDVControlModalProps> = ({
   onCaixaChange
 }) => {
   const { user, isEmployee, employeeData, displayName } = useAuth();
+  const { employeeData: currentEmployeeData } = useEmployeeAuth();
   const { restaurante, funcionarios } = useRestaurante();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -45,10 +47,11 @@ const PDVControlModal: React.FC<PDVControlModalProps> = ({
 
   // Obter dados do operador atual
   const getOperadorAtual = () => {
-    if (isEmployee && employeeData) {
+    if (isEmployee && (employeeData || currentEmployeeData)) {
+      const empData = employeeData || currentEmployeeData;
       return {
-        id: employeeData.id,
-        nome: employeeData.name,
+        id: empData.id,
+        nome: empData.name,
         tipo: 'funcionario' as const
       };
     } else {

@@ -26,7 +26,7 @@ const AdicionarItemModal: React.FC<AdicionarItemModalProps> = ({ isOpen, onClose
   
   useEffect(() => {
     if (isOpen) {
-      refreshData();
+      // Não recarregar dados desnecessariamente, apenas usar os produtos já carregados
     }
   }, [isOpen]);
   
