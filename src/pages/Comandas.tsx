@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Filter, Calendar, Clock, CheckCircle, CookingPot, ArrowUp, ArrowLeft } from 'lucide-react';
 import Button from '../components/ui/Button';
+import { useAuth } from '../contexts/AuthContext';
 import { useRestaurante } from '../contexts/RestauranteContext';
 import ComandaItem from '../components/comanda/ComandaItem';
 import ComandaModal from '../components/comanda/ComandaModal';

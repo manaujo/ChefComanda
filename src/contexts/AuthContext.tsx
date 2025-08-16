@@ -167,7 +167,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         console.log("Employee data loaded successfully, role:", employeeData.role);
         
         // Redirect based on employee role
-        // Não redirecionar automaticamente funcionários, deixar eles navegarem
+        if (shouldRedirect()) {
+          redirectEmployeeByRole(employeeData.role);
+        }
         return;
       }
 
@@ -326,6 +328,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         break;
       case "stock":
         navigate("/dashboard/estoque");
+        break;
+      default:
+        navigate("/dashboard");
+    }
+  };
+
+  const redirectEmployeeByRole = (role: string) => {
+    const currentPath = location.pathname;
+
+    console.log("Redirecting employee with role:", role, "from path:", currentPath);
+
+    switch (role) {
+      case "kitchen":
+        navigate("/dashboard/comandas");
+        break;
+      case "waiter":
+        navigate("/dashboard/mesas");
+        break;
+      case "cashier":
+        navigate("/dashboard/caixa");
+        break;
+      case "stock":
+        navigate("/dashboard/estoque");
+        break;
+      case "admin":
+        navigate("/dashboard");
         break;
       default:
         navigate("/dashboard");

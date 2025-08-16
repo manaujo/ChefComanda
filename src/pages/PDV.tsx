@@ -14,6 +14,7 @@ import { useRestaurante } from '../contexts/RestauranteContext';
 import { formatarDinheiro } from '../utils/formatters';
 import { Database } from '../types/database';
 import { useEmployeeAuth } from '../hooks/useEmployeeAuth';
+import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
 import { usePageActive } from '../hooks/usePageVisibility';
 import { usePreventReload } from '../hooks/usePreventReload';
