@@ -3,7 +3,7 @@ import { Link, useLocation, Outlet, useNavigate } from 'react-router-dom';
 import {
   Menu, ChefHat, LayoutDashboard, Users, ShoppingBag,
   ClipboardList, PieChart, Settings, Coffee, QrCode,
-  CreditCard, Moon, Sun, Globe, PenSquare, Calculator, DollarSign,
+  CreditCard, Moon, Sun, Globe, PenSquare, Calculator,
   HelpCircle, Headphones
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -37,11 +37,11 @@ const DashboardLayout: React.FC = () => {
       { name: 'Mesas', path: '/dashboard/mesas', icon: <Coffee size={20} />, permission: 'mesas' },
       { name: 'Comandas', path: '/dashboard/comandas', icon: <ClipboardList size={20} />, permission: 'comandas' },
       { name: 'PDV', path: '/dashboard/pdv', icon: <CreditCard size={20} />, permission: 'pdv' },
-      { name: 'Produtos', path: '/dashboard/cardapio', icon: <ShoppingBag size={20} />, permission: 'produtos' },
+      { name: 'Caixa', path: '/dashboard/caixa', icon: <CreditCard size={20} />, permission: 'caixa' },
+      { name: 'Cardápio', path: '/dashboard/cardapio', icon: <ShoppingBag size={20} />, permission: 'produtos' },
       { name: 'Estoque', path: '/dashboard/estoque', icon: <ShoppingBag size={20} />, permission: 'estoque' },
       { name: 'Pedidos iFood', path: '/dashboard/ifood', icon: <ShoppingBag size={20} />, permission: 'ifood' },
       { name: 'Relatórios', path: '/dashboard/relatorios', icon: <PieChart size={20} />, permission: 'relatorios' },
-      { name: 'Relatórios de Caixa', path: '/dashboard/caixa', icon: <DollarSign size={20} />, permission: 'caixa' },
       { name: 'CMV', path: '/dashboard/cmv', icon: <Calculator size={20} />, permission: 'cmv' },
       { name: 'Cardápio Online', path: '/dashboard/cardapio-online', icon: <QrCode size={20} />, permission: 'cardapio-online' },
       { name: 'Editor de Cardápio', path: '/dashboard/cardapio-online/editor', icon: <PenSquare size={20} />, permission: 'cardapio-online-editor' },
@@ -52,11 +52,6 @@ const DashboardLayout: React.FC = () => {
     return allNavItems.filter(item => {
       // Admin sempre tem acesso (se não for funcionário)
       if (userRole === 'admin' && !isEmployee) {
-        return true;
-      }
-      
-      // Suporte está disponível para todos
-      if (item.permission === 'suporte') {
         return true;
       }
       

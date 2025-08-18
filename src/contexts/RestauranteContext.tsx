@@ -103,7 +103,7 @@ export const RestauranteProvider: React.FC<RestauranteProviderProps> = ({ childr
     if (user && !dataLoaded) {
       refreshData();
     }
-  }, [user, dataLoaded, isEmployee, authRestaurantId]);
+  }, [user, dataLoaded]);
 
   const refreshData = async () => {
     if (!user) return;
@@ -124,7 +124,6 @@ export const RestauranteProvider: React.FC<RestauranteProviderProps> = ({ childr
         
         if (error) throw error;
         restauranteData = data;
-        console.log("Employee restaurant loaded:", restauranteData.id);
       } else {
         // Load or create restaurant for owner
         restauranteData = await DatabaseService.getRestaurante(user.id);
@@ -150,13 +149,6 @@ export const RestauranteProvider: React.FC<RestauranteProviderProps> = ({ childr
         CRUDService.getCategoriasByRestaurante(restauranteData.id),
         DatabaseService.getComandas(restauranteData.id)
       ]);
-      
-      console.log("Data loaded for restaurant:", restauranteData.id, {
-        mesas: mesasData?.length || 0,
-        produtos: produtosData?.length || 0,
-        categorias: categoriasData?.length || 0,
-        comandas: comandasData?.length || 0
-      });
       
       setMesas(mesasData || []);
       setProdutos(produtosData || []);

@@ -4,7 +4,6 @@ import Button from '../ui/Button';
 import { formatarDinheiro } from '../../utils/formatters';
 import { useAuth } from '../../contexts/AuthContext';
 import { useRestaurante } from '../../contexts/RestauranteContext';
-import { useEmployeeAuth } from '../../hooks/useEmployeeAuth';
 import CaixaService from '../../services/CaixaService';
 import toast from 'react-hot-toast';
 
@@ -24,7 +23,6 @@ const PDVControlModal: React.FC<PDVControlModalProps> = ({
   onCaixaChange
 }) => {
   const { user, isEmployee, employeeData, displayName } = useAuth();
-  const { employeeData: currentEmployeeData } = useEmployeeAuth();
   const { restaurante, funcionarios } = useRestaurante();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -47,11 +45,10 @@ const PDVControlModal: React.FC<PDVControlModalProps> = ({
 
   // Obter dados do operador atual
   const getOperadorAtual = () => {
-    if (isEmployee && (employeeData || currentEmployeeData)) {
-      const empData = employeeData || currentEmployeeData;
+    if (isEmployee && employeeData) {
       return {
-        id: empData.id,
-        nome: empData.name,
+        id: employeeData.id,
+        nome: employeeData.name,
         tipo: 'funcionario' as const
       };
     } else {
@@ -78,7 +75,7 @@ const PDVControlModal: React.FC<PDVControlModalProps> = ({
 
       const operador = getOperadorAtual();
 
-      // Verificar se o operador já tem um caixa aberto (apenas para este operador específico)
+      // Verificar se o operador já tem um caixa aberto
       const caixaExistente = await CaixaService.getOperadorCaixaAberto(operador.id);
       if (caixaExistente) {
         throw new Error('Você já possui um caixa aberto. Feche o caixa atual antes de abrir um novo.');
@@ -191,7 +188,7 @@ const PDVControlModal: React.FC<PDVControlModalProps> = ({
                     <div>
                       <h4 className="text-sm font-medium text-blue-800">Abertura do PDV</h4>
                       <p className="text-sm text-blue-600">
-                        Informe o valor inicial em dinheiro para abrir seu PDV.
+                        Informe o valor inicial em dinheiro para abrir o PDV.
                       </p>
                     </div>
                   </div>

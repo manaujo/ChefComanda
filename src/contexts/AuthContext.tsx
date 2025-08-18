@@ -168,7 +168,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         
         // Redirect based on employee role
         if (shouldRedirect()) {
-          redirectEmployeeByRole(employeeData.role);
+          redirectByRole(employeeData.role);
         }
         return;
       }
@@ -324,36 +324,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         navigate("/dashboard/mesas");
         break;
       case "cashier":
-        navigate("/dashboard/pdv");
+        navigate("/dashboard/caixa");
         break;
       case "stock":
         navigate("/dashboard/estoque");
-        break;
-      default:
-        navigate("/dashboard");
-    }
-  };
-
-  const redirectEmployeeByRole = (role: string) => {
-    const currentPath = location.pathname;
-
-    console.log("Redirecting employee with role:", role, "from path:", currentPath);
-
-    switch (role) {
-      case "kitchen":
-        navigate("/dashboard/comandas");
-        break;
-      case "waiter":
-        navigate("/dashboard/mesas");
-        break;
-      case "cashier":
-        navigate("/dashboard/pdv");
-        break;
-      case "stock":
-        navigate("/dashboard/estoque");
-        break;
-      case "admin":
-        navigate("/dashboard");
         break;
       default:
         navigate("/dashboard");

@@ -11,10 +11,9 @@ import PDVStatusBar from '../components/pdv/PDVStatusBar';
 import PDVService from '../services/PDVService';
 import CaixaService from '../services/CaixaService';
 import { useRestaurante } from '../contexts/RestauranteContext';
+import { useAuth } from '../contexts/AuthContext';
 import { formatarDinheiro } from '../utils/formatters';
 import { Database } from '../types/database';
-import { useEmployeeAuth } from '../hooks/useEmployeeAuth';
-import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
 import { usePageActive } from '../hooks/usePageVisibility';
 import { usePreventReload } from '../hooks/usePreventReload';
@@ -44,9 +43,8 @@ interface ComandaMesa {
 }
 
 const PDV: React.FC = () => {
-  const { user, isEmployee, displayName } = useAuth();
-  const { employeeData } = useEmployeeAuth();
   const { produtos, refreshData, mesas, itensComanda, finalizarPagamento, liberarMesa, restaurante } = useRestaurante();
+  const { user, isEmployee, employeeData } = useAuth();
   const [itensVenda, setItensVenda] = useState<ItemVenda[]>([]);
   const [busca, setBusca] = useState('');
   const [categoriaSelecionada, setCategoriaSelecionada] = useState('todos');
@@ -65,48 +63,26 @@ const PDV: React.FC = () => {
   const [pdvModalMode, setPDVModalMode] = useState<'abrir' | 'fechar'>('abrir');
   const [caixaPDV, setCaixaPDV] = useState<any>(null);
   const [loading, setLoading] = useState(false);
-  const [dataInitialized, setDataInitialized] = useState(false);
   
   const isPageActive = usePageActive();
   const { currentRoute } = usePreventReload();
 
-  // Verificar se é funcionário e obter dados corretos
-  const getOperadorAtual = () => {
-    if (isEmployee && (employeeData)) {
-      return {
-        id: employeeData.id,
-        nome: employeeData.name,
-        tipo: 'funcionario' as const
-      };
-    } else {
-      return {
-        id: user?.id || '',
-        nome: displayName || user?.user_metadata?.name || 'Usuário',
-        tipo: 'usuario' as const
-      };
-    }
-  };
-
   useEffect(() => {
-    // Só carrega dados uma vez quando o componente monta
-    if (!dataInitialized) {
-      Promise.all([
-        refreshData(),
-        loadCaixaPDV()
-      ]).then(() => {
-        setDataInitialized(true);
-      });
-    }
-  }, [dataInitialized]);
+    // Carrega dados sempre que o componente monta ou contexto muda
+    Promise.all([
+      refreshData(),
+      loadCaixaPDV()
+    ]);
+  }, [user, restaurante?.id]);
 
   // Carregar caixa do PDV
   const loadCaixaPDV = async () => {
     try {
       if (!restaurante?.id) return;
 
-      const operadorAtual = getOperadorAtual();
-      // Buscar caixa aberto específico deste operador
-      const caixa = await CaixaService.getOperadorCaixaAberto(operadorAtual.id);
+      // Verificar se há um caixa aberto para o operador atual
+      const operadorAtual = isEmployee && employeeData ? employeeData.id : user?.id;
+      const caixa = await CaixaService.getCaixaAberto(restaurante.id, operadorAtual);
       setCaixaPDV(caixa);
 
       // Verificar localStorage também
@@ -119,7 +95,7 @@ const PDV: React.FC = () => {
             .from('caixas_operadores')
             .select('*')
             .eq('id', parsedCaixa.id)
-            .eq('operador_id', operadorAtual.id)
+            .eq('operador_id', operadorAtual)
             .eq('status', 'aberto')
             .maybeSingle();
           
@@ -447,7 +423,9 @@ const PDV: React.FC = () => {
                   }
                   adicionarItem(produto);
                 }}
-                className="bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg p-4 cursor-pointer hover:shadow-md transition-shadow"
+                className={`bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg p-4 cursor-pointer hover:shadow-md transition-shadow ${
+                  !caixaPDV ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
               >
                 <div className="text-center">
                   <h3 className="font-medium text-gray-900 dark:text-white text-sm mb-1">
@@ -907,6 +885,7 @@ const PDV: React.FC = () => {
                   }}
                   isLoading={loading}
                   disabled={!formaPagamento}
+                  disabled={!formaPagamento || !caixaPDV}
                   icon={<Receipt size={20} />}
                 >
                   Confirmar Pagamento

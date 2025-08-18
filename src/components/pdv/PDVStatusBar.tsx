@@ -1,21 +1,14 @@
 import React from 'react';
-import { Power, PowerOff, User, DollarSign, Clock, AlertTriangle } from 'lucide-react';
-import Button from '../ui/Button';
+import { User, Clock, DollarSign, CreditCard, AlertCircle } from 'lucide-react';
 import { formatarDinheiro } from '../../utils/formatters';
+import Button from '../ui/Button';
 import { useAuth } from '../../contexts/AuthContext';
-import { useEmployeeAuth } from '../../hooks/useEmployeeAuth';
-
-interface Caixa {
-  id: string;
-  operador_id: string;
-  operador_nome: string;
-  data_abertura: string;
-  valor_inicial: number;
-  valor_sistema: number;
-}
+import { useRestaurante } from '../../contexts/RestauranteContext';
+import CaixaService from '../../services/CaixaService';
+import { useState, useEffect } from 'react';
 
 interface PDVStatusBarProps {
-  caixaAtual?: Caixa | null;
+  caixaAtual: any;
   onAbrirPDV: () => void;
   onFecharPDV: () => void;
 }
@@ -25,154 +18,163 @@ const PDVStatusBar: React.FC<PDVStatusBarProps> = ({
   onAbrirPDV,
   onFecharPDV
 }) => {
-  const { user, isEmployee, displayName } = useAuth();
-  const { employeeData } = useEmployeeAuth();
+  const [todosCaixasAbertos, setTodosCaixasAbertos] = useState<any[]>([]);
+  const { user, isEmployee } = useAuth();
+  const { restaurante } = useRestaurante();
 
-  // Obter dados do operador atual
-  const getOperadorAtual = () => {
-    if (isEmployee && employeeData) {
-      return {
-        id: employeeData.id,
-        nome: employeeData.name,
-        tipo: 'funcionario' as const
-      };
-    } else {
-      return {
-        id: user?.id || '',
-        nome: displayName || user?.user_metadata?.name || 'Usuário',
-        tipo: 'usuario' as const
-      };
+  useEffect(() => {
+    if (!isEmployee && restaurante?.id) {
+      loadTodosCaixasAbertos();
+    }
+  }, [isEmployee, restaurante?.id]);
+
+  const loadTodosCaixasAbertos = async () => {
+    try {
+      if (!restaurante?.id) return;
+      const caixas = await CaixaService.getTodosCaixasAbertos(restaurante.id);
+      setTodosCaixasAbertos(caixas);
+    } catch (error) {
+      console.error('Error loading all cash registers:', error);
     }
   };
 
-  const operadorAtual = getOperadorAtual();
-  const isOperadorDoCaixa = caixaAtual?.operador_id === operadorAtual.id;
-  
-  // Se é funcionário e não tem caixa próprio, mostrar que pode abrir
-  const podeAbrirCaixa = !caixaAtual || isOperadorDoCaixa;
-
-  const formatarTempo = (dataAbertura: string) => {
-    const agora = new Date();
-    const abertura = new Date(dataAbertura);
-    const diferencaMs = agora.getTime() - abertura.getTime();
-    const horas = Math.floor(diferencaMs / (1000 * 60 * 60));
-    const minutos = Math.floor((diferencaMs % (1000 * 60 * 60)) / (1000 * 60));
+  const calcularTempoAberto = () => {
+    if (!caixaAtual?.data_abertura) return '';
     
-    if (horas > 0) {
-      return `${horas}h ${minutos}min`;
+    const inicio = new Date(caixaAtual.data_abertura);
+    const agora = new Date();
+    const diffMs = agora.getTime() - inicio.getTime();
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+    
+    if (diffHours > 0) {
+      return `${diffHours}h ${diffMinutes}min`;
     }
-    return `${minutos}min`;
+    return `${diffMinutes}min`;
   };
 
-  return (
-    <div className="flex items-center justify-between">
-      <div className="flex items-center space-x-6">
-        {/* Status do PDV */}
-        <div className="flex items-center space-x-3">
-          <div
-            className={`p-2 rounded-full ${
-              caixaAtual
-                ? 'bg-green-100 dark:bg-green-900'
-                : 'bg-red-100 dark:bg-red-900'
-            }`}
-          >
-            {caixaAtual ? (
-              <Power className="w-5 h-5 text-green-600 dark:text-green-400" />
-            ) : (
-              <PowerOff className="w-5 h-5 text-red-600 dark:text-red-400" />
-            )}
-          </div>
-          <div>
-            <div className="flex items-center space-x-2">
-              <span className="text-sm font-medium text-gray-900 dark:text-white">
-                PDV {caixaAtual ? 'Aberto' : 'Fechado'}
-              </span>
-              {caixaAtual && (
-                <span
-                  className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    isOperadorDoCaixa
-                      ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-                      : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
-                  }`}
-                >
-                  {isOperadorDoCaixa ? 'Seu Caixa' : 'Outro Operador'}
-                </span>
-              )}
+  if (!caixaAtual) {
+    return (
+      <div className="space-y-4">
+        {/* Mostrar outros caixas abertos se for administrador */}
+        {!isEmployee && todosCaixasAbertos.length > 0 && (
+          <div className="bg-blue-50 border-l-4 border-blue-500 p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center">
+                <CreditCard className="h-5 w-5 text-blue-500 mr-2" />
+                <div>
+                  <h3 className="text-sm font-medium text-blue-800">
+                    Caixas Abertos no Restaurante
+                  </h3>
+                  <p className="text-sm text-blue-700">
+                    {todosCaixasAbertos.length} {todosCaixasAbertos.length === 1 ? 'caixa aberto' : 'caixas abertos'} por funcionários
+                  </p>
+                </div>
+              </div>
             </div>
-            <div className="text-xs text-gray-500 dark:text-gray-400">
-              {caixaAtual ? (
-                <div className="flex items-center space-x-4">
-                  <div className="flex items-center">
-                    <User className="w-3 h-3 mr-1" />
-                    <span>{caixaAtual.operador_nome}</span>
-                  </div>
-                  <div className="flex items-center">
-                    <Clock className="w-3 h-3 mr-1" />
-                    <span>Aberto há {formatarTempo(caixaAtual.data_abertura)}</span>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {todosCaixasAbertos.map(caixa => (
+                <div key={caixa.id} className="bg-white rounded-lg p-3 border border-blue-200">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">
+                        {caixa.operador_nome}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {caixa.operador_tipo === 'funcionario' ? 'Funcionário' : 'Usuário'}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {new Date(caixa.data_abertura).toLocaleTimeString('pt-BR')}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-medium text-gray-900">
+                        {formatarDinheiro(caixa.valor_sistema)}
+                      </p>
+                      <p className="text-xs text-gray-500">Saldo</p>
+                    </div>
                   </div>
                 </div>
-              ) : (
-                'Nenhum caixa aberto'
-              )}
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="bg-red-50 border-l-4 border-red-500 p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center">
+            <AlertCircle className="h-5 w-5 text-red-500 mr-2" />
+            <div>
+              <h3 className="text-sm font-medium text-red-800">PDV Fechado</h3>
+              <p className="text-sm text-red-700">
+                {isEmployee 
+                  ? 'Você precisa abrir seu próprio caixa para realizar vendas.'
+                  : 'O PDV precisa ser aberto por um operador autorizado para realizar vendas.'
+                }
+              </p>
+            </div>
+          </div>
+          <Button
+            variant="primary"
+            onClick={onAbrirPDV}
+            icon={<CreditCard size={16} />}
+          >
+            {isEmployee ? 'Abrir Meu PDV' : 'Abrir PDV'}
+          </Button>
+        </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-green-50 border-l-4 border-green-500 p-4 mb-6">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-6">
+          <div className="flex items-center">
+            <User className="h-5 w-5 text-green-500 mr-2" />
+            <div>
+              <p className="text-sm font-medium text-green-800">
+                {caixaAtual.operador_nome}
+              </p>
+              <p className="text-xs text-green-700">
+                {caixaAtual.operador_tipo === 'funcionario' ? 'Funcionário' : 'Usuário Principal'}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center">
+            <Clock className="h-5 w-5 text-green-500 mr-2" />
+            <div>
+              <p className="text-sm font-medium text-green-800">
+                Aberto há {calcularTempoAberto()}
+              </p>
+              <p className="text-xs text-green-700">
+                {new Date(caixaAtual.data_abertura).toLocaleTimeString('pt-BR')}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center">
+            <DollarSign className="h-5 w-5 text-green-500 mr-2" />
+            <div>
+              <p className="text-sm font-medium text-green-800">
+                {formatarDinheiro(caixaAtual.valor_sistema)}
+              </p>
+              <p className="text-xs text-green-700">
+                Saldo atual
+              </p>
             </div>
           </div>
         </div>
 
-        {/* Informações do Caixa */}
-        {caixaAtual && (
-          <div className="flex items-center space-x-6">
-            <div className="text-center">
-              <div className="text-xs text-gray-500 dark:text-gray-400">Valor Inicial</div>
-              <div className="text-sm font-medium text-gray-900 dark:text-white">
-                {formatarDinheiro(caixaAtual.valor_inicial)}
-              </div>
-            </div>
-            <div className="text-center">
-              <div className="text-xs text-gray-500 dark:text-gray-400">Saldo Atual</div>
-              <div className="text-sm font-medium text-gray-900 dark:text-white">
-                {formatarDinheiro(caixaAtual.valor_sistema)}
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Ações */}
-      <div className="flex items-center space-x-3">
-        {/* Alertas */}
-        {caixaAtual && !isOperadorDoCaixa && (
-          <div className="flex items-center text-yellow-600 dark:text-yellow-400">
-            <AlertTriangle className="w-4 h-4 mr-1" />
-            <span className="text-xs">
-              Caixa operado por {caixaAtual.operador_nome}
-            </span>
-          </div>
-        )}
-
-        {/* Botões de Controle */}
-        {!caixaAtual ? (
-          <Button
-            variant="success"
-            onClick={onAbrirPDV}
-            icon={<Power size={18} />}
-            className="bg-green-600 hover:bg-green-700 text-white"
-          >
-            Abrir PDV
-          </Button>
-        ) : isOperadorDoCaixa ? (
-          <Button
-            variant="warning"
-            onClick={onFecharPDV}
-            icon={<PowerOff size={18} />}
-            className="bg-orange-600 hover:bg-orange-700 text-white"
-          >
-            Fechar PDV
-          </Button>
-        ) : (
-          <Button disabled className="bg-gray-400 text-white">
-            PDV ocupado
-          </Button>
-        )}
+        <Button
+          variant="warning"
+          onClick={onFecharPDV}
+          icon={<CreditCard size={16} />}
+        >
+          Fechar PDV
+        </Button>
       </div>
     </div>
   );

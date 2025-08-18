@@ -38,7 +38,7 @@ class CaixaService {
   }
 
   // Obter caixa aberto atual
-  async getCaixaAberto(restauranteId: string, operador?: { id: string; nome: string; tipo: 'funcionario' | 'usuario' }): Promise<CaixaOperador | null> {
+  async getCaixaAberto(restauranteId: string, operadorId?: string): Promise<CaixaOperador | null> {
     try {
       let query = supabase
         .from('caixas_operadores')
@@ -46,9 +46,9 @@ class CaixaService {
         .eq('restaurante_id', restauranteId)
         .eq('status', 'aberto');
 
-      // Se operador for fornecido, filtrar por operador específico
-      if (operador) {
-        query = query.eq('operador_id', operador.id);
+      // Se operadorId for fornecido, filtrar por operador específico
+      if (operadorId) {
+        query = query.eq('operador_id', operadorId);
       }
 
       const { data, error } = await query.maybeSingle();
@@ -106,10 +106,10 @@ class CaixaService {
     valorInicial: number;
   }): Promise<CaixaOperador> {
     try {
-      // Verificar se ESTE operador específico já tem um caixa aberto
+      // Verificar se o operador já tem um caixa aberto
       const caixaExistente = await this.getOperadorCaixaAberto(data.operadorId);
       if (caixaExistente) {
-        throw new Error('Você já possui um caixa aberto. Feche o caixa atual antes de abrir um novo.');
+        throw new Error('Este operador já possui um caixa aberto');
       }
 
       const { data: caixa, error } = await supabase

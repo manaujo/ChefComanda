@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Filter, Calendar, Clock, CheckCircle, CookingPot, ArrowUp, ArrowLeft } from 'lucide-react';
 import Button from '../components/ui/Button';
-import { useAuth } from '../contexts/AuthContext';
 import { useRestaurante } from '../contexts/RestauranteContext';
 import ComandaItem from '../components/comanda/ComandaItem';
 import ComandaModal from '../components/comanda/ComandaModal';
@@ -9,13 +8,10 @@ import { formatarDinheiro } from '../utils/formatters';
 import { useNavigate } from 'react-router-dom';
 import { usePageActive } from '../hooks/usePageVisibility';
 import { usePreventReload } from '../hooks/usePreventReload';
-import { useEmployeeAuth } from '../hooks/useEmployeeAuth';
 
 const Comandas: React.FC = () => {
   const navigate = useNavigate();
-  const { isEmployee } = useAuth();
-  const { employeeData } = useEmployeeAuth();
-  const { mesas, itensComanda, atualizarStatusItem, restaurante, refreshData } = useRestaurante();
+  const { mesas, itensComanda, atualizarStatusItem, restaurante } = useRestaurante();
   const [filtroStatus, setFiltroStatus] = useState<string>('todos');
   const [filtroMesa, setFiltroMesa] = useState<string | null>(null);
   const [comandaModalAberta, setComandaModalAberta] = useState(false);
@@ -25,15 +21,6 @@ const Comandas: React.FC = () => {
   
   const isPageActive = usePageActive();
   const { currentRoute } = usePreventReload();
-
-  useEffect(() => {
-    // Só carrega dados uma vez quando o componente monta
-    if (!dataInitialized) {
-      refreshData().then(() => {
-        setDataInitialized(true);
-      });
-    }
-  }, [dataInitialized]);
   
   useEffect(() => {
     const handleScroll = () => {
@@ -82,19 +69,9 @@ const Comandas: React.FC = () => {
   // Aplicar filtros
   const mesasFiltradasIds = Object.keys(itensPorMesa)
     .filter(mesaId => {
-      // Verificar se a mesa pertence ao restaurante correto
+      // Verificar se a mesa pertence ao restaurante do usuário logado
       const mesa = mesas.find(m => m.id === mesaId);
-      if (!mesa) {
-        return false;
-      }
-      
-      // Para funcionários, verificar se a mesa pertence ao restaurante do funcionário
-      if (isEmployee && employeeData?.restaurant_id) {
-        if (mesa.restaurante_id !== employeeData.restaurant_id) {
-          return false;
-        }
-      } else if (!isEmployee && mesa.restaurante_id !== restaurante?.id) {
-        // Para proprietários, verificar se a mesa pertence ao restaurante do proprietário
+      if (!mesa || mesa.restaurante_id !== restaurante?.id) {
         return false;
       }
       
