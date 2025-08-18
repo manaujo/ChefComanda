@@ -3,7 +3,7 @@ import { Link, useLocation, Outlet, useNavigate } from 'react-router-dom';
 import {
   Menu, ChefHat, LayoutDashboard, Users, ShoppingBag,
   ClipboardList, PieChart, Settings, Coffee, QrCode,
-  CreditCard, Moon, Sun, Globe, PenSquare, Calculator,
+  CreditCard, Moon, Sun, Globe, PenSquare, Calculator, DollarSign,
   HelpCircle, Headphones
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -37,6 +37,7 @@ const DashboardLayout: React.FC = () => {
       { name: 'Mesas', path: '/dashboard/mesas', icon: <Coffee size={20} />, permission: 'mesas' },
       { name: 'Comandas', path: '/dashboard/comandas', icon: <ClipboardList size={20} />, permission: 'comandas' },
       { name: 'PDV', path: '/dashboard/pdv', icon: <CreditCard size={20} />, permission: 'pdv' },
+      { name: 'Relatórios de Caixa', path: '/dashboard/caixa', icon: <DollarSign size={20} />, permission: 'caixa' },
       { name: 'Produtos', path: '/dashboard/cardapio', icon: <ShoppingBag size={20} />, permission: 'produtos' },
       { name: 'Estoque', path: '/dashboard/estoque', icon: <ShoppingBag size={20} />, permission: 'estoque' },
       { name: 'Pedidos iFood', path: '/dashboard/ifood', icon: <ShoppingBag size={20} />, permission: 'ifood' },
