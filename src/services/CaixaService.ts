@@ -309,6 +309,65 @@ class CaixaService {
     }
   }
 
+  // Obter relatório incluindo usuários administradores
+  async getRelatorioCompleto(
+    restauranteId: string,
+    startDate?: string,
+    endDate?: string
+  ): Promise<CaixaOperadorReport[]> {
+    try {
+      // Buscar todos os caixas do período
+      const caixas = await this.getCaixasPorPeriodo(
+        restauranteId,
+        startDate || '1900-01-01',
+        endDate || '2100-01-01'
+      );
+
+      // Agrupar por operador
+      const operadoresMap = new Map();
+
+      caixas.forEach(caixa => {
+        const operadorId = caixa.operador_id;
+        
+        if (!operadoresMap.has(operadorId)) {
+          operadoresMap.set(operadorId, {
+            operador_id: operadorId,
+            operador_nome: caixa.operador_nome,
+            operador_tipo: caixa.operador_tipo,
+            total_caixas: 0,
+            total_entradas: 0,
+            total_saidas: 0,
+            total_diferencas: 0,
+            media_tempo_operacao: 0
+          });
+        }
+
+        const operador = operadoresMap.get(operadorId);
+        operador.total_caixas++;
+        operador.total_entradas += caixa.entradas_total;
+        operador.total_saidas += caixa.saidas_total;
+        operador.total_diferencas += Math.abs(caixa.diferenca);
+        
+        if (caixa.tempo_operacao_horas) {
+          operador.media_tempo_operacao += caixa.tempo_operacao_horas;
+        }
+      });
+
+      // Calcular médias
+      const resultado = Array.from(operadoresMap.values()).map(operador => ({
+        ...operador,
+        media_tempo_operacao: operador.total_caixas > 0 
+          ? operador.media_tempo_operacao / operador.total_caixas 
+          : 0
+      }));
+
+      return resultado.sort((a, b) => b.total_entradas - a.total_entradas);
+    } catch (error) {
+      console.error('Error getting complete report:', error);
+      return [];
+    }
+  }
+
   // Obter relatório por operador
   async getRelatorioOperadores(
     restauranteId: string,

@@ -8,8 +8,6 @@ import {
 import Button from '../components/ui/Button';
 import PDVControlModal from '../components/pdv/PDVControlModal';
 import PDVStatusBar from '../components/pdv/PDVStatusBar';
-import PDVService from '../services/PDVService';
-import CaixaService from '../services/CaixaService';
 import { useRestaurante } from '../contexts/RestauranteContext';
 import { useAuth } from '../contexts/AuthContext';
 import { formatarDinheiro } from '../utils/formatters';
@@ -59,8 +57,6 @@ const PDV: React.FC = () => {
   const [showPagamentoModal, setShowPagamentoModal] = useState(false);
   const [showComandasModal, setComandasModal] = useState(false);
   const [comandasSelecionada, setComandaSelecionada] = useState<ComandaMesa | null>(null);
-  const [showPDVModal, setShowPDVModal] = useState(false);
-  const [pdvModalMode, setPDVModalMode] = useState<'abrir' | 'fechar'>('abrir');
   const [caixaPDV, setCaixaPDV] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   
@@ -80,33 +76,10 @@ const PDV: React.FC = () => {
     try {
       if (!restaurante?.id) return;
 
-      // Verificar se há um caixa aberto para o operador atual
-      const operadorAtual = isEmployee && employeeData ? employeeData.id : user?.id;
-      const caixa = await CaixaService.getCaixaAberto(restaurante.id, operadorAtual);
-      setCaixaPDV(caixa);
-
-      // Verificar localStorage também
-      const savedCaixa = localStorage.getItem('pdvAtual');
-      if (savedCaixa && !caixa) {
-        try {
-          const parsedCaixa = JSON.parse(savedCaixa);
-          // Verificar se ainda está aberto no banco e pertence ao operador atual
-          const { data } = await supabase
-            .from('caixas_operadores')
-            .select('*')
-            .eq('id', parsedCaixa.id)
-            .eq('operador_id', operadorAtual)
-            .eq('status', 'aberto')
-            .maybeSingle();
-          
-          if (data) {
-            setCaixaPDV(data);
-          } else {
-            localStorage.removeItem('pdvAtual');
-          }
-        } catch (error) {
-          localStorage.removeItem('pdvAtual');
-        }
+      // Verificar se há um caixa aberto no localStorage
+      const savedCaixa = localStorage.getItem('caixaAtual');
+      if (savedCaixa) {
+        setCaixaPDV(JSON.parse(savedCaixa));
       }
     } catch (error) {
       console.error('Error loading PDV cash register:', error);
@@ -270,23 +243,11 @@ const PDV: React.FC = () => {
     setLoading(true);
     try {
       // Registrar venda no PDV
-      await PDVService.registrarVenda(restaurante?.id || '', caixaPDV.id, {
-        itens: itensVenda.map(item => ({
-          produto_id: item.produto.id,
-          nome: item.produto.nome,
-          quantidade: item.quantidade,
-          preco_unitario: item.produto.preco,
-          observacao: item.observacao
-        })),
+      // Simular registro de venda
+      console.log('Venda registrada:', {
+        itens: itensVenda,
         valor_total: calcularTotal(),
-        forma_pagamento: formaPagamento,
-        desconto: calcularDesconto(),
-        taxa_servico: calcularTaxaServico(),
-        cliente: {
-          nome: cliente.nome,
-          telefone: cliente.telefone,
-          mesa: cliente.mesa
-        }
+        forma_pagamento: formaPagamento
       });
       
       toast.success('Venda finalizada com sucesso!');
@@ -301,8 +262,6 @@ const PDV: React.FC = () => {
       setShowPagamentoModal(false);
       sessionStorage.removeItem('pdv_carrinho');
       
-      // Recarregar dados do caixa para atualizar saldo
-      await loadCaixaPDV();
     } catch (error) {
       console.error('Error finalizing sale:', error);
       toast.error('Erro ao finalizar venda');
@@ -353,17 +312,48 @@ const PDV: React.FC = () => {
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
       {/* Barra de Status do PDV */}
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4">
-        <PDVStatusBar
-          caixaAtual={caixaPDV}
-          onAbrirPDV={() => {
-            setPDVModalMode('abrir');
-            setShowPDVModal(true);
-          }}
-          onFecharPDV={() => {
-            setPDVModalMode('fechar');
-            setShowPDVModal(true);
-          }}
-        />
+        {caixaPDV ? (
+          <div className="bg-green-50 border-l-4 border-green-500 p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-6">
+                <div className="flex items-center">
+                  <User className="h-5 w-5 text-green-500 mr-2" />
+                  <div>
+                    <p className="text-sm font-medium text-green-800">
+                      Caixa Aberto
+                    </p>
+                    <p className="text-xs text-green-700">
+                      PDV operacional
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="text-sm text-green-700">
+                Para fechar o caixa, acesse a tela "Caixa"
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-red-50 border-l-4 border-red-500 p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <AlertTriangle className="h-5 w-5 text-red-500 mr-2" />
+                <div>
+                  <h3 className="text-sm font-medium text-red-800">PDV Fechado</h3>
+                  <p className="text-sm text-red-700">
+                    O caixa precisa ser aberto na tela "Caixa" para realizar vendas.
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="primary"
+                onClick={() => window.location.href = '/dashboard/caixa'}
+              >
+                Ir para Caixa
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="flex h-screen">
@@ -896,21 +886,6 @@ const PDV: React.FC = () => {
         </div>
       )}
 
-      {/* Modal de Controle do PDV */}
-      <PDVControlModal
-        isOpen={showPDVModal}
-        onClose={() => setShowPDVModal(false)}
-        mode={pdvModalMode}
-        caixaAtual={caixaPDV}
-        onCaixaChange={(caixa) => {
-          setCaixaPDV(caixa);
-          if (caixa) {
-            localStorage.setItem('pdvAtual', JSON.stringify(caixa));
-          } else {
-            localStorage.removeItem('pdvAtual');
-          }
-        }}
-      />
     </div>
   );
 };

@@ -88,6 +88,7 @@ const Relatorios: React.FC = () => {
   
   useEffect(() => {
     loadReportData();
+    loadRelatorioCaixa();
   }, [periodoSelecionado]);
 
   const loadReportData = async () => {
@@ -217,7 +218,7 @@ const Relatorios: React.FC = () => {
           break;
       }
 
-      const caixasDetalhados = await CaixaService.getCaixasPorPeriodo(
+      const caixasDetalhados = await CaixaService.getRelatorioCompleto(
         restaurante.id,
         startDate.toISOString(),
         endDate
