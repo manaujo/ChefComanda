@@ -324,7 +324,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         navigate("/dashboard/mesas");
         break;
       case "cashier":
-        navigate("/dashboard/caixa");
+        navigate("/dashboard/pdv");
         break;
       case "stock":
         navigate("/dashboard/estoque");
@@ -347,7 +347,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         navigate("/dashboard/mesas");
         break;
       case "cashier":
-        navigate("/dashboard/caixa");
+        navigate("/dashboard/pdv");
         break;
       case "stock":
         navigate("/dashboard/estoque");

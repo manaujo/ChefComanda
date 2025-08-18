@@ -78,7 +78,7 @@ const PDVControlModal: React.FC<PDVControlModalProps> = ({
 
       const operador = getOperadorAtual();
 
-      // Verificar se o operador já tem um caixa aberto
+      // Verificar se o operador já tem um caixa aberto (apenas para este operador específico)
       const caixaExistente = await CaixaService.getOperadorCaixaAberto(operador.id);
       if (caixaExistente) {
         throw new Error('Você já possui um caixa aberto. Feche o caixa atual antes de abrir um novo.');
@@ -191,7 +191,7 @@ const PDVControlModal: React.FC<PDVControlModalProps> = ({
                     <div>
                       <h4 className="text-sm font-medium text-blue-800">Abertura do PDV</h4>
                       <p className="text-sm text-blue-600">
-                        Informe o valor inicial em dinheiro para abrir o PDV.
+                        Informe o valor inicial em dinheiro para abrir seu PDV.
                       </p>
                     </div>
                   </div>

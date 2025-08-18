@@ -5,8 +5,17 @@ import { formatarDinheiro } from '../../utils/formatters';
 import { useAuth } from '../../contexts/AuthContext';
 import { useEmployeeAuth } from '../../hooks/useEmployeeAuth';
 
+interface Caixa {
+  id: string;
+  operador_id: string;
+  operador_nome: string;
+  data_abertura: string;
+  valor_inicial: number;
+  valor_sistema: number;
+}
+
 interface PDVStatusBarProps {
-  caixaAtual: any;
+  caixaAtual?: Caixa | null;
   onAbrirPDV: () => void;
   onFecharPDV: () => void;
 }
@@ -38,6 +47,9 @@ const PDVStatusBar: React.FC<PDVStatusBarProps> = ({
 
   const operadorAtual = getOperadorAtual();
   const isOperadorDoCaixa = caixaAtual?.operador_id === operadorAtual.id;
+  
+  // Se é funcionário e não tem caixa próprio, mostrar que pode abrir
+  const podeAbrirCaixa = !caixaAtual || isOperadorDoCaixa;
 
   const formatarTempo = (dataAbertura: string) => {
     const agora = new Date();
@@ -57,11 +69,13 @@ const PDVStatusBar: React.FC<PDVStatusBarProps> = ({
       <div className="flex items-center space-x-6">
         {/* Status do PDV */}
         <div className="flex items-center space-x-3">
-          <div className={`p-2 rounded-full ${
-            caixaAtual 
-              ? 'bg-green-100 dark:bg-green-900' 
-              : 'bg-red-100 dark:bg-red-900'
-          }`}>
+          <div
+            className={`p-2 rounded-full ${
+              caixaAtual
+                ? 'bg-green-100 dark:bg-green-900'
+                : 'bg-red-100 dark:bg-red-900'
+            }`}
+          >
             {caixaAtual ? (
               <Power className="w-5 h-5 text-green-600 dark:text-green-400" />
             ) : (
@@ -74,11 +88,13 @@ const PDVStatusBar: React.FC<PDVStatusBarProps> = ({
                 PDV {caixaAtual ? 'Aberto' : 'Fechado'}
               </span>
               {caixaAtual && (
-                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                  isOperadorDoCaixa
-                    ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-                    : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
-                }`}>
+                <span
+                  className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    isOperadorDoCaixa
+                      ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                      : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                  }`}
+                >
                   {isOperadorDoCaixa ? 'Seu Caixa' : 'Outro Operador'}
                 </span>
               )}
@@ -153,9 +169,9 @@ const PDVStatusBar: React.FC<PDVStatusBarProps> = ({
             Fechar PDV
           </Button>
         ) : (
-          <div className="text-xs text-gray-500 dark:text-gray-400">
-            Apenas {caixaAtual.operador_nome} pode fechar este caixa
-          </div>
+          <Button disabled className="bg-gray-400 text-white">
+            PDV ocupado
+          </Button>
         )}
       </div>
     </div>

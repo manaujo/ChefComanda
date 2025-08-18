@@ -106,10 +106,10 @@ class CaixaService {
     valorInicial: number;
   }): Promise<CaixaOperador> {
     try {
-      // Verificar se o operador já tem um caixa aberto
+      // Verificar se ESTE operador específico já tem um caixa aberto
       const caixaExistente = await this.getOperadorCaixaAberto(data.operadorId);
       if (caixaExistente) {
-        throw new Error('Este operador já possui um caixa aberto');
+        throw new Error('Você já possui um caixa aberto. Feche o caixa atual antes de abrir um novo.');
       }
 
       const { data: caixa, error } = await supabase

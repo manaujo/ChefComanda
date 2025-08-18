@@ -105,7 +105,8 @@ const PDV: React.FC = () => {
       if (!restaurante?.id) return;
 
       const operadorAtual = getOperadorAtual();
-      const caixa = await CaixaService.getCaixaAberto(restaurante.id, operadorAtual);
+      // Buscar caixa aberto específico deste operador
+      const caixa = await CaixaService.getOperadorCaixaAberto(operadorAtual.id);
       setCaixaPDV(caixa);
 
       // Verificar localStorage também
@@ -446,9 +447,7 @@ const PDV: React.FC = () => {
                   }
                   adicionarItem(produto);
                 }}
-                className={`bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg p-4 cursor-pointer hover:shadow-md transition-shadow ${
-                  !caixaPDV ? 'opacity-50 cursor-not-allowed' : ''
-                }`}
+                className="bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg p-4 cursor-pointer hover:shadow-md transition-shadow"
               >
                 <div className="text-center">
                   <h3 className="font-medium text-gray-900 dark:text-white text-sm mb-1">
@@ -908,7 +907,6 @@ const PDV: React.FC = () => {
                   }}
                   isLoading={loading}
                   disabled={!formaPagamento}
-                  disabled={!formaPagamento || !caixaPDV}
                   icon={<Receipt size={20} />}
                 >
                   Confirmar Pagamento
