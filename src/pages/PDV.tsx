@@ -3,7 +3,7 @@ import {
   ShoppingCart, Plus, Minus, Trash2, CreditCard, 
   DollarSign, QrCode, Calculator, Receipt, Search,
   Filter, X, Check, Clock, User, Coffee, CheckCircle,
-  Power, PowerOff
+  Power, PowerOff, AlertTriangle
 } from 'lucide-react';
 import Button from '../components/ui/Button';
 import PDVControlModal from '../components/pdv/PDVControlModal';
