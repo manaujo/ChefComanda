@@ -12,6 +12,7 @@ import { useRestaurante } from '../contexts/RestauranteContext';
 import { useAuth } from '../contexts/AuthContext';
 import { formatarDinheiro } from '../utils/formatters';
 import { Database } from '../types/database';
+import { supabase } from '../services/supabase';
 import toast from 'react-hot-toast';
 import { usePageActive } from '../hooks/usePageVisibility';
 import { usePreventReload } from '../hooks/usePreventReload';
@@ -373,7 +374,7 @@ const PDV: React.FC = () => {
       setComandasModal(false);
     } catch (error) {
       console.error('Error finalizing comanda:', error);
-      toast.error('Erro ao finalizar comanda');
+      toast.error(error instanceof Error ? error.message : 'Erro ao finalizar comanda');
     } finally {
       setLoading(false);
     }

@@ -420,6 +420,9 @@ export const RestauranteProvider: React.FC<RestauranteProviderProps> = ({ childr
 
   const finalizarPagamento = async (mesaId: string, formaPagamento: string) => {
     try {
+      // Refresh data to ensure comandas state is up to date
+      await refreshData();
+      
       // Get comanda for this mesa
       const comanda = comandas.find(c => c.mesa_id === mesaId && c.status === 'aberta');
       if (!comanda) throw new Error('Comanda não encontrada');
