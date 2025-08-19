@@ -1,5 +1,5 @@
-import { supabase } from './supabase';
-import CRUDService from './CRUDService';
+import { supabase } from "./supabase";
+import CRUDService from "./CRUDService";
 
 export interface VendaReport {
   data: string;
@@ -22,7 +22,7 @@ export interface EstoqueReport {
   quantidade_atual: number;
   quantidade_minima: number;
   unidade_medida: string;
-  status: 'critico' | 'baixo' | 'ok';
+  status: "critico" | "baixo" | "ok";
   data_validade?: string;
 }
 
@@ -55,21 +55,21 @@ class ReportsService {
     try {
       // Get sales data directly from vendas table
       const { data: vendas, error } = await supabase
-        .from('vendas')
-        .select('*')
-        .eq('restaurante_id', restauranteId)
-        .eq('status', 'concluida')
-        .gte('created_at', startDate)
-        .lte('created_at', endDate)
-        .order('created_at', { ascending: false });
+        .from("vendas")
+        .select("*")
+        .eq("restaurante_id", restauranteId)
+        .eq("status", "concluida")
+        .gte("created_at", startDate)
+        .lte("created_at", endDate)
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
 
       // Group by date and calculate metrics
       const salesByDate = new Map<string, { total: number; count: number }>();
-      
-      (vendas || []).forEach(venda => {
-        const date = new Date(venda.created_at).toISOString().split('T')[0];
+
+      (vendas || []).forEach((venda) => {
+        const date = new Date(venda.created_at).toISOString().split("T")[0];
         const existing = salesByDate.get(date) || { total: 0, count: 0 };
         existing.total += Number(venda.valor_total);
         existing.count += 1;
@@ -77,16 +77,20 @@ class ReportsService {
       });
 
       // Convert to report format
-      const report: VendaReport[] = Array.from(salesByDate.entries()).map(([date, data]) => ({
-        data: date,
-        total_vendas: data.total,
-        quantidade_pedidos: data.count,
-        ticket_medio: data.count > 0 ? data.total / data.count : 0
-      }));
+      const report: VendaReport[] = Array.from(salesByDate.entries()).map(
+        ([date, data]) => ({
+          data: date,
+          total_vendas: data.total,
+          quantidade_pedidos: data.count,
+          ticket_medio: data.count > 0 ? data.total / data.count : 0
+        })
+      );
 
-      return report.sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
+      return report.sort(
+        (a, b) => new Date(b.data).getTime() - new Date(a.data).getTime()
+      );
     } catch (error) {
-      console.error('Error getting sales report:', error);
+      console.error("Error getting sales report:", error);
       return [];
     }
   }
@@ -97,15 +101,19 @@ class ReportsService {
     days: number = 30
   ): Promise<ProdutoReport[]> {
     try {
-      const produtos = await CRUDService.getProdutosMaisVendidos(restauranteId, 10, days);
+      const produtos = await CRUDService.getProdutosMaisVendidos(
+        restauranteId,
+        10,
+        days
+      );
       const totalVendas = produtos.reduce((acc, p) => acc + p.valor, 0);
 
-      return produtos.map(produto => ({
+      return produtos.map((produto) => ({
         ...produto,
         percentual: totalVendas > 0 ? (produto.valor / totalVendas) * 100 : 0
       }));
     } catch (error) {
-      console.error('Error getting produtos mais vendidos:', error);
+      console.error("Error getting produtos mais vendidos:", error);
       return [];
     }
   }
@@ -113,14 +121,14 @@ class ReportsService {
   // Relatório de estoque
   async getEstoqueReport(restauranteId: string): Promise<EstoqueReport[]> {
     try {
-      const { data, error } = await supabase.rpc('get_stock_alerts', {
+      const { data, error } = await supabase.rpc("get_stock_alerts", {
         p_restaurante_id: restauranteId
       });
 
       if (error) throw error;
       return data || [];
     } catch (error) {
-      console.error('Error getting stock report:', error);
+      console.error("Error getting stock report:", error);
       return [];
     }
   }
@@ -134,28 +142,28 @@ class ReportsService {
     try {
       // Get company profile for this restaurant's user
       const { data: restaurante, error: restError } = await supabase
-        .from('restaurantes')
-        .select('user_id')
-        .eq('id', restauranteId)
+        .from("restaurantes")
+        .select("user_id")
+        .eq("id", restauranteId)
         .single();
 
       if (restError) throw restError;
 
       const { data: companyProfile, error: compError } = await supabase
-        .from('company_profiles')
-        .select('id')
-        .eq('user_id', restaurante.user_id)
+        .from("company_profiles")
+        .select("id")
+        .eq("user_id", restaurante.user_id)
         .single();
 
       if (compError) throw compError;
 
       // Get employees with waiter role for this company
       const { data: employees, error: empError } = await supabase
-        .from('employees')
-        .select('id, name')
-        .eq('role', 'waiter')
-        .eq('active', true)
-        .eq('company_id', companyProfile.id);
+        .from("employees")
+        .select("id, name")
+        .eq("role", "waiter")
+        .eq("active", true)
+        .eq("company_id", companyProfile.id);
 
       if (empError) throw empError;
 
@@ -163,15 +171,15 @@ class ReportsService {
       const garcomStats = await Promise.all(
         (employees || []).map(async (employee) => {
           const { data: vendas, error: vendasError } = await supabase
-            .from('vendas')
-            .select('valor_total, mesa_id')
-            .eq('restaurante_id', restauranteId)
-            .gte('created_at', startDate)
-            .lte('created_at', endDate)
-            .eq('status', 'concluida');
+            .from("vendas")
+            .select("valor_total, mesa_id")
+            .eq("restaurante_id", restauranteId)
+            .gte("created_at", startDate)
+            .lte("created_at", endDate)
+            .eq("status", "concluida");
 
           if (vendasError) {
-            console.error('Error getting sales for employee:', vendasError);
+            console.error("Error getting sales for employee:", vendasError);
             return {
               nome: employee.name,
               vendas: 0,
@@ -181,8 +189,12 @@ class ReportsService {
             };
           }
 
-          const totalVendas = (vendas || []).reduce((acc, v) => acc + Number(v.valor_total), 0);
-          const mesasAtendidas = new Set((vendas || []).map(v => v.mesa_id)).size;
+          const totalVendas = (vendas || []).reduce(
+            (acc, v) => acc + Number(v.valor_total),
+            0
+          );
+          const mesasAtendidas = new Set((vendas || []).map((v) => v.mesa_id))
+            .size;
 
           return {
             nome: employee.name,
@@ -196,13 +208,16 @@ class ReportsService {
 
       // Calculate percentages
       const totalGeral = garcomStats.reduce((acc, g) => acc + g.total, 0);
-      
-      return garcomStats.map(garcom => ({
-        ...garcom,
-        percentual: totalGeral > 0 ? Math.round((garcom.total / totalGeral) * 100) : 0
-      })).sort((a, b) => b.total - a.total);
+
+      return garcomStats
+        .map((garcom) => ({
+          ...garcom,
+          percentual:
+            totalGeral > 0 ? Math.round((garcom.total / totalGeral) * 100) : 0
+        }))
+        .sort((a, b) => b.total - a.total);
     } catch (error) {
-      console.error('Error getting garcom report:', error);
+      console.error("Error getting garcom report:", error);
       return [];
     }
   }
@@ -211,54 +226,62 @@ class ReportsService {
   async getDashboardData(restauranteId: string) {
     try {
       // Calculate dashboard metrics directly
-      const hoje = new Date().toISOString().split('T')[0];
-      const inicioMes = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
+      const hoje = new Date().toISOString().split("T")[0];
+      const inicioMes = new Date(
+        new Date().getFullYear(),
+        new Date().getMonth(),
+        1
+      ).toISOString();
       const agora = new Date().toISOString();
 
       // Vendas de hoje
       const { data: vendasHoje, error: vendasHojeError } = await supabase
-        .from('vendas')
-        .select('valor_total')
-        .eq('restaurante_id', restauranteId)
-        .eq('status', 'concluida')
-        .gte('created_at', hoje)
-        .lte('created_at', agora);
+        .from("vendas")
+        .select("valor_total")
+        .eq("restaurante_id", restauranteId)
+        .eq("status", "concluida")
+        .gte("created_at", hoje)
+        .lte("created_at", agora);
 
       if (vendasHojeError) throw vendasHojeError;
 
       // Vendas do mês
       const { data: vendasMes, error: vendasMesError } = await supabase
-        .from('vendas')
-        .select('valor_total')
-        .eq('restaurante_id', restauranteId)
-        .eq('status', 'concluida')
-        .gte('created_at', inicioMes)
-        .lte('created_at', agora);
+        .from("vendas")
+        .select("valor_total")
+        .eq("restaurante_id", restauranteId)
+        .eq("status", "concluida")
+        .gte("created_at", inicioMes)
+        .lte("created_at", agora);
 
       if (vendasMesError) throw vendasMesError;
 
       // Mesas ocupadas
       const { data: mesasOcupadas, error: mesasError } = await supabase
-        .from('mesas')
-        .select('id')
-        .eq('restaurante_id', restauranteId)
-        .eq('status', 'ocupada');
+        .from("mesas")
+        .select("id")
+        .eq("restaurante_id", restauranteId)
+        .eq("status", "ocupada");
 
       if (mesasError) throw mesasError;
 
       // Comandas abertas
       const { data: comandasAbertas, error: comandasError } = await supabase
-        .from('comandas')
-        .select('c.id')
-        .from('comandas c')
-        .innerJoin('mesas m', 'c.mesa_id', 'm.id')
-        .eq('m.restaurante_id', restauranteId)
-        .eq('c.status', 'aberta');
+        .from("comandas")
+        .select("id, mesa_id!inner(restaurante_id)")
+        .eq("mesa_id.restaurante_id", restauranteId)
+        .eq("status", "aberta");
 
       if (comandasError) throw comandasError;
 
-      const totalVendasHoje = (vendasHoje || []).reduce((acc, v) => acc + Number(v.valor_total), 0);
-      const totalVendasMes = (vendasMes || []).reduce((acc, v) => acc + Number(v.valor_total), 0);
+      const totalVendasHoje = (vendasHoje || []).reduce(
+        (acc, v) => acc + Number(v.valor_total),
+        0
+      );
+      const totalVendasMes = (vendasMes || []).reduce(
+        (acc, v) => acc + Number(v.valor_total),
+        0
+      );
       const pedidosHoje = vendasHoje?.length || 0;
       const pedidosMes = vendasMes?.length || 0;
       const ticketMedio = pedidosHoje > 0 ? totalVendasHoje / pedidosHoje : 0;
@@ -285,7 +308,7 @@ class ReportsService {
         alertasEstoque
       };
     } catch (error) {
-      console.error('Error getting dashboard data:', error);
+      console.error("Error getting dashboard data:", error);
       return null;
     }
   }
@@ -293,13 +316,13 @@ class ReportsService {
   // Export functions
   async exportToExcel(data: any[], filename: string) {
     // Simulate Excel export
-    console.log('Exporting to Excel:', filename, data);
+    console.log("Exporting to Excel:", filename, data);
     return Promise.resolve();
   }
 
   async exportToPDF(data: any[], filename: string) {
     // Simulate PDF export
-    console.log('Exporting to PDF:', filename, data);
+    console.log("Exporting to PDF:", filename, data);
     return Promise.resolve();
   }
 }
