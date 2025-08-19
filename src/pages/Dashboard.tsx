@@ -183,20 +183,14 @@ const Dashboard: React.FC = () => {
   };
 
   // Calcular métricas em tempo real
-  const mesasOcupadas = mesas.filter(
-    (mesa) => mesa.status === "ocupada"
-  ).length;
+  const mesasOcupadas = mesas.filter((mesa) => mesa.status === "ocupada").length;
   const mesasLivres = mesas.filter((mesa) => mesa.status === "livre").length;
-  const comandasAbertas = comandas.filter(
-    (comanda) => comanda.status === "aberta"
-  ).length;
+  const comandasAbertas = comandas.filter((comanda) => comanda.status === "aberta").length;
 
-  const vendasHoje = vendasData.reduce((acc, venda) => acc + venda.total, 0);
-  const pedidosHoje = vendasData.reduce(
-    (acc, venda) => acc + venda.quantidade,
-    0
-  );
-  const ticketMedio = pedidosHoje > 0 ? vendasHoje / pedidosHoje : 0;
+  // Use dashboard data if available, otherwise calculate from vendasData
+  const vendasHoje = dashboardData?.vendas_hoje || vendasData.reduce((acc, venda) => acc + (venda.total || 0), 0);
+  const pedidosHoje = dashboardData?.pedidos_hoje || vendasData.reduce((acc, venda) => acc + (venda.quantidade || 0), 0);
+  const ticketMedio = dashboardData?.ticket_medio || (pedidosHoje > 0 ? vendasHoje / pedidosHoje : 0);
 
   // Itens pendentes na cozinha
   const itensPendentes = itensComanda.filter(

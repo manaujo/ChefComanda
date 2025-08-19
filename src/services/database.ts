@@ -224,11 +224,11 @@ export class DatabaseService {
     const { data, error } = await supabase
       .from('movimentacoes_caixa')
       .select('*')
-      .eq('caixa_operador_id', caixaId)
+      .or(`caixa_id.eq.${caixaId},caixa_operador_id.eq.${caixaId}`)
       .order('created_at');
 
     if (error) throw error;
-    return data;
+    return data || [];
   }
 
   static async createMovimentacaoCaixa(movimentacao: Omit<Tables['movimentacoes_caixa']['Insert'], 'id' | 'created_at'>) {

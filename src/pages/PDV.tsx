@@ -242,13 +242,93 @@ const PDV: React.FC = () => {
 
     setLoading(true);
     try {
-      // Registrar venda no PDV
-      // Simular registro de venda
-      console.log('Venda registrada:', {
-        itens: itensVenda,
+      if (!restaurante?.id) {
+        throw new Error('Restaurante não encontrado');
+      }
+
+      // Registrar venda no sistema
+      const vendaData = {
+        itens: itensVenda.map(item => ({
+          produto_id: item.produto.id,
+          nome: item.produto.nome,
+          quantidade: item.quantidade,
+          preco_unitario: item.produto.preco,
+          observacao: item.observacao
+        })),
         valor_total: calcularTotal(),
-        forma_pagamento: formaPagamento
-      });
+        forma_pagamento: formaPagamento,
+        desconto: calcularDesconto(),
+        taxa_servico: calcularTaxaServico(),
+        cliente
+      };
+
+      // Create sale record
+      const { data: venda, error: vendaError } = await supabase
+        .from('vendas')
+        .insert({
+          restaurante_id: restaurante.id,
+          mesa_id: cliente.mesa ? mesas.find(m => m.numero === cliente.mesa)?.id : null,
+          valor_total: vendaData.valor_total,
+          forma_pagamento: vendaData.forma_pagamento,
+          status: 'concluida',
+          usuario_id: user?.id || ''
+        })
+        .select()
+        .single();
+
+      if (vendaError) throw vendaError;
+
+      // Register cash movement
+      const { error: movError } = await supabase
+        .from('movimentacoes_caixa')
+        .insert({
+          caixa_operador_id: caixaPDV.id,
+          tipo: 'entrada',
+          valor: vendaData.valor_total,
+          motivo: 'Venda PDV',
+          observacao: `Venda #${venda.id} - ${vendaData.forma_pagamento}${cliente.nome ? ` - Cliente: ${cliente.nome}` : ''}`,
+          forma_pagamento: vendaData.forma_pagamento,
+          usuario_id: user?.id || ''
+        });
+
+      if (movError) throw movError;
+
+      // Update cash register system value
+      const { data: caixaAtual } = await supabase
+        .from('caixas_operadores')
+        .select('valor_inicial')
+        .eq('id', caixaPDV.id)
+        .single();
+
+      if (caixaAtual) {
+        // Calculate total movements
+        const { data: movimentacoes } = await supabase
+          .from('movimentacoes_caixa')
+          .select('tipo, valor')
+          .eq('caixa_operador_id', caixaPDV.id);
+
+        const totais = (movimentacoes || []).reduce(
+          (acc, mov) => {
+            if (mov.tipo === 'entrada') {
+              acc.entradas += Number(mov.valor);
+            } else {
+              acc.saidas += Number(mov.valor);
+            }
+            return acc;
+          },
+          { entradas: 0, saidas: 0 }
+        );
+
+        const novoValorSistema = Number(caixaAtual.valor_inicial) + totais.entradas - totais.saidas;
+
+        await supabase
+          .from('caixas_operadores')
+          .update({ valor_sistema: novoValorSistema })
+          .eq('id', caixaPDV.id);
+
+        // Update local state
+        setCaixaPDV(prev => prev ? { ...prev, valor_sistema: novoValorSistema } : null);
+      }
       
       toast.success('Venda finalizada com sucesso!');
       

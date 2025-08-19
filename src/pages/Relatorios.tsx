@@ -99,12 +99,16 @@ const Relatorios: React.FC = () => {
       // Carregar dados de vendas diárias
       const vendasData = await getVendasData();
       if (vendasData) {
-        const vendasFormatadas = vendasData.map(venda => ({
-          data: new Date(venda.data).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
-          total: venda.total || 0,
-          quantidade: venda.quantidade || 0,
-          ticket_medio: venda.quantidade > 0 ? venda.total / venda.quantidade : 0
-        }));
+        const vendasFormatadas = vendasData.map(venda => {
+          const total = Number(venda.total_vendas || venda.total || 0);
+          const quantidade = Number(venda.quantidade_pedidos || venda.quantidade || 0);
+          return {
+            data: new Date(venda.data).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
+            total,
+            quantidade,
+            ticket_medio: quantidade > 0 ? total / quantidade : 0
+          };
+        });
         setVendasDiarias(vendasFormatadas);
       }
 

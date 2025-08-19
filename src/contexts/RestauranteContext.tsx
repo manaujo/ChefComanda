@@ -424,8 +424,17 @@ export const RestauranteProvider: React.FC<RestauranteProviderProps> = ({ childr
       const comanda = comandas.find(c => c.mesa_id === mesaId && c.status === 'aberta');
       if (!comanda) throw new Error('Comanda não encontrada');
       
+      // Calculate total value from items
+      const itensComandaMesa = itensComanda.filter(item => item.mesa_id === mesaId);
+      const valorTotal = itensComandaMesa.reduce((total, item) => {
+        return total + (item.preco_unitario * item.quantidade);
+      }, 0);
+      
       // Close comanda
-      await DatabaseService.updateComanda(comanda.id, { status: 'fechada' });
+      await DatabaseService.updateComanda(comanda.id, { 
+        status: 'fechada',
+        valor_total: valorTotal
+      });
       
       // Create venda record
       if (restaurante) {
@@ -433,11 +442,30 @@ export const RestauranteProvider: React.FC<RestauranteProviderProps> = ({ childr
           restaurante_id: restaurante.id,
           mesa_id: mesaId,
           comanda_id: comanda.id,
-          valor_total: comanda.valor_total,
+          valor_total: valorTotal,
           forma_pagamento: formaPagamento,
           status: 'concluida',
           usuario_id: user?.id || ''
         });
+        
+        // Register cash movement if there's an open cash register
+        try {
+          const caixaAberto = await DatabaseService.getCaixaAtual(restaurante.id);
+          if (caixaAberto) {
+            await DatabaseService.createMovimentacaoCaixa({
+              caixa_operador_id: caixaAberto.id,
+              tipo: 'entrada',
+              valor: valorTotal,
+              motivo: `Venda Mesa ${mesas.find(m => m.id === mesaId)?.numero || mesaId}`,
+              observacao: `Pagamento via ${formaPagamento} - Comanda ${comanda.id}`,
+              forma_pagamento: formaPagamento,
+              usuario_id: user?.id || ''
+            });
+          }
+        } catch (caixaError) {
+          console.error('Error registering cash movement:', caixaError);
+          // Don't fail the payment if cash register update fails
+        }
       }
       
       // Update mesa status to livre and reset values
@@ -531,7 +559,17 @@ export const RestauranteProvider: React.FC<RestauranteProviderProps> = ({ childr
     if (!restaurante) return null;
     
     try {
-      return await ReportsService.getDashboardData(restaurante.id);
+      const dashboardData = await ReportsService.getDashboardData(restaurante.id);
+      
+      // Also get real-time metrics from current state
+      const mesasOcupadas = mesas.filter(m => m.status === 'ocupada').length;
+      const comandasAbertas = comandas.filter(c => c.status === 'aberta').length;
+      
+      return {
+        ...dashboardData,
+        mesas_ocupadas_realtime: mesasOcupadas,
+        comandas_abertas_realtime: comandasAbertas
+      };
     } catch (error) {
       console.error('Error getting dashboard data:', error);
       return null;
