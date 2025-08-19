@@ -52,10 +52,12 @@ const MesaCard: React.FC<MesaCardProps> = ({ mesa }) => {
           break;
         case 'adicionar':
           // Check if there's an open comanda for this mesa
-          const comandaAberta = comandas.find(c => c.mesa_id === mesa.id && c.status === 'aberta');
+          let comandaAberta = comandas.find(c => c.mesa_id === mesa.id && c.status === 'aberta');
           if (!comandaAberta) {
             // Create new comanda
-            await criarComanda(mesa.id);
+            const novaComandaId = await criarComanda(mesa.id);
+            // Refresh comandas to get the new one
+            await refreshData();
           }
           setAdicionarItemModalAberto(true);
           break;

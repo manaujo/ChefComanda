@@ -107,6 +107,7 @@ export class DatabaseService {
         )
       `)
       .eq('mesa.restaurante_id', restauranteId)
+      .eq('status', 'aberta')
       .order('created_at', { ascending: false });
 
     if (error) throw error;

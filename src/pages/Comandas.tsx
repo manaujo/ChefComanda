@@ -75,17 +75,28 @@ const Comandas: React.FC = () => {
         return false;
       }
       
+      // Filtrar apenas itens de comandas abertas
+      const itensDoMesa = itensPorMesa[mesaId];
+      if (!itensDoMesa || !Array.isArray(itensDoMesa)) {
+        return false;
+      }
+      
+      // Verificar se há pelo menos um item que não foi entregue
+      const temItensAtivos = itensDoMesa.some(item => 
+        item.status !== 'entregue' && item.status !== 'cancelado'
+      );
+      
+      if (!temItensAtivos) {
+        return false;
+      }
+      
       if (filtroMesa !== null && mesaId !== filtroMesa) {
         return false;
       }
       
       if (filtroStatus !== 'todos') {
-        const itensDoMesa = itensPorMesa[mesaId];
-        if (!itensDoMesa || !Array.isArray(itensDoMesa)) {
-          return false;
-        }
         const temItemComStatus = itensDoMesa.some(
-          item => item.status === filtroStatus
+          item => item.status === filtroStatus && item.status !== 'entregue' && item.status !== 'cancelado'
         );
         return temItemComStatus;
       }

@@ -430,6 +430,13 @@ export const RestauranteProvider: React.FC<RestauranteProviderProps> = ({ childr
         return total + (item.preco_unitario * item.quantidade);
       }, 0);
       
+      // Mark all items as delivered before closing comanda
+      await Promise.all(
+        itensComandaMesa.map(item => 
+          DatabaseService.updateItemComanda(item.id, { status: 'entregue' })
+        )
+      );
+      
       // Close comanda
       await DatabaseService.updateComanda(comanda.id, { 
         status: 'fechada',
@@ -450,17 +457,66 @@ export const RestauranteProvider: React.FC<RestauranteProviderProps> = ({ childr
         
         // Register cash movement if there's an open cash register
         try {
-          const caixaAberto = await DatabaseService.getCaixaAtual(restaurante.id);
+          // Try to find any open cash register for this restaurant
+          const { data: caixasAbertos, error: caixaError } = await supabase
+            .from('caixas_operadores')
+            .select('*')
+            .eq('restaurante_id', restaurante.id)
+            .eq('status', 'aberto')
+            .limit(1);
+
+          if (caixaError) {
+            console.error('Error finding open cash register:', caixaError);
+          }
+
+          const caixaAberto = caixasAbertos?.[0];
           if (caixaAberto) {
+            const mesaNumero = mesas.find(m => m.id === mesaId)?.numero || 'N/A';
             await DatabaseService.createMovimentacaoCaixa({
               caixa_operador_id: caixaAberto.id,
               tipo: 'entrada',
               valor: valorTotal,
-              motivo: `Venda Mesa ${mesas.find(m => m.id === mesaId)?.numero || mesaId}`,
-              observacao: `Pagamento via ${formaPagamento} - Comanda ${comanda.id}`,
+              motivo: `Venda Mesa ${mesaNumero}`,
+              observacao: `Pagamento via ${formaPagamento} - Comanda ${comanda.id} - ${itensComandaMesa.length} ${itensComandaMesa.length === 1 ? 'item' : 'itens'}`,
               forma_pagamento: formaPagamento,
               usuario_id: user?.id || ''
             });
+
+            // Update cash register system value
+            const { data: caixaAtual } = await supabase
+              .from('caixas_operadores')
+              .select('valor_inicial')
+              .eq('id', caixaAberto.id)
+              .single();
+
+            if (caixaAtual) {
+              // Calculate total movements
+              const { data: movimentacoes } = await supabase
+                .from('movimentacoes_caixa')
+                .select('tipo, valor')
+                .eq('caixa_operador_id', caixaAberto.id);
+
+              const totais = (movimentacoes || []).reduce(
+                (acc, mov) => {
+                  if (mov.tipo === 'entrada') {
+                    acc.entradas += Number(mov.valor);
+                  } else {
+                    acc.saidas += Number(mov.valor);
+                  }
+                  return acc;
+                },
+                { entradas: 0, saidas: 0 }
+              );
+
+              const novoValorSistema = Number(caixaAtual.valor_inicial) + totais.entradas - totais.saidas;
+
+              await supabase
+                .from('caixas_operadores')
+                .update({ valor_sistema: novoValorSistema })
+                .eq('id', caixaAberto.id);
+            }
+          } else {
+            console.warn('No open cash register found for payment registration');
           }
         } catch (caixaError) {
           console.error('Error registering cash movement:', caixaError);

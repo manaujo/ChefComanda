@@ -27,7 +27,12 @@ const PagamentoModal: React.FC<PagamentoModalProps> = ({ isOpen, onClose, mesa }
   useEffect(() => {
     if (isOpen && mesa) {
       // Filtrar itens da comanda para esta mesa
-      const itensMesa = allItensComanda.filter(item => item.mesa_id === mesa.id);
+      // Filtrar apenas itens ativos (não entregues ou cancelados)
+      const itensMesa = allItensComanda.filter(item => 
+        item.mesa_id === mesa.id && 
+        item.status !== 'entregue' && 
+        item.status !== 'cancelado'
+      );
       setItensComanda(itensMesa);
     }
   }, [isOpen, mesa, allItensComanda]);

@@ -19,7 +19,12 @@ const ComandaModal: React.FC<ComandaModalProps> = ({ isOpen, onClose, mesaId }) 
   
   const mesa = mesas.find(m => m.id === mesaId);
   const comanda = comandas.find(c => c.mesa_id === mesaId && c.status === 'aberta');
-  const itens = itensComanda.filter(item => item.mesa_id === mesaId);
+  // Filtrar apenas itens ativos (não entregues ou cancelados)
+  const itens = itensComanda.filter(item => 
+    item.mesa_id === mesaId && 
+    item.status !== 'entregue' && 
+    item.status !== 'cancelado'
+  );
   
   const valorTotal = itens.reduce((total, item) => {
     return total + (item.preco_unitario * item.quantidade);
