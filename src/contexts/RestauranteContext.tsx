@@ -293,12 +293,9 @@ export const RestauranteProvider: React.FC<RestauranteProviderProps> = ({ childr
   const ocuparMesa = async (mesaId: string) => {
     try {
       // Determinar garçom baseado no usuário logado
-      const { displayName, isEmployee, employeeData } = useAuth();
       let garcomNome = '';
-      if (isEmployee && employeeData?.role === 'waiter') {
-        garcomNome = employeeData.name;
-      } else if (displayName) {
-        garcomNome = displayName;
+      if (user?.user_metadata?.name) {
+        garcomNome = user.user_metadata.name;
       }
       
       const mesaAtualizada = await DatabaseService.updateMesa(mesaId, {

@@ -218,7 +218,7 @@ const CardapioOnlineEditor: React.FC = () => {
         toast.success(`${newItems.length} produtos sincronizados com sucesso!`);
         loadMenuItems();
       } else {
-        toast.info('Todos os produtos já estão sincronizados');
+        toast('Todos os produtos já estão sincronizados');
       }
     } catch (error) {
       console.error('Error syncing products:', error);

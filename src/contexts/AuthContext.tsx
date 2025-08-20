@@ -60,7 +60,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   });
 
   const navigate = useNavigate();
-  const location = useLocation();
 
   useEffect(() => {
     // Check active sessions and subscribe to auth changes
