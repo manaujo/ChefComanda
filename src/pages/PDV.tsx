@@ -1,35 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  ShoppingCart, Plus, Minus, Trash2, CreditCard, 
-  DollarSign, QrCode, Calculator, Receipt, Search,
-  Filter, X, Check, Clock, User, Coffee, CheckCircle,
-  Power, PowerOff, AlertTriangle
+  Coffee, CreditCard, DollarSign, QrCode, Receipt, 
+  Plus, Minus, Trash2, X, Check, Clock, User, 
+  AlertTriangle, Calculator, Percent, Music, 
+  ShoppingCart, Edit, Printer
 } from 'lucide-react';
 import Button from '../components/ui/Button';
-import PDVControlModal from '../components/pdv/PDVControlModal';
-import PDVStatusBar from '../components/pdv/PDVStatusBar';
 import { useRestaurante } from '../contexts/RestauranteContext';
 import { useAuth } from '../contexts/AuthContext';
 import { formatarDinheiro } from '../utils/formatters';
 import { Database } from '../types/database';
 import { supabase } from '../services/supabase';
 import toast from 'react-hot-toast';
-import { usePageActive } from '../hooks/usePageVisibility';
-import { usePreventReload } from '../hooks/usePreventReload';
 
-type Produto = Database['public']['Tables']['produtos']['Row'];
-
-interface ItemVenda {
-  produto: Produto;
-  quantidade: number;
-  observacao?: string;
-}
-
-interface Cliente {
-  nome?: string;
-  telefone?: string;
-  mesa?: number;
-}
+type Mesa = Database['public']['Tables']['mesas']['Row'];
 
 interface ComandaMesa {
   mesa_id: string;
@@ -41,200 +25,194 @@ interface ComandaMesa {
   valor_total: number;
 }
 
+interface ItemCupom {
+  nome: string;
+  quantidade: number;
+  preco_unitario: number;
+  total: number;
+  observacao?: string;
+}
+
+interface CupomFiscal {
+  numero: string;
+  data: string;
+  hora: string;
+  mesa?: number;
+  garcom?: string;
+  itens: ItemCupom[];
+  subtotal: number;
+  taxa_servico: number;
+  couvert_artistico: number;
+  desconto: number;
+  total: number;
+  forma_pagamento: string;
+  operador: string;
+}
+
 const PDV: React.FC = () => {
-  const { produtos, refreshData, mesas, itensComanda, finalizarPagamento, liberarMesa, restaurante } = useRestaurante();
-  const { user, isEmployee, employeeData } = useAuth();
-  const [itensVenda, setItensVenda] = useState<ItemVenda[]>([]);
-  const [busca, setBusca] = useState('');
-  const [categoriaSelecionada, setCategoriaSelecionada] = useState('todos');
-  const [cliente, setCliente] = useState<Cliente>({});
+  const { 
+    mesas, 
+    itensComanda, 
+    comandas, 
+    finalizarPagamento, 
+    refreshData, 
+    restaurante,
+    adicionarItemComanda,
+    criarComanda
+  } = useRestaurante();
+  const { user, isEmployee, employeeData, displayName } = useAuth();
+  
+  const [mesaSelecionada, setMesaSelecionada] = useState<ComandaMesa | null>(null);
+  const [showPagamentoModal, setShowPagamentoModal] = useState(false);
+  const [showAdicionarItemModal, setShowAdicionarItemModal] = useState(false);
   const [formaPagamento, setFormaPagamento] = useState<'dinheiro' | 'cartao' | 'pix' | null>(null);
   const [valorRecebido, setValorRecebido] = useState<string>('');
+  const [taxaServico, setTaxaServico] = useState(false);
+  const [couvertArtistico, setCouvertArtistico] = useState(false);
+  const [valorCouvert, setValorCouvert] = useState(15);
   const [desconto, setDesconto] = useState({
     tipo: 'percentual' as 'percentual' | 'valor',
     valor: 0
   });
-  const [taxaServico, setTaxaServico] = useState(false);
-  const [showPagamentoModal, setShowPagamentoModal] = useState(false);
-  const [showComandasModal, setComandasModal] = useState(false);
-  const [comandasSelecionada, setComandaSelecionada] = useState<ComandaMesa | null>(null);
-  const [caixaPDV, setCaixaPDV] = useState<any>(null);
   const [loading, setLoading] = useState(false);
-  
-  const isPageActive = usePageActive();
-  const { currentRoute } = usePreventReload();
+  const [caixaAtual, setCaixaAtual] = useState<any>(null);
+  const [cupomFiscal, setCupomFiscal] = useState<CupomFiscal | null>(null);
+  const [showCupomModal, setShowCupomModal] = useState(false);
 
   useEffect(() => {
-    // Carrega dados sempre que o componente monta ou contexto muda
-    Promise.all([
-      refreshData(),
-      loadCaixaPDV()
-    ]);
-  }, [user, restaurante?.id]);
-
-  // Carregar caixa do PDV
-  const loadCaixaPDV = async () => {
-    try {
-      if (!restaurante?.id) return;
-
-      // Verificar se há um caixa aberto no localStorage
-      const savedCaixa = localStorage.getItem('caixaAtual');
-      if (savedCaixa) {
-        setCaixaPDV(JSON.parse(savedCaixa));
-      }
-    } catch (error) {
-      console.error('Error loading PDV cash register:', error);
-    }
-  };
-
-  // Salvar estado do carrinho no sessionStorage
-  useEffect(() => {
-    if (itensVenda.length > 0) {
-      sessionStorage.setItem('pdv_carrinho', JSON.stringify({
-        itensVenda,
-        cliente,
-        desconto,
-        taxaServico,
-        formaPagamento,
-        valorRecebido
-      }));
-    }
-  }, [itensVenda, cliente, desconto, taxaServico, formaPagamento, valorRecebido]);
-
-  // Restaurar estado do carrinho ao carregar
-  useEffect(() => {
-    const savedState = sessionStorage.getItem('pdv_carrinho');
-    if (savedState && itensVenda.length === 0) {
-      try {
-        const parsed = JSON.parse(savedState);
-        setItensVenda(parsed.itensVenda || []);
-        setCliente(parsed.cliente || {});
-        setDesconto(parsed.desconto || { tipo: 'percentual', valor: 0 });
-        setTaxaServico(parsed.taxaServico || false);
-        setFormaPagamento(parsed.formaPagamento || null);
-        setValorRecebido(parsed.valorRecebido || '');
-      } catch (error) {
-        console.error('Error restoring PDV state:', error);
-      }
-    }
+    refreshData();
+    loadCaixaAtual();
   }, []);
 
-  // Get unique categories
-  const categorias = Array.from(new Set(produtos.map(produto => produto.categoria)));
-
-  // Filter products
-  const produtosFiltrados = produtos.filter(produto => {
-    const matchBusca = produto.nome.toLowerCase().includes(busca.toLowerCase());
-    const matchCategoria = categoriaSelecionada === 'todos' || produto.categoria === categoriaSelecionada;
-    return matchBusca && matchCategoria && produto.disponivel;
-  });
-
-  // Agrupar comandas por mesa
-  const comandasPorMesa = (): ComandaMesa[] => {
-    // Filtrar apenas mesas do restaurante atual que estão ocupadas
-    const mesasComComandas = mesas.filter(mesa => 
-      mesa.status === 'ocupada' && 
-      // Verificar se a mesa pertence ao restaurante do usuário logado
-      mesa.restaurante_id === restaurante?.id
-    );
-    
-    return mesasComComandas.map(mesa => {
-      const itensDaMesa = itensComanda.filter(item => item.mesa_id === mesa.id);
-      const valorTotal = itensDaMesa.reduce((total, item) => {
-        return total + (item.preco_unitario * item.quantidade);
-      }, 0);
-
-      return {
-        mesa_id: mesa.id,
-        mesa_numero: mesa.numero,
-        mesa_capacidade: mesa.capacidade,
-        garcom: mesa.garcom,
-        horario_abertura: mesa.horario_abertura,
-        itens: itensDaMesa,
-        valor_total: valorTotal
-      };
-    }).filter(comanda => comanda.itens.length > 0);
-  };
-
-  const adicionarItem = (produto: Produto) => {
-    const itemExistente = itensVenda.find(item => item.produto.id === produto.id);
-    
-    if (itemExistente) {
-      setItensVenda(itensVenda.map(item =>
-        item.produto.id === produto.id
-          ? { ...item, quantidade: item.quantidade + 1 }
-          : item
-      ));
-    } else {
-      setItensVenda([...itensVenda, { produto, quantidade: 1 }]);
+  const loadCaixaAtual = async () => {
+    try {
+      const savedCaixa = localStorage.getItem('caixaAtual');
+      if (savedCaixa) {
+        setCaixaAtual(JSON.parse(savedCaixa));
+      }
+    } catch (error) {
+      console.error('Error loading current cash register:', error);
     }
   };
 
-  const removerItem = (produtoId: string) => {
-    setItensVenda(itensVenda.filter(item => item.produto.id !== produtoId));
+  // Filtrar apenas mesas ocupadas com comandas abertas
+  const mesasComComandas = (): ComandaMesa[] => {
+    return mesas
+      .filter(mesa => {
+        if (mesa.status !== 'ocupada' || mesa.restaurante_id !== restaurante?.id) {
+          return false;
+        }
+        
+        // Verificar se existe comanda aberta para esta mesa
+        const temComandaAberta = comandas.some(comanda => 
+          comanda.mesa_id === mesa.id && comanda.status === 'aberta'
+        );
+        
+        return temComandaAberta;
+      })
+      .map(mesa => {
+        // Buscar comanda aberta desta mesa
+        const comandaAberta = comandas.find(comanda => 
+          comanda.mesa_id === mesa.id && comanda.status === 'aberta'
+        );
+        
+        // Filtrar apenas itens da comanda aberta que não foram entregues/cancelados
+        const itensDaMesa = itensComanda.filter(item => 
+          item.mesa_id === mesa.id && 
+          item.comanda_id === comandaAberta?.id &&
+          item.status !== 'entregue' && 
+          item.status !== 'cancelado'
+        );
+        
+        const valorTotal = itensDaMesa.reduce((total, item) => {
+          return total + (item.preco_unitario * item.quantidade);
+        }, 0);
+
+        return {
+          mesa_id: mesa.id,
+          mesa_numero: mesa.numero,
+          mesa_capacidade: mesa.capacidade,
+          garcom: mesa.garcom,
+          horario_abertura: mesa.horario_abertura,
+          itens: itensDaMesa,
+          valor_total: valorTotal
+        };
+      })
+      .filter(comanda => comanda.itens.length > 0);
   };
 
-  const alterarQuantidade = (produtoId: string, novaQuantidade: number) => {
-    if (novaQuantidade <= 0) {
-      removerItem(produtoId);
-      return;
-    }
-
-    setItensVenda(itensVenda.map(item =>
-      item.produto.id === produtoId
-        ? { ...item, quantidade: novaQuantidade }
-        : item
-    ));
+  const calcularTaxaServico = (valorBase: number) => {
+    return taxaServico ? valorBase * 0.1 : 0;
   };
 
-  const calcularSubtotal = () => {
-    return itensVenda.reduce((total, item) => {
-      return total + (item.produto.preco * item.quantidade);
-    }, 0);
+  const calcularCouvert = (capacidade: number) => {
+    return couvertArtistico ? valorCouvert * capacidade : 0;
   };
 
-  const calcularTaxaServico = () => {
-    return taxaServico ? calcularSubtotal() * 0.1 : 0;
-  };
-
-  const calcularDesconto = () => {
-    const subtotal = calcularSubtotal() + calcularTaxaServico();
+  const calcularDesconto = (valorBase: number) => {
     if (desconto.tipo === 'percentual') {
-      return subtotal * (desconto.valor / 100);
+      return valorBase * (desconto.valor / 100);
     }
     return desconto.valor;
   };
 
-  const calcularTotal = () => {
-    return calcularSubtotal() + calcularTaxaServico() - calcularDesconto();
+  const calcularTotalFinal = (comanda: ComandaMesa) => {
+    const subtotal = comanda.valor_total;
+    const taxa = calcularTaxaServico(subtotal);
+    const couvert = calcularCouvert(comanda.mesa_capacidade);
+    const descontoValor = calcularDesconto(subtotal + taxa + couvert);
+    return subtotal + taxa + couvert - descontoValor;
   };
 
-  const calcularTroco = () => {
-    if (formaPagamento !== 'dinheiro' || !valorRecebido) return 0;
-    const recebido = parseFloat(valorRecebido);
-    const total = calcularTotal();
-    return Math.max(0, recebido - total);
+  const gerarCupomFiscal = (comanda: ComandaMesa): CupomFiscal => {
+    const agora = new Date();
+    const numeroComanda = `${comanda.mesa_numero.toString().padStart(3, '0')}-${agora.getTime().toString().slice(-6)}`;
+    
+    const itens: ItemCupom[] = comanda.itens.map(item => ({
+      nome: item.nome,
+      quantidade: item.quantidade,
+      preco_unitario: item.preco_unitario,
+      total: item.preco_unitario * item.quantidade,
+      observacao: item.observacao
+    }));
+
+    const subtotal = comanda.valor_total;
+    const taxa = calcularTaxaServico(subtotal);
+    const couvert = calcularCouvert(comanda.mesa_capacidade);
+    const descontoValor = calcularDesconto(subtotal + taxa + couvert);
+    const total = calcularTotalFinal(comanda);
+
+    return {
+      numero: numeroComanda,
+      data: agora.toLocaleDateString('pt-BR'),
+      hora: agora.toLocaleTimeString('pt-BR'),
+      mesa: comanda.mesa_numero,
+      garcom: comanda.garcom,
+      itens,
+      subtotal,
+      taxa_servico: taxa,
+      couvert_artistico: couvert,
+      desconto: descontoValor,
+      total,
+      forma_pagamento: formaPagamento || '',
+      operador: displayName || user?.user_metadata?.name || 'Operador'
+    };
   };
 
-  const finalizarVenda = async () => {
-    if (itensVenda.length === 0) {
-      toast.error('Adicione pelo menos um item à venda');
-      return;
-    }
-
-    if (!caixaPDV) {
-      toast.error('PDV precisa estar aberto para realizar vendas');
-      return;
-    }
-
-    if (!formaPagamento) {
+  const finalizarPagamentoMesa = async () => {
+    if (!mesaSelecionada || !formaPagamento) {
       toast.error('Selecione uma forma de pagamento');
+      return;
+    }
+
+    if (!caixaAtual) {
+      toast.error('Caixa precisa estar aberto para finalizar pagamentos');
       return;
     }
 
     if (formaPagamento === 'dinheiro') {
       const recebido = parseFloat(valorRecebido);
-      const total = calcularTotal();
+      const total = calcularTotalFinal(mesaSelecionada);
       if (isNaN(recebido) || recebido < total) {
         toast.error('Valor recebido insuficiente');
         return;
@@ -243,70 +221,45 @@ const PDV: React.FC = () => {
 
     setLoading(true);
     try {
-      if (!restaurante?.id) {
-        throw new Error('Restaurante não encontrado');
-      }
+      const valorFinal = calcularTotalFinal(mesaSelecionada);
+      
+      // Gerar cupom fiscal antes de finalizar
+      const cupom = gerarCupomFiscal(mesaSelecionada);
+      setCupomFiscal(cupom);
 
-      // Registrar venda no sistema
-      const vendaData = {
-        itens: itensVenda.map(item => ({
-          produto_id: item.produto.id,
-          nome: item.produto.nome,
-          quantidade: item.quantidade,
-          preco_unitario: item.produto.preco,
-          observacao: item.observacao
-        })),
-        valor_total: calcularTotal(),
-        forma_pagamento: formaPagamento,
-        desconto: calcularDesconto(),
-        taxa_servico: calcularTaxaServico(),
-        cliente
-      };
+      // Finalizar pagamento da comanda
+      await finalizarPagamento(mesaSelecionada.mesa_id, formaPagamento);
 
-      // Create sale record
-      const { data: venda, error: vendaError } = await supabase
-        .from('vendas')
-        .insert({
-          restaurante_id: restaurante.id,
-          mesa_id: cliente.mesa ? mesas.find(m => m.numero === cliente.mesa)?.id : null,
-          valor_total: vendaData.valor_total,
-          forma_pagamento: vendaData.forma_pagamento,
-          status: 'concluida',
-          usuario_id: user?.id || ''
-        })
-        .select()
-        .single();
-
-      if (vendaError) throw vendaError;
-
-      // Register cash movement
+      // Registrar movimentação no caixa
       const { error: movError } = await supabase
         .from('movimentacoes_caixa')
         .insert({
-          caixa_operador_id: caixaPDV.id,
+          caixa_operador_id: caixaAtual.id,
           tipo: 'entrada',
-          valor: vendaData.valor_total,
-          motivo: 'Venda PDV',
-          observacao: `Venda #${venda.id} - ${vendaData.forma_pagamento}${cliente.nome ? ` - Cliente: ${cliente.nome}` : ''}`,
-          forma_pagamento: vendaData.forma_pagamento,
+          valor: valorFinal,
+          motivo: `Pagamento Mesa ${mesaSelecionada.mesa_numero}`,
+          observacao: `${formaPagamento.toUpperCase()} - ${mesaSelecionada.itens.length} ${mesaSelecionada.itens.length === 1 ? 'item' : 'itens'}${taxaServico ? ' + Taxa 10%' : ''}${couvertArtistico ? ` + Couvert R$${valorCouvert}` : ''}${desconto.valor > 0 ? ` - Desconto ${desconto.tipo === 'percentual' ? desconto.valor + '%' : formatarDinheiro(desconto.valor)}` : ''}`,
+          forma_pagamento: formaPagamento,
           usuario_id: user?.id || ''
         });
 
-      if (movError) throw movError;
+      if (movError) {
+        console.error('Error registering cash movement:', movError);
+        toast.error('Erro ao registrar movimentação no caixa');
+      }
 
-      // Update cash register system value
-      const { data: caixaAtual } = await supabase
+      // Atualizar valor do sistema no caixa
+      const { data: caixaData } = await supabase
         .from('caixas_operadores')
         .select('valor_inicial')
-        .eq('id', caixaPDV.id)
+        .eq('id', caixaAtual.id)
         .single();
 
-      if (caixaAtual) {
-        // Calculate total movements
+      if (caixaData) {
         const { data: movimentacoes } = await supabase
           .from('movimentacoes_caixa')
           .select('tipo, valor')
-          .eq('caixa_operador_id', caixaPDV.id);
+          .eq('caixa_operador_id', caixaAtual.id);
 
         const totais = (movimentacoes || []).reduce(
           (acc, mov) => {
@@ -320,80 +273,62 @@ const PDV: React.FC = () => {
           { entradas: 0, saidas: 0 }
         );
 
-        const novoValorSistema = Number(caixaAtual.valor_inicial) + totais.entradas - totais.saidas;
+        const novoValorSistema = Number(caixaData.valor_inicial) + totais.entradas - totais.saidas;
 
         await supabase
           .from('caixas_operadores')
           .update({ valor_sistema: novoValorSistema })
-          .eq('id', caixaPDV.id);
+          .eq('id', caixaAtual.id);
 
-        // Update local state
-        setCaixaPDV(prev => prev ? { ...prev, valor_sistema: novoValorSistema } : null);
+        setCaixaAtual(prev => prev ? { ...prev, valor_sistema: novoValorSistema } : null);
       }
-      
-      toast.success('Venda finalizada com sucesso!');
-      
-      // Limpar carrinho
-      setItensVenda([]);
-      setCliente({});
-      setFormaPagamento(null);
-      setValorRecebido('');
-      setDesconto({ tipo: 'percentual', valor: 0 });
-      setTaxaServico(false);
-      setShowPagamentoModal(false);
-      sessionStorage.removeItem('pdv_carrinho');
-      
-    } catch (error) {
-      console.error('Error finalizing sale:', error);
-      toast.error('Erro ao finalizar venda');
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  const finalizarComandaMesa = async (comanda: ComandaMesa) => {
-    if (!formaPagamento) {
-      toast.error('Selecione uma forma de pagamento');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      // Finalizar pagamento da comanda
-      await finalizarPagamento(comanda.mesa_id, formaPagamento);
-      
-      // Liberar a mesa
-      await liberarMesa(comanda.mesa_id);
-      
-      // Atualizar dados
       await refreshData();
       
-      toast.success(`Comanda da Mesa ${comanda.mesa_numero} finalizada com sucesso!`);
-      setComandaSelecionada(null);
+      toast.success(`Pagamento da Mesa ${mesaSelecionada.mesa_numero} finalizado!`);
+      
+      // Mostrar cupom fiscal
+      setShowCupomModal(true);
+      
+      // Reset form
+      setMesaSelecionada(null);
+      setShowPagamentoModal(false);
       setFormaPagamento(null);
-      setComandasModal(false);
+      setValorRecebido('');
+      setTaxaServico(false);
+      setCouvertArtistico(false);
+      setDesconto({ tipo: 'percentual', valor: 0 });
+      
     } catch (error) {
-      console.error('Error finalizing comanda:', error);
-      toast.error(error instanceof Error ? error.message : 'Erro ao finalizar comanda');
+      console.error('Error finalizing payment:', error);
+      toast.error('Erro ao finalizar pagamento');
     } finally {
       setLoading(false);
     }
   };
 
-  const limparCarrinho = () => {
-    setItensVenda([]);
-    setCliente({});
-    setDesconto({ tipo: 'percentual', valor: 0 });
-    setTaxaServico(false);
+  const calcularTroco = () => {
+    if (!mesaSelecionada || formaPagamento !== 'dinheiro' || !valorRecebido) return 0;
+    const recebido = parseFloat(valorRecebido);
+    const total = calcularTotalFinal(mesaSelecionada);
+    return Math.max(0, recebido - total);
   };
 
-  const comandasDisponiveis = comandasPorMesa();
+  const imprimirCupom = () => {
+    if (cupomFiscal) {
+      // Simular impressão
+      console.log('Imprimindo cupom fiscal:', cupomFiscal);
+      toast.success('Cupom fiscal enviado para impressão!');
+    }
+  };
+
+  const comandasAtivas = mesasComComandas();
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
-      {/* Barra de Status do PDV */}
+      {/* Status do Caixa */}
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4">
-        {caixaPDV ? (
+        {caixaAtual ? (
           <div className="bg-green-50 border-l-4 border-green-500 p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-6">
@@ -401,16 +336,16 @@ const PDV: React.FC = () => {
                   <User className="h-5 w-5 text-green-500 mr-2" />
                   <div>
                     <p className="text-sm font-medium text-green-800">
-                      Caixa Aberto
+                      PDV Operacional - {caixaAtual.operador_nome}
                     </p>
                     <p className="text-xs text-green-700">
-                      PDV operacional
+                      Saldo: {formatarDinheiro(caixaAtual.valor_sistema)}
                     </p>
                   </div>
                 </div>
               </div>
               <div className="text-sm text-green-700">
-                Para fechar o caixa, acesse a tela "Caixa"
+                Caixa aberto às {new Date(caixaAtual.data_abertura).toLocaleTimeString('pt-BR')}
               </div>
             </div>
           </div>
@@ -422,7 +357,7 @@ const PDV: React.FC = () => {
                 <div>
                   <h3 className="text-sm font-medium text-red-800">PDV Fechado</h3>
                   <p className="text-sm text-red-700">
-                    O caixa precisa ser aberto na tela "Caixa" para realizar vendas.
+                    O caixa precisa ser aberto para realizar vendas.
                   </p>
                 </div>
               </div>
@@ -437,411 +372,165 @@ const PDV: React.FC = () => {
         )}
       </div>
 
-      <div className="flex h-screen">
-        {/* Produtos - Lado Esquerdo */}
-        <div className="flex-1 bg-white dark:bg-gray-800 p-6 overflow-y-auto pt-2">
-          <div className="mb-6">
-            <div className="flex justify-between items-center mb-4">
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                Ponto de Venda
+      {/* Header */}
+      <div className="bg-white dark:bg-gray-800 shadow-sm p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+                Ponto de Venda - Mesas
               </h1>
-              <Button
-                variant="secondary"
-                icon={<Coffee size={18} />}
-                onClick={() => setComandasModal(true)}
-              >
-                Comandas das Mesas ({comandasDisponiveis.length})
-              </Button>
+              <p className="text-gray-600 dark:text-gray-400 mt-1">
+                Selecione uma mesa para finalizar o pagamento
+              </p>
             </div>
-            
-            {/* Filtros */}
-            <div className="flex flex-col md:flex-row gap-4 mb-6">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-                <input
-                  type="text"
-                  placeholder="Buscar produtos..."
-                  value={busca}
-                  onChange={(e) => setBusca(e.target.value)}
-                  className="pl-10 w-full rounded-lg border border-gray-300 dark:border-gray-600 py-2 px-4 focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:bg-gray-700 dark:text-white"
-                />
+            <div className="flex items-center space-x-4">
+              <div className="text-right">
+                <p className="text-sm text-gray-500 dark:text-gray-400">Comandas Ativas</p>
+                <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                  {comandasAtivas.length}
+                </p>
               </div>
-              
-              <select
-                value={categoriaSelecionada}
-                onChange={(e) => setCategoriaSelecionada(e.target.value)}
-                className="border border-gray-300 dark:border-gray-600 rounded-md py-2 pl-3 pr-10 focus:ring-red-500 focus:border-red-500 dark:bg-gray-700 dark:text-white"
-              >
-                <option value="todos">Todas as categorias</option>
-                {categorias.map((categoria) => (
-                  <option key={categoria} value={categoria}>
-                    {categoria}
-                  </option>
-                ))}
-              </select>
             </div>
           </div>
+        </div>
+      </div>
 
-          {/* Grid de Produtos */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {produtosFiltrados.map((produto) => (
+      {/* Grid de Mesas */}
+      <div className="max-w-7xl mx-auto p-6">
+        {comandasAtivas.length === 0 ? (
+          <div className="text-center py-16">
+            <Coffee size={64} className="mx-auto text-gray-400 dark:text-gray-600 mb-4" />
+            <h3 className="text-xl font-medium text-gray-900 dark:text-white mb-2">
+              Nenhuma comanda ativa
+            </h3>
+            <p className="text-gray-500 dark:text-gray-400">
+              Não há mesas com comandas abertas para finalizar pagamento
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {comandasAtivas.map((comanda) => (
               <div
-                key={produto.id}
+                key={comanda.mesa_id}
+                className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer"
                 onClick={() => {
-                  if (!caixaPDV) {
-                    toast.error('PDV precisa estar aberto para adicionar itens');
+                  if (!caixaAtual) {
+                    toast.error('Caixa precisa estar aberto para finalizar pagamentos');
                     return;
                   }
-                  adicionarItem(produto);
+                  setMesaSelecionada(comanda);
+                  setShowPagamentoModal(true);
                 }}
-                className={`bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg p-4 cursor-pointer hover:shadow-md transition-shadow ${
-                  !caixaPDV ? 'opacity-50 cursor-not-allowed' : ''
-                }`}
               >
-                <div className="text-center">
-                  <h3 className="font-medium text-gray-900 dark:text-white text-sm mb-1">
-                    {produto.nome}
-                  </h3>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                    {produto.categoria}
-                  </p>
-                  <p className="text-lg font-bold text-red-600 dark:text-red-400">
-                    {formatarDinheiro(produto.preco)}
-                  </p>
-                  {produto.estoque <= produto.estoque_minimo && (
-                    <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded-full mt-1 inline-block">
-                      Estoque baixo
-                    </span>
-                  )}
+                {/* Header da Mesa */}
+                <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-4 text-white">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-xl font-bold">Mesa {comanda.mesa_numero}</h3>
+                      <p className="text-blue-100 text-sm">
+                        {comanda.mesa_capacidade} pessoas
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-2xl font-bold">
+                        {formatarDinheiro(comanda.valor_total)}
+                      </p>
+                      <p className="text-blue-100 text-sm">
+                        {comanda.itens.length} {comanda.itens.length === 1 ? 'item' : 'itens'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Informações da Mesa */}
+                <div className="p-4">
+                  <div className="space-y-2 mb-4">
+                    {comanda.garcom && (
+                      <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                        <User size={14} className="mr-2" />
+                        <span>Garçom: {comanda.garcom}</span>
+                      </div>
+                    )}
+                    {comanda.horario_abertura && (
+                      <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                        <Clock size={14} className="mr-2" />
+                        <span>
+                          Aberta há {Math.floor((Date.now() - new Date(comanda.horario_abertura).getTime()) / (1000 * 60))} min
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Itens da Comanda */}
+                  <div className="space-y-2 mb-4">
+                    <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Itens do Pedido:
+                    </h4>
+                    <div className="max-h-32 overflow-y-auto space-y-1">
+                      {comanda.itens.map((item) => (
+                        <div key={item.id} className="flex justify-between text-sm bg-gray-50 dark:bg-gray-700 p-2 rounded">
+                          <span className="text-gray-700 dark:text-gray-300">
+                            {item.quantidade}x {item.nome}
+                          </span>
+                          <span className="font-medium text-gray-900 dark:text-white">
+                            {formatarDinheiro(item.preco_unitario * item.quantidade)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Status dos Itens */}
+                  <div className="flex flex-wrap gap-1 mb-4">
+                    {comanda.itens.map((item) => (
+                      <span
+                        key={item.id}
+                        className={`text-xs px-2 py-1 rounded-full ${
+                          item.status === 'pendente' ? 'bg-yellow-100 text-yellow-800' :
+                          item.status === 'preparando' ? 'bg-blue-100 text-blue-800' :
+                          item.status === 'pronto' ? 'bg-green-100 text-green-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}
+                      >
+                        {item.status}
+                      </span>
+                    ))}
+                  </div>
+
+                  <Button
+                    variant="primary"
+                    fullWidth
+                    icon={<CreditCard size={18} />}
+                    disabled={!caixaAtual}
+                  >
+                    Finalizar Pagamento
+                  </Button>
                 </div>
               </div>
             ))}
           </div>
-
-          {produtosFiltrados.length === 0 && (
-            <div className="text-center py-8">
-              <p className="text-gray-500 dark:text-gray-400">
-                Nenhum produto encontrado
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* Carrinho - Lado Direito */}
-        <div className="w-96 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 flex flex-col">
-          {/* Header do Carrinho */}
-          <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-medium text-gray-900 dark:text-white">
-                Carrinho
-              </h2>
-              {itensVenda.length > 0 && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={limparCarrinho}
-                  icon={<Trash2 size={16} />}
-                >
-                  Limpar
-                </Button>
-              )}
-            </div>
-          </div>
-
-          {/* Dados do Cliente */}
-          <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Cliente (Opcional)
-            </h3>
-            <div className="space-y-2">
-              <input
-                type="text"
-                placeholder="Nome do cliente"
-                value={cliente.nome || ''}
-                onChange={(e) => setCliente({ ...cliente, nome: e.target.value })}
-                className="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 focus:ring-red-500 focus:border-red-500 dark:bg-gray-700 dark:text-white"
-              />
-              <input
-                type="text"
-                placeholder="Telefone"
-                value={cliente.telefone || ''}
-                onChange={(e) => setCliente({ ...cliente, telefone: e.target.value })}
-                className="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 focus:ring-red-500 focus:border-red-500 dark:bg-gray-700 dark:text-white"
-              />
-              <input
-                type="number"
-                placeholder="Número da mesa"
-                value={cliente.mesa || ''}
-                onChange={(e) => setCliente({ ...cliente, mesa: parseInt(e.target.value) || undefined })}
-                className="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 focus:ring-red-500 focus:border-red-500 dark:bg-gray-700 dark:text-white"
-              />
-            </div>
-          </div>
-
-          {/* Itens do Carrinho */}
-          <div className="flex-1 overflow-y-auto p-4">
-            {itensVenda.length === 0 ? (
-              <div className="text-center py-8">
-                <ShoppingCart size={48} className="mx-auto text-gray-400 dark:text-gray-600 mb-4" />
-                <p className="text-gray-500 dark:text-gray-400">
-                  Carrinho vazio
-                </p>
-                <p className="text-sm text-gray-400 dark:text-gray-500">
-                  Clique nos produtos para adicionar
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {itensVenda.map((item) => (
-                  <div
-                    key={item.produto.id}
-                    className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3"
-                  >
-                    <div className="flex justify-between items-start mb-2">
-                      <div className="flex-1">
-                        <h4 className="font-medium text-gray-900 dark:text-white text-sm">
-                          {item.produto.nome}
-                        </h4>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          {formatarDinheiro(item.produto.preco)} cada
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => removerItem(item.produto.id)}
-                        className="text-red-500 hover:text-red-700 p-1"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <button
-                          onClick={() => alterarQuantidade(item.produto.id, item.quantidade - 1)}
-                          className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center hover:bg-gray-300 dark:hover:bg-gray-500"
-                        >
-                          <Minus size={14} />
-                        </button>
-                        <span className="w-8 text-center font-medium text-gray-900 dark:text-white">
-                          {item.quantidade}
-                        </span>
-                        <button
-                          onClick={() => alterarQuantidade(item.produto.id, item.quantidade + 1)}
-                          className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center hover:bg-gray-300 dark:hover:bg-gray-500"
-                        >
-                          <Plus size={14} />
-                        </button>
-                      </div>
-                      
-                      <span className="font-medium text-gray-900 dark:text-white">
-                        {formatarDinheiro(item.produto.preco * item.quantidade)}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Resumo e Pagamento */}
-          {itensVenda.length > 0 && (
-            <div className="border-t border-gray-200 dark:border-gray-700 p-4">
-              {/* Adicionais */}
-              <div className="space-y-2 mb-4">
-                <div className="flex items-center justify-between">
-                  <label className="flex items-center text-sm">
-                    <input
-                      type="checkbox"
-                      checked={taxaServico}
-                      onChange={(e) => setTaxaServico(e.target.checked)}
-                      className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    />
-                    Taxa de Serviço (10%)
-                  </label>
-                  <span className="text-sm font-medium">
-                    {formatarDinheiro(calcularTaxaServico())}
-                  </span>
-                </div>
-
-                {/* Desconto */}
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2">
-                    <select
-                      value={desconto.tipo}
-                      onChange={(e) => setDesconto({ ...desconto, tipo: e.target.value as 'percentual' | 'valor' })}
-                      className="text-xs border border-gray-300 dark:border-gray-600 rounded py-1 px-2 dark:bg-gray-700 dark:text-white"
-                    >
-                      <option value="percentual">% Desconto</option>
-                      <option value="valor">R$ Desconto</option>
-                    </select>
-                    <input
-                      type="number"
-                      value={desconto.valor}
-                      onChange={(e) => setDesconto({ ...desconto, valor: parseFloat(e.target.value) || 0 })}
-                      min="0"
-                      step={desconto.tipo === 'percentual' ? '1' : '0.01'}
-                      className="flex-1 text-xs border border-gray-300 dark:border-gray-600 rounded py-1 px-2 dark:bg-gray-700 dark:text-white"
-                      placeholder="0"
-                    />
-                  </div>
-                  {calcularDesconto() > 0 && (
-                    <p className="text-xs text-green-600 dark:text-green-400">
-                      Desconto: -{formatarDinheiro(calcularDesconto())}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* Totais */}
-              <div className="space-y-2 mb-4 pt-2 border-t border-gray-200 dark:border-gray-700">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600 dark:text-gray-400">Subtotal:</span>
-                  <span className="text-gray-900 dark:text-white">{formatarDinheiro(calcularSubtotal())}</span>
-                </div>
-                {taxaServico && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600 dark:text-gray-400">Taxa de Serviço:</span>
-                    <span className="text-gray-900 dark:text-white">{formatarDinheiro(calcularTaxaServico())}</span>
-                  </div>
-                )}
-                {calcularDesconto() > 0 && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600 dark:text-gray-400">Desconto:</span>
-                    <span className="text-green-600 dark:text-green-400">-{formatarDinheiro(calcularDesconto())}</span>
-                  </div>
-                )}
-                <div className="flex justify-between text-lg font-bold pt-2 border-t border-gray-200 dark:border-gray-700">
-                  <span className="text-gray-900 dark:text-white">Total:</span>
-                  <span className="text-gray-900 dark:text-white">{formatarDinheiro(calcularTotal())}</span>
-                </div>
-              </div>
-
-              <Button
-                variant="primary"
-                fullWidth
-                size="lg"
-                onClick={() => setShowPagamentoModal(true)}
-                icon={<CreditCard size={20} />}
-              >
-                Finalizar Venda
-              </Button>
-            </div>
-          )}
-        </div>
+        )}
       </div>
 
-      {/* Modal de Comandas das Mesas */}
-      {showComandasModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black bg-opacity-50">
-          <div className="flex items-center justify-center min-h-screen p-4">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
-              <div className="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700">
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                  Comandas das Mesas
-                </h3>
-                <button
-                  onClick={() => setComandasModal(false)}
-                  className="text-gray-400 hover:text-gray-500"
-                >
-                  <X size={24} />
-                </button>
-              </div>
-
-              <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
-                {comandasDisponiveis.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Coffee size={48} className="mx-auto text-gray-400 mb-4" />
-                    <p className="text-gray-500">Nenhuma comanda ativa</p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {comandasDisponiveis.map((comanda) => (
-                      <div
-                        key={comanda.mesa_id}
-                        className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600"
-                      >
-                        <div className="flex justify-between items-start mb-4">
-                          <div>
-                            <h4 className="font-medium text-gray-900 dark:text-white">
-                              Mesa {comanda.mesa_numero}
-                            </h4>
-                            <div className="text-sm text-gray-500 dark:text-gray-400 space-y-1">
-                              <p>Capacidade: {comanda.mesa_capacidade} pessoas</p>
-                              {comanda.garcom && <p>Garçom: {comanda.garcom}</p>}
-                              {comanda.horario_abertura && (
-                                <div className="flex items-center">
-                                  <Clock size={14} className="mr-1" />
-                                  <span>
-                                    {new Date(comanda.horario_abertura).toLocaleTimeString('pt-BR')}
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-lg font-bold text-gray-900 dark:text-white">
-                              {formatarDinheiro(comanda.valor_total)}
-                            </p>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">
-                              {comanda.itens.length} {comanda.itens.length === 1 ? 'item' : 'itens'}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="space-y-2 mb-4">
-                          {comanda.itens.slice(0, 3).map((item) => (
-                            <div key={item.id} className="flex justify-between text-sm">
-                              <span>{item.quantidade}x {item.nome}</span>
-                              <span>{formatarDinheiro(item.preco_unitario * item.quantidade)}</span>
-                            </div>
-                          ))}
-                          {comanda.itens.length > 3 && (
-                            <p className="text-xs text-gray-500 dark:text-gray-400">
-                              +{comanda.itens.length - 3} {comanda.itens.length - 3 === 1 ? 'item' : 'itens'}
-                            </p>
-                          )}
-                        </div>
-
-                        <Button
-                          variant="primary"
-                          fullWidth
-                          size="sm"
-                          onClick={() => {
-                            setComandaSelecionada(comanda);
-                            setComandasModal(false);
-                            setShowPagamentoModal(true);
-                          }}
-                          icon={<CreditCard size={16} />}
-                        >
-                          Finalizar Pagamento
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Modal de Pagamento */}
-      {showPagamentoModal && (
+      {showPagamentoModal && mesaSelecionada && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-black bg-opacity-50">
           <div className="flex items-center justify-center min-h-screen p-4">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700">
                 <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                  {comandasSelecionada 
-                    ? `Finalizar Mesa ${comandasSelecionada.mesa_numero}`
-                    : 'Finalizar Pagamento'
-                  }
+                  Finalizar Pagamento - Mesa {mesaSelecionada.mesa_numero}
                 </h3>
                 <button
                   onClick={() => {
                     setShowPagamentoModal(false);
-                    setComandaSelecionada(null);
+                    setMesaSelecionada(null);
                     setFormaPagamento(null);
+                    setValorRecebido('');
+                    setTaxaServico(false);
+                    setCouvertArtistico(false);
+                    setDesconto({ tipo: 'percentual', valor: 0 });
                   }}
                   className="text-gray-400 hover:text-gray-500"
                 >
@@ -850,69 +539,205 @@ const PDV: React.FC = () => {
               </div>
 
               <div className="p-6">
-                {/* Total */}
-                <div className="text-center mb-6">
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Total a pagar</p>
-                  <p className="text-3xl font-bold text-gray-900 dark:text-white">
-                    {comandasSelecionada 
-                      ? formatarDinheiro(comandasSelecionada.valor_total)
-                      : formatarDinheiro(calcularTotal())
-                    }
-                  </p>
-                  {comandasSelecionada && (
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                      Mesa {comandasSelecionada.mesa_numero} • {comandasSelecionada.itens.length} {comandasSelecionada.itens.length === 1 ? 'item' : 'itens'}
-                    </p>
-                  )}
+                {/* Resumo dos Itens */}
+                <div className="mb-6">
+                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                    Itens Consumidos
+                  </h4>
+                  <div className="max-h-40 overflow-y-auto border rounded-lg p-3 bg-gray-50 dark:bg-gray-700">
+                    {mesaSelecionada.itens.map((item) => (
+                      <div key={item.id} className="flex justify-between text-sm py-1">
+                        <span className="text-gray-700 dark:text-gray-300">
+                          {item.quantidade}x {item.nome}
+                          {item.observacao && (
+                            <span className="text-xs text-gray-500 block">
+                              {item.observacao}
+                            </span>
+                          )}
+                        </span>
+                        <span className="font-medium text-gray-900 dark:text-white">
+                          {formatarDinheiro(item.preco_unitario * item.quantidade)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Adicionais */}
+                <div className="space-y-4 mb-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id="taxaServico"
+                        checked={taxaServico}
+                        onChange={(e) => setTaxaServico(e.target.checked)}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                      <label htmlFor="taxaServico" className="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                        Taxa de Serviço (10%)
+                      </label>
+                    </div>
+                    <span className="text-sm font-medium text-gray-900 dark:text-white">
+                      {formatarDinheiro(calcularTaxaServico(mesaSelecionada.valor_total))}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id="couvert"
+                        checked={couvertArtistico}
+                        onChange={(e) => setCouvertArtistico(e.target.checked)}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                      <label htmlFor="couvert" className="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                        Couvert Artístico
+                      </label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-xs text-gray-500 dark:text-gray-400">R$</span>
+                      <input
+                        type="number"
+                        value={valorCouvert}
+                        onChange={(e) => setValorCouvert(parseFloat(e.target.value) || 15)}
+                        min="0"
+                        step="0.01"
+                        className="w-16 text-sm border border-gray-300 dark:border-gray-600 rounded py-1 px-2 dark:bg-gray-700 dark:text-white"
+                      />
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        x {mesaSelecionada.mesa_capacidade} = {formatarDinheiro(calcularCouvert(mesaSelecionada.mesa_capacidade))}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Desconto */}
+                  <div className="border-t pt-4">
+                    <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Desconto</h4>
+                    <div className="flex space-x-2 mb-2">
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          checked={desconto.tipo === 'percentual'}
+                          onChange={() => setDesconto({ ...desconto, tipo: 'percentual' })}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                        />
+                        <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Percentual (%)</span>
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          checked={desconto.tipo === 'valor'}
+                          onChange={() => setDesconto({ ...desconto, tipo: 'valor' })}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                        />
+                        <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Valor (R$)</span>
+                      </label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="number"
+                        value={desconto.valor}
+                        onChange={(e) => setDesconto({ ...desconto, valor: parseFloat(e.target.value) || 0 })}
+                        min="0"
+                        step={desconto.tipo === 'percentual' ? '1' : '0.01'}
+                        className="flex-1 border border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                        placeholder={desconto.tipo === 'percentual' ? "0%" : "R$ 0,00"}
+                      />
+                      {desconto.valor > 0 && (
+                        <span className="text-sm text-green-600 dark:text-green-400">
+                          -{formatarDinheiro(calcularDesconto(mesaSelecionada.valor_total + calcularTaxaServico(mesaSelecionada.valor_total) + calcularCouvert(mesaSelecionada.mesa_capacidade)))}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Resumo do Pagamento */}
+                <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-6">
+                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                    Resumo do Pagamento
+                  </h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600 dark:text-gray-400">Subtotal:</span>
+                      <span className="text-gray-900 dark:text-white">{formatarDinheiro(mesaSelecionada.valor_total)}</span>
+                    </div>
+                    {taxaServico && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600 dark:text-gray-400">Taxa de Serviço (10%):</span>
+                        <span className="text-gray-900 dark:text-white">{formatarDinheiro(calcularTaxaServico(mesaSelecionada.valor_total))}</span>
+                      </div>
+                    )}
+                    {couvertArtistico && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600 dark:text-gray-400">Couvert Artístico:</span>
+                        <span className="text-gray-900 dark:text-white">{formatarDinheiro(calcularCouvert(mesaSelecionada.mesa_capacidade))}</span>
+                      </div>
+                    )}
+                    {desconto.valor > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600 dark:text-gray-400">Desconto:</span>
+                        <span className="text-green-600 dark:text-green-400">
+                          -{formatarDinheiro(calcularDesconto(mesaSelecionada.valor_total + calcularTaxaServico(mesaSelecionada.valor_total) + calcularCouvert(mesaSelecionada.mesa_capacidade)))}
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex justify-between text-lg font-bold pt-2 border-t border-gray-200 dark:border-gray-600">
+                      <span className="text-gray-900 dark:text-white">Total:</span>
+                      <span className="text-gray-900 dark:text-white">{formatarDinheiro(calcularTotalFinal(mesaSelecionada))}</span>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Formas de Pagamento */}
                 <div className="space-y-3 mb-6">
                   <button
                     onClick={() => setFormaPagamento('pix')}
-                    className={`w-full p-4 rounded-lg border-2 transition-colors ${
+                    className={`w-full p-3 rounded-lg border-2 transition-colors ${
                       formaPagamento === 'pix'
-                        ? 'border-red-500 bg-red-50 dark:bg-red-900/20'
-                        : 'border-gray-200 dark:border-gray-600 hover:border-red-200'
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                        : 'border-gray-200 dark:border-gray-600 hover:border-blue-200'
                     }`}
                   >
                     <div className="flex items-center">
-                      <QrCode size={24} className="text-red-500" />
+                      <QrCode size={20} className="text-blue-500" />
                       <span className="ml-3 font-medium text-gray-900 dark:text-white">PIX</span>
                     </div>
                   </button>
 
                   <button
                     onClick={() => setFormaPagamento('cartao')}
-                    className={`w-full p-4 rounded-lg border-2 transition-colors ${
+                    className={`w-full p-3 rounded-lg border-2 transition-colors ${
                       formaPagamento === 'cartao'
-                        ? 'border-red-500 bg-red-50 dark:bg-red-900/20'
-                        : 'border-gray-200 dark:border-gray-600 hover:border-red-200'
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                        : 'border-gray-200 dark:border-gray-600 hover:border-blue-200'
                     }`}
                   >
                     <div className="flex items-center">
-                      <CreditCard size={24} className="text-red-500" />
+                      <CreditCard size={20} className="text-blue-500" />
                       <span className="ml-3 font-medium text-gray-900 dark:text-white">Cartão</span>
                     </div>
                   </button>
 
                   <button
                     onClick={() => setFormaPagamento('dinheiro')}
-                    className={`w-full p-4 rounded-lg border-2 transition-colors ${
+                    className={`w-full p-3 rounded-lg border-2 transition-colors ${
                       formaPagamento === 'dinheiro'
-                        ? 'border-red-500 bg-red-50 dark:bg-red-900/20'
-                        : 'border-gray-200 dark:border-gray-600 hover:border-red-200'
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                        : 'border-gray-200 dark:border-gray-600 hover:border-blue-200'
                     }`}
                   >
                     <div className="flex items-center">
-                      <DollarSign size={24} className="text-red-500" />
+                      <DollarSign size={20} className="text-blue-500" />
                       <span className="ml-3 font-medium text-gray-900 dark:text-white">Dinheiro</span>
                     </div>
                   </button>
                 </div>
 
                 {/* Valor Recebido (apenas para dinheiro) */}
-                {formaPagamento === 'dinheiro' && !comandasSelecionada && (
+                {formaPagamento === 'dinheiro' && (
                   <div className="mb-6">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Valor Recebido
@@ -934,7 +759,7 @@ const PDV: React.FC = () => {
                     {valorRecebido && (
                       <div className="mt-2 text-sm">
                         <p className="text-gray-600 dark:text-gray-400">
-                          Troco: <span className="font-medium text-gray-900 dark:text-white">
+                          Troco: <span className="font-medium text-green-600 dark:text-green-400">
                             {formatarDinheiro(calcularTroco())}
                           </span>
                         </p>
@@ -943,30 +768,169 @@ const PDV: React.FC = () => {
                   </div>
                 )}
 
-                <Button
-                  variant="primary"
-                  fullWidth
-                  size="lg"
-                  onClick={() => {
-                    if (comandasSelecionada) {
-                      finalizarComandaMesa(comandasSelecionada);
-                    } else {
-                      finalizarVenda();
-                    }
-                  }}
-                  isLoading={loading}
-                  disabled={!formaPagamento}
-                  disabled={!formaPagamento || !caixaPDV}
-                  icon={<Receipt size={20} />}
-                >
-                  Confirmar Pagamento
-                </Button>
+                {/* Botões de Ação */}
+                <div className="space-y-3">
+                  <Button
+                    variant="secondary"
+                    fullWidth
+                    onClick={() => {
+                      setShowPagamentoModal(false);
+                      setShowAdicionarItemModal(true);
+                    }}
+                    icon={<Plus size={18} />}
+                  >
+                    Adicionar Mais Itens
+                  </Button>
+
+                  <Button
+                    variant="primary"
+                    fullWidth
+                    size="lg"
+                    onClick={finalizarPagamentoMesa}
+                    isLoading={loading}
+                    disabled={!formaPagamento}
+                    icon={<Receipt size={20} />}
+                  >
+                    Confirmar Pagamento
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
         </div>
       )}
 
+      {/* Modal do Cupom Fiscal */}
+      {showCupomModal && cupomFiscal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black bg-opacity-50">
+          <div className="flex items-center justify-center min-h-screen p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md">
+              <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                  Cupom Fiscal
+                </h3>
+                <button
+                  onClick={() => setShowCupomModal(false)}
+                  className="text-gray-400 hover:text-gray-500"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="p-4">
+                {/* Cupom Fiscal */}
+                <div className="bg-white border-2 border-dashed border-gray-300 p-4 font-mono text-sm">
+                  <div className="text-center mb-4">
+                    <h4 className="font-bold">{restaurante?.nome || 'RESTAURANTE'}</h4>
+                    <p className="text-xs">CUPOM FISCAL NÃO FISCAL</p>
+                    <p className="text-xs">Comanda: {cupomFiscal.numero}</p>
+                  </div>
+
+                  <div className="border-t border-dashed border-gray-300 pt-2 mb-2">
+                    <div className="flex justify-between text-xs">
+                      <span>Data: {cupomFiscal.data}</span>
+                      <span>Hora: {cupomFiscal.hora}</span>
+                    </div>
+                    {cupomFiscal.mesa && (
+                      <p className="text-xs">Mesa: {cupomFiscal.mesa}</p>
+                    )}
+                    {cupomFiscal.garcom && (
+                      <p className="text-xs">Garçom: {cupomFiscal.garcom}</p>
+                    )}
+                    <p className="text-xs">Operador: {cupomFiscal.operador}</p>
+                  </div>
+
+                  <div className="border-t border-dashed border-gray-300 pt-2 mb-2">
+                    <div className="space-y-1">
+                      {cupomFiscal.itens.map((item, index) => (
+                        <div key={index}>
+                          <div className="flex justify-between">
+                            <span className="text-xs">
+                              {item.quantidade}x {item.nome}
+                            </span>
+                            <span className="text-xs">
+                              {formatarDinheiro(item.total)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between text-xs text-gray-600">
+                            <span>  {formatarDinheiro(item.preco_unitario)} un</span>
+                          </div>
+                          {item.observacao && (
+                            <div className="text-xs text-gray-600 ml-2">
+                              Obs: {item.observacao}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="border-t border-dashed border-gray-300 pt-2 mb-2">
+                    <div className="space-y-1 text-xs">
+                      <div className="flex justify-between">
+                        <span>SUBTOTAL:</span>
+                        <span>{formatarDinheiro(cupomFiscal.subtotal)}</span>
+                      </div>
+                      {cupomFiscal.taxa_servico > 0 && (
+                        <div className="flex justify-between">
+                          <span>TAXA SERVIÇO (10%):</span>
+                          <span>{formatarDinheiro(cupomFiscal.taxa_servico)}</span>
+                        </div>
+                      )}
+                      {cupomFiscal.couvert_artistico > 0 && (
+                        <div className="flex justify-between">
+                          <span>COUVERT ARTÍSTICO:</span>
+                          <span>{formatarDinheiro(cupomFiscal.couvert_artistico)}</span>
+                        </div>
+                      )}
+                      {cupomFiscal.desconto > 0 && (
+                        <div className="flex justify-between">
+                          <span>DESCONTO:</span>
+                          <span>-{formatarDinheiro(cupomFiscal.desconto)}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="border-t border-dashed border-gray-300 pt-2 mb-2">
+                    <div className="flex justify-between font-bold">
+                      <span>TOTAL:</span>
+                      <span>{formatarDinheiro(cupomFiscal.total)}</span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span>FORMA PAGTO:</span>
+                      <span>{cupomFiscal.forma_pagamento.toUpperCase()}</span>
+                    </div>
+                  </div>
+
+                  <div className="text-center text-xs mt-4">
+                    <p>OBRIGADO PELA PREFERÊNCIA!</p>
+                    <p>VOLTE SEMPRE!</p>
+                  </div>
+                </div>
+
+                <div className="flex space-x-3 mt-4">
+                  <Button
+                    variant="ghost"
+                    onClick={() => setShowCupomModal(false)}
+                    className="flex-1"
+                  >
+                    Fechar
+                  </Button>
+                  <Button
+                    variant="primary"
+                    onClick={imprimirCupom}
+                    icon={<Printer size={16} />}
+                    className="flex-1"
+                  >
+                    Imprimir
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

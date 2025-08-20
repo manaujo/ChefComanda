@@ -95,10 +95,15 @@ const Dashboard: React.FC = () => {
       setLoading(true);
       await refreshData();
 
-      const [dashboard, vendas] = await Promise.all([
-        getDashboardData(),
-        getVendasData()
-      ]);
+      // Load dashboard data
+      const dashboard = await getDashboardData();
+      
+      // Load vendas data with proper date range
+      const endDate = new Date().toISOString();
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - 7);
+      
+      const vendas = await getVendasData();
 
       setDashboardData(dashboard);
       setVendasData(vendas || []);
@@ -227,14 +232,19 @@ const Dashboard: React.FC = () => {
     }
   ];
 
-  const vendasChartData = vendasData.map((venda) => ({
-    data: new Date(venda.data).toLocaleDateString("pt-BR", {
-      day: "2-digit",
-      month: "2-digit"
-    }),
-    vendas: venda.total,
-    pedidos: venda.quantidade
-  }));
+  const vendasChartData = vendasData.map((venda) => {
+    const total = Number(venda.total_vendas || venda.total || 0);
+    const quantidade = Number(venda.quantidade_pedidos || venda.quantidade || 0);
+    
+    return {
+      data: new Date(venda.data).toLocaleDateString("pt-BR", {
+        day: "2-digit",
+        month: "2-digit"
+      }),
+      vendas: total,
+      pedidos: quantidade
+    };
+  });
 
   if (loading) {
     return (

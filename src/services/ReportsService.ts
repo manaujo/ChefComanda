@@ -53,14 +53,14 @@ class ReportsService {
     endDate: string
   ): Promise<VendaReport[]> {
     try {
-      // Get sales data directly from vendas table
+      // Get sales data directly from vendas table with proper date filtering
       const { data: vendas, error } = await supabase
         .from("vendas")
         .select("*")
         .eq("restaurante_id", restauranteId)
         .eq("status", "concluida")
         .gte("created_at", startDate)
-        .lte("created_at", endDate)
+        .lt("created_at", endDate)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -76,6 +76,17 @@ class ReportsService {
         salesByDate.set(date, existing);
       });
 
+      // Fill in missing dates with zero values for the last 7 days
+      const today = new Date();
+      for (let i = 0; i < 7; i++) {
+        const date = new Date(today);
+        date.setDate(date.getDate() - i);
+        const dateStr = date.toISOString().split("T")[0];
+        
+        if (!salesByDate.has(dateStr)) {
+          salesByDate.set(dateStr, { total: 0, count: 0 });
+        }
+      }
       // Convert to report format
       const report: VendaReport[] = Array.from(salesByDate.entries()).map(
         ([date, data]) => ({
@@ -88,7 +99,7 @@ class ReportsService {
 
       return report.sort(
         (a, b) => new Date(b.data).getTime() - new Date(a.data).getTime()
-      );
+      ).slice(0, 7); // Limit to last 7 days
     } catch (error) {
       console.error("Error getting sales report:", error);
       return [];

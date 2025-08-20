@@ -21,7 +21,7 @@ const MesaCard: React.FC<MesaCardProps> = ({ mesa }) => {
   const [pagamentoModalAberto, setPagamentoModalAberto] = useState(false);
   const [menuAberto, setMenuAberto] = useState(false);
   
-  const { ocuparMesa, liberarMesa, excluirMesa, criarComanda, comandas } = useRestaurante();
+  const { ocuparMesa, liberarMesa, excluirMesa, criarComanda, comandas, refreshData } = useRestaurante();
 
   const statusClasses = {
     livre: 'border-l-4 border-green-500 bg-green-50',

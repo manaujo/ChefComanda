@@ -423,12 +423,28 @@ export const RestauranteProvider: React.FC<RestauranteProviderProps> = ({ childr
       // Refresh data to ensure comandas state is up to date
       await refreshData();
       
-      // Get comanda for this mesa
-      const comanda = comandas.find(c => c.mesa_id === mesaId && c.status === 'aberta');
+      // Get the most recent open comanda for this mesa
+      const { data: comandaAtual, error: comandaError } = await supabase
+        .from('comandas')
+        .select('*')
+        .eq('mesa_id', mesaId)
+        .eq('status', 'aberta')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      
+      if (comandaError) throw comandaError;
+      const comanda = comandaAtual;
       if (!comanda) throw new Error('Comanda não encontrada');
       
-      // Calculate total value from items
-      const itensComandaMesa = itensComanda.filter(item => item.mesa_id === mesaId);
+      // Calculate total value from items of this specific comanda
+      const itensComandaMesa = itensComanda.filter(item => 
+        item.mesa_id === mesaId && 
+        item.comanda_id === comanda.id &&
+        item.status !== 'entregue' && 
+        item.status !== 'cancelado'
+      );
+      
       const valorTotal = itensComandaMesa.reduce((total, item) => {
         return total + (item.preco_unitario * item.quantidade);
       }, 0);
@@ -479,7 +495,7 @@ export const RestauranteProvider: React.FC<RestauranteProviderProps> = ({ childr
               caixa_operador_id: caixaAberto.id,
               tipo: 'entrada',
               valor: valorTotal,
-              motivo: `Venda Mesa ${mesaNumero}`,
+              motivo: `Pagamento Mesa ${mesaNumero}`,
               observacao: `Pagamento via ${formaPagamento} - Comanda ${comanda.id} - ${itensComandaMesa.length} ${itensComandaMesa.length === 1 ? 'item' : 'itens'}`,
               forma_pagamento: formaPagamento,
               usuario_id: user?.id || ''
@@ -618,7 +634,43 @@ export const RestauranteProvider: React.FC<RestauranteProviderProps> = ({ childr
     if (!restaurante) return null;
     
     try {
-      const dashboardData = await ReportsService.getDashboardData(restaurante.id);
+      // Get dashboard data using the database function
+      const { data: dashboardData, error } = await supabase.rpc('get_dashboard_data', {
+        p_restaurante_id: restaurante.id
+      });
+      
+      if (error) {
+        console.error('Error getting dashboard data:', error);
+        // Fallback to manual calculation
+        const hoje = new Date().toISOString().split('T')[0];
+        const inicioMes = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
+        
+        const [vendasHoje, vendasMes] = await Promise.all([
+          supabase.from('vendas')
+            .select('valor_total')
+            .eq('restaurante_id', restaurante.id)
+            .eq('status', 'concluida')
+            .gte('created_at', hoje),
+          supabase.from('vendas')
+            .select('valor_total')
+            .eq('restaurante_id', restaurante.id)
+            .eq('status', 'concluida')
+            .gte('created_at', inicioMes)
+        ]);
+        
+        const totalVendasHoje = (vendasHoje.data || []).reduce((acc, v) => acc + Number(v.valor_total), 0);
+        const totalVendasMes = (vendasMes.data || []).reduce((acc, v) => acc + Number(v.valor_total), 0);
+        
+        return {
+          vendas_hoje: totalVendasHoje,
+          vendas_mes: totalVendasMes,
+          pedidos_hoje: vendasHoje.data?.length || 0,
+          pedidos_mes: vendasMes.data?.length || 0,
+          mesas_ocupadas: mesas.filter(m => m.status === 'ocupada').length,
+          comandas_abertas: comandas.filter(c => c.status === 'aberta').length,
+          ticket_medio: vendasHoje.data?.length ? totalVendasHoje / vendasHoje.data.length : 0
+        };
+      }
       
       // Also get real-time metrics from current state
       const mesasOcupadas = mesas.filter(m => m.status === 'ocupada').length;

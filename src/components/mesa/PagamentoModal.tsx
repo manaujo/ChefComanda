@@ -4,6 +4,8 @@ import Button from '../ui/Button';
 import { useRestaurante } from '../../contexts/RestauranteContext';
 import { formatarDinheiro } from '../../utils/formatters';
 import toast from 'react-hot-toast';
+import { supabase } from '../../services/supabase';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface PagamentoModalProps {
   isOpen: boolean;
@@ -23,6 +25,7 @@ const PagamentoModal: React.FC<PagamentoModalProps> = ({ isOpen, onClose, mesa }
   const [itensComanda, setItensComanda] = useState<ComandaItemData[]>([]);
   
   const { finalizarPagamento, itensComanda: allItensComanda, refreshData } = useRestaurante();
+  const { user } = useAuth();
 
   useEffect(() => {
     if (isOpen && mesa) {
@@ -63,6 +66,61 @@ const PagamentoModal: React.FC<PagamentoModalProps> = ({ isOpen, onClose, mesa }
 
     setLoading(true);
     try {
+      // Registrar movimentação no caixa se houver caixa aberto
+      const savedCaixa = localStorage.getItem('caixaAtual');
+      if (savedCaixa) {
+        const caixaAtual = JSON.parse(savedCaixa);
+        
+        const { error: movError } = await supabase
+          .from('movimentacoes_caixa')
+          .insert({
+            caixa_operador_id: caixaAtual.id,
+            tipo: 'entrada',
+            valor: valorTotal,
+            motivo: `Pagamento Mesa ${mesa.numero}`,
+            observacao: `${formaPagamento.toUpperCase()} - ${itensComanda.length} ${itensComanda.length === 1 ? 'item' : 'itens'}${taxaServico ? ' + Taxa 10%' : ''}${couvertArtistico ? ` + Couvert` : ''}${valorDesconto > 0 ? ` - Desconto` : ''}`,
+            forma_pagamento: formaPagamento,
+            usuario_id: user?.id || ''
+          });
+
+        if (movError) {
+          console.error('Error registering cash movement:', movError);
+        } else {
+          // Atualizar valor do sistema no caixa
+          const { data: caixaData } = await supabase
+            .from('caixas_operadores')
+            .select('valor_inicial')
+            .eq('id', caixaAtual.id)
+            .single();
+
+          if (caixaData) {
+            const { data: movimentacoes } = await supabase
+              .from('movimentacoes_caixa')
+              .select('tipo, valor')
+              .eq('caixa_operador_id', caixaAtual.id);
+
+            const totais = (movimentacoes || []).reduce(
+              (acc, mov) => {
+                if (mov.tipo === 'entrada') {
+                  acc.entradas += Number(mov.valor);
+                } else {
+                  acc.saidas += Number(mov.valor);
+                }
+                return acc;
+              },
+              { entradas: 0, saidas: 0 }
+            );
+
+            const novoValorSistema = Number(caixaData.valor_inicial) + totais.entradas - totais.saidas;
+
+            await supabase
+              .from('caixas_operadores')
+              .update({ valor_sistema: novoValorSistema })
+              .eq('id', caixaAtual.id);
+          }
+        }
+      }
+
       await finalizarPagamento(mesa.id, formaPagamento);
       await refreshData(); // Refresh data to update UI
       onClose();
