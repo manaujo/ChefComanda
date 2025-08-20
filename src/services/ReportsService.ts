@@ -53,14 +53,22 @@ class ReportsService {
     endDate: string
   ): Promise<VendaReport[]> {
     try {
+      // Ajustar datas para timezone do Brasil
+      const adjustedStartDate = new Date(startDate);
+      const adjustedEndDate = new Date(endDate);
+      
+      // Garantir que estamos usando o timezone correto
+      const startDateBR = new Date(adjustedStartDate.getTime() - (adjustedStartDate.getTimezoneOffset() * 60000));
+      const endDateBR = new Date(adjustedEndDate.getTime() - (adjustedEndDate.getTimezoneOffset() * 60000));
+      
       // Get sales data directly from vendas table with proper date filtering
       const { data: vendas, error } = await supabase
         .from("vendas")
         .select("*")
         .eq("restaurante_id", restauranteId)
         .eq("status", "concluida")
-        .gte("created_at", startDate)
-        .lt("created_at", endDate)
+        .gte("created_at", startDateBR.toISOString())
+        .lt("created_at", endDateBR.toISOString())
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -69,15 +77,18 @@ class ReportsService {
       const salesByDate = new Map<string, { total: number; count: number }>();
 
       (vendas || []).forEach((venda) => {
-        const date = new Date(venda.created_at).toISOString().split("T")[0];
+        // Usar timezone do Brasil para agrupar por data
+        const vendaDate = new Date(venda.created_at);
+        const date = new Date(vendaDate.getTime() - (vendaDate.getTimezoneOffset() * 60000))
+          .toISOString().split("T")[0];
         const existing = salesByDate.get(date) || { total: 0, count: 0 };
         existing.total += Number(venda.valor_total);
         existing.count += 1;
         salesByDate.set(date, existing);
       });
 
-      // Fill in missing dates with zero values for the last 7 days
-      const today = new Date();
+      // Fill in missing dates with zero values
+      const today = new Date(new Date().getTime() - (new Date().getTimezoneOffset() * 60000));
       for (let i = 0; i < 7; i++) {
         const date = new Date(today);
         date.setDate(date.getDate() - i);
@@ -87,6 +98,7 @@ class ReportsService {
           salesByDate.set(dateStr, { total: 0, count: 0 });
         }
       }
+      
       // Convert to report format
       const report: VendaReport[] = Array.from(salesByDate.entries()).map(
         ([date, data]) => ({

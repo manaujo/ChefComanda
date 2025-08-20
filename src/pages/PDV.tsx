@@ -1363,7 +1363,7 @@ const PDV: React.FC = () => {
                     </div>
 
                     {/* Grid de Produtos */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-50 overflow-y-auto">
                       {produtosFiltrados.map((produto) => (
                         <div
                           key={produto.id}
@@ -1447,7 +1447,7 @@ const PDV: React.FC = () => {
                 </button>
               </div>
 
-              <div className="p-6">
+              <div className="p-6" style={{ maxHeight: "calc(100vh - 200px)", overflowY: "auto" }}>
                 {vendaAvulsa.length > 0 && !produtoSelecionado ? (
                   // Finalizar venda avulsa
                   <div className="space-y-6">

@@ -276,6 +276,35 @@ export class DatabaseService {
     return data;
   }
 
+  // Dashboard data
+  static async getDashboardData(restauranteId: string) {
+    try {
+      const now = new Date();
+      const hoje = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().split("T")[0];
+      const inicioMes = new Date(
+        new Date().getFullYear(),
+        new Date().getMonth(),
+        1
+      ).toISOString();
+      const agora = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString();
+
+      // Vendas de hoje
+      const { data: vendasHoje, error: vendasHojeError } = await supabase
+        .from("vendas")
+        .select("valor_total")
+        .eq("restaurante_id", restauranteId)
+        .eq("status", "concluida")
+        .gte("created_at", hoje + "T00:00:00.000Z")
+        .lte("created_at", agora);
+
+      if (vendasHojeError) throw vendasHojeError;
+
+      return { vendasHoje };
+    } catch (error) {
+      throw error;
+    }
+  }
+
   // Audit Logs
   static async createAuditLog(log: Omit<Tables['audit_logs']['Insert'], 'id' | 'created_at'>) {
     const { error } = await supabase

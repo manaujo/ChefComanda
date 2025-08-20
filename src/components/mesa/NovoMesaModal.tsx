@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import Button from '../ui/Button';
 import { useRestaurante } from '../../contexts/RestauranteContext';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface NovoMesaModalProps {
   isOpen: boolean;
@@ -11,11 +12,11 @@ interface NovoMesaModalProps {
 const NovoMesaModal: React.FC<NovoMesaModalProps> = ({ isOpen, onClose }) => {
   const [numero, setNumero] = useState<string>('');
   const [capacidade, setCapacidade] = useState<string>('4');
-  const [garcom, setGarcom] = useState<string>('');
   const [error, setError] = useState<string>('');
   const [loading, setLoading] = useState(false);
   
-  const { adicionarMesa, funcionarios } = useRestaurante();
+  const { adicionarMesa } = useRestaurante();
+  const { displayName, isEmployee, employeeData } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,17 +43,24 @@ const NovoMesaModal: React.FC<NovoMesaModalProps> = ({ isOpen, onClose }) => {
         return;
       }
       
+      // Determinar garçom baseado no usuário logado
+      let garcomNome = '';
+      if (isEmployee && employeeData?.role === 'waiter') {
+        garcomNome = employeeData.name;
+      } else if (displayName) {
+        garcomNome = displayName;
+      }
+      
       // Add table
       await adicionarMesa({
         numero: numeroInt,
         capacidade: capacidadeInt,
-        garcom: garcom || undefined
+        garcom: garcomNome || undefined
       });
       
       // Clear and close modal
       setNumero('');
       setCapacidade('4');
-      setGarcom('');
       onClose();
     } catch (error) {
       console.error('Error adding mesa:', error);
@@ -64,10 +72,6 @@ const NovoMesaModal: React.FC<NovoMesaModalProps> = ({ isOpen, onClose }) => {
 
   if (!isOpen) return null;
 
-  // Filtrar apenas funcionários com função de garçom e que estão ativos
-  const garcons = funcionarios.filter(func => 
-    func.role === 'waiter' && func.active
-  );
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
@@ -131,25 +135,18 @@ const NovoMesaModal: React.FC<NovoMesaModalProps> = ({ isOpen, onClose }) => {
                 </select>
               </div>
 
-              <div className="mb-4">
-                <label htmlFor="garcom" className="block text-sm font-medium text-gray-700">
-                  Garçom Responsável (Opcional)
-                </label>
-                <select
-                  id="garcom"
-                  value={garcom}
-                  onChange={(e) => setGarcom(e.target.value)}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                >
-                  <option value="">Selecione um garçom</option>
-                  {garcons.length > 0 ? (
-                    garcons.map(func => (
-                      <option key={func.id} value={func.name}>{func.name}</option>
-                    ))
-                  ) : (
-                    <option value="" disabled>Nenhum garçom cadastrado</option>
-                  )}
-                </select>
+              {/* Informação sobre garçom responsável */}
+              <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+                <p className="text-sm text-blue-800 font-medium">
+                  Garçom Responsável: {
+                    isEmployee && employeeData?.role === 'waiter' 
+                      ? employeeData.name
+                      : displayName || 'Usuário Principal'
+                  }
+                </p>
+                <p className="text-xs text-blue-600 mt-1">
+                  A mesa será automaticamente atribuída ao operador logado
+                </p>
               </div>
               
               <div className="mt-6 flex justify-end space-x-3">

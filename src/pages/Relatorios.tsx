@@ -11,6 +11,8 @@ import { useRestaurante } from '../contexts/RestauranteContext';
 import RelatorioOperadorModal from '../components/caixa/RelatorioOperadorModal';
 import FuncionariosCaixaTab from '../components/relatorios/FuncionariosCaixaTab';
 import CaixaService from '../services/CaixaService';
+import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../services/supabase';
 import toast from 'react-hot-toast';
 import { 
   BarChart as RechartsBarChart, 
@@ -71,8 +73,12 @@ const Relatorios: React.FC = () => {
     restaurante,
     refreshData 
   } = useRestaurante();
+  const { user } = useAuth();
   
-  const produtosEstoqueBaixo = produtos.filter(p => p.estoque <= p.estoque_minimo);
+  const [insumosEstoqueBaixo, setInsumosEstoqueBaixo] = useState<any[]>([]);
+  const [tempoMedioPreparo, setTempoMedioPreparo] = useState(18);
+  const [taxaOcupacao, setTaxaOcupacao] = useState(0);
+  const [itensNaFila, setItensNaFila] = useState(0);
   
   const [periodoSelecionado, setPeriodoSelecionado] = useState('7dias');
   const [categoriaAtiva, setCategoriaAtiva] = useState('vendas');
@@ -89,7 +95,21 @@ const Relatorios: React.FC = () => {
   useEffect(() => {
     loadReportData();
     loadRelatorioCaixa();
+    loadInsumosEstoqueBaixo();
+    loadEficienciaOperacional();
   }, [periodoSelecionado]);
+
+  // Auto-refresh a cada 30 segundos para dados em tempo real
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (categoriaAtiva === 'vendas' || categoriaAtiva === 'operacional') {
+        loadReportData();
+        loadEficienciaOperacional();
+      }
+    }, 30000); // 30 segundos
+
+    return () => clearInterval(interval);
+  }, [categoriaAtiva]);
 
   const loadReportData = async () => {
     setLoading(true);
@@ -103,7 +123,11 @@ const Relatorios: React.FC = () => {
           const total = Number(venda.total_vendas || venda.total || 0);
           const quantidade = Number(venda.quantidade_pedidos || venda.quantidade || 0);
           return {
-            data: new Date(venda.data).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
+            data: new Date(venda.data).toLocaleDateString('pt-BR', { 
+              day: '2-digit', 
+              month: '2-digit',
+              timeZone: 'America/Sao_Paulo'
+            }),
             total,
             quantidade,
             ticket_medio: quantidade > 0 ? total / quantidade : 0
@@ -154,36 +178,39 @@ const Relatorios: React.FC = () => {
 
   const loadVendasPorGarcom = async () => {
     try {
-      // Garantir que estamos usando apenas funcionários do restaurante atual
-      const garcons = funcionarios.filter(func => 
-        func.role === 'waiter' && func.active
-      );
+      // Buscar garçons que realmente atenderam mesas (incluindo usuário principal)
+      const garconsComVendas = new Map();
       
-      if (garcons.length === 0) {
-        setVendasGarcons([]);
-        return;
-      }
-
-      // Calcular vendas por garçom baseado nas mesas ocupadas
-      const vendasPorGarcom: VendaGarcom[] = garcons.map(garcom => {
-        // Filtrar apenas mesas do restaurante atual
-        const mesasDoGarcom = mesas.filter(mesa => 
-          mesa.garcom === garcom.name && 
-          mesa.restaurante_id === restaurante?.id
-        );
-        const vendasGarcom = mesasDoGarcom.reduce((acc, mesa) => {
-          const itensMesa = itensComanda.filter(item => item.mesa_id === mesa.id);
-          return acc + itensMesa.reduce((total, item) => total + (item.preco_unitario * item.quantidade), 0);
-        }, 0);
-        
-        return {
-          nome: garcom.name,
-          vendas: mesasDoGarcom.filter(mesa => mesa.status !== 'livre').length,
-          total: vendasGarcom,
-          mesas: mesasDoGarcom.length,
-          percentual: 0
-        };
+      // Processar mesas com garçom atribuído
+      mesas.forEach(mesa => {
+        if (mesa.garcom && mesa.restaurante_id === restaurante?.id) {
+          if (!garconsComVendas.has(mesa.garcom)) {
+            garconsComVendas.set(mesa.garcom, {
+              nome: mesa.garcom,
+              vendas: 0,
+              total: 0,
+              mesas: 0,
+              percentual: 0
+            });
+          }
+          
+          const garcomData = garconsComVendas.get(mesa.garcom);
+          garcomData.mesas++;
+          
+          if (mesa.status !== 'livre') {
+            garcomData.vendas++;
+            
+            // Calcular vendas baseado nos itens da mesa
+            const itensMesa = itensComanda.filter(item => item.mesa_id === mesa.id);
+            const valorMesa = itensMesa.reduce((total, item) => 
+              total + (item.preco_unitario * item.quantidade), 0
+            );
+            garcomData.total += valorMesa;
+          }
+        }
       });
+
+      const vendasPorGarcom = Array.from(garconsComVendas.values());
       
       // Calcular percentuais
       const totalVendas = vendasPorGarcom.reduce((acc, g) => acc + g.total, 0);
@@ -199,11 +226,74 @@ const Relatorios: React.FC = () => {
     }
   };
 
+  const loadInsumosEstoqueBaixo = async () => {
+    if (!user || !restaurante?.id) return;
+    
+    try {
+      const { data: insumos } = await supabase
+        .from("insumos")
+        .select("*")
+        .eq("restaurante_id", restaurante.id)
+        .eq("ativo", true)
+        .order("quantidade");
+
+      // Filtrar insumos com estoque baixo
+      const insumosComEstoqueBaixo = (insumos || []).filter(
+        (insumo) => Number(insumo.quantidade) <= Number(insumo.quantidade_minima)
+      );
+
+      setInsumosEstoqueBaixo(insumosComEstoqueBaixo);
+    } catch (error) {
+      console.error("Error loading insumos estoque baixo:", error);
+      setInsumosEstoqueBaixo([]);
+    }
+  };
+
+  const loadEficienciaOperacional = async () => {
+    try {
+      // Calcular tempo médio de preparo baseado nos itens
+      const itensFinalizados = itensComanda.filter(item => 
+        item.status === 'entregue' || item.status === 'pronto'
+      );
+      
+      if (itensFinalizados.length > 0) {
+        // Simular tempo médio baseado no tipo de item
+        const tempoMedio = itensFinalizados.reduce((acc, item) => {
+          // Tempo estimado baseado na categoria
+          let tempoEstimado = 15; // padrão
+          if (item.categoria.includes('Principal') || item.categoria.includes('Prato')) {
+            tempoEstimado = 25;
+          } else if (item.categoria.includes('Bebida')) {
+            tempoEstimado = 5;
+          } else if (item.categoria.includes('Sobremesa')) {
+            tempoEstimado = 12;
+          }
+          return acc + tempoEstimado;
+        }, 0) / itensFinalizados.length;
+        
+        setTempoMedioPreparo(Math.round(tempoMedio));
+      }
+      
+      // Calcular taxa de ocupação
+      const mesasOcupadas = mesas.filter(mesa => mesa.status === 'ocupada').length;
+      const taxaOcupacaoAtual = mesas.length > 0 ? Math.round((mesasOcupadas / mesas.length) * 100) : 0;
+      setTaxaOcupacao(taxaOcupacaoAtual);
+      
+      // Itens na fila
+      const itensPendentesCount = itensComanda.filter(item => item.status === 'pendente').length;
+      setItensNaFila(itensPendentesCount);
+    } catch (error) {
+      console.error('Error loading operational efficiency:', error);
+    }
+  };
+
   const loadRelatorioCaixa = async () => {
     try {
       if (!restaurante?.id) return;
 
-      const endDate = new Date().toISOString();
+      // Usar timezone do Brasil para garantir data correta
+      const now = new Date();
+      const endDate = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString();
       const startDate = new Date();
       
       switch (periodoSelecionado) {
@@ -224,7 +314,7 @@ const Relatorios: React.FC = () => {
 
       const caixasDetalhados = await CaixaService.getRelatorioCompleto(
         restaurante.id,
-        startDate.toISOString(),
+        new Date(startDate.getTime() - (startDate.getTimezoneOffset() * 60000)).toISOString(),
         endDate
       );
       
@@ -265,6 +355,8 @@ const Relatorios: React.FC = () => {
     try {
       setRefreshing(true);
       await loadReportData();
+      await loadInsumosEstoqueBaixo();
+      await loadEficienciaOperacional();
       toast.success('Relatórios atualizados!');
     } catch (error) {
       toast.error('Erro ao atualizar relatórios');
@@ -671,7 +763,7 @@ const Relatorios: React.FC = () => {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm text-blue-700 dark:text-blue-300">Tempo Médio de Preparo</p>
-                        <p className="text-2xl font-bold text-blue-800 dark:text-blue-200">18 min</p>
+                        <p className="text-2xl font-bold text-blue-800 dark:text-blue-200">{tempoMedioPreparo} min</p>
                       </div>
                       <Clock className="text-blue-600 dark:text-blue-400" size={24} />
                     </div>
@@ -682,7 +774,7 @@ const Relatorios: React.FC = () => {
                       <div>
                         <p className="text-sm text-green-700 dark:text-green-300">Taxa de Ocupação</p>
                         <p className="text-2xl font-bold text-green-800 dark:text-green-200">
-                          {mesas.length > 0 ? Math.round((mesasOcupadas / mesas.length) * 100) : 0}%
+                          {taxaOcupacao}%
                         </p>
                       </div>
                       <Coffee className="text-green-600 dark:text-green-400" size={24} />
@@ -694,7 +786,7 @@ const Relatorios: React.FC = () => {
                       <div>
                         <p className="text-sm text-purple-700 dark:text-purple-300">Itens na Fila</p>
                         <p className="text-2xl font-bold text-purple-800 dark:text-purple-200">
-                          {itensComanda.filter(item => item.status === 'pendente').length}
+                          {itensNaFila}
                         </p>
                       </div>
                       <Package className="text-purple-600 dark:text-purple-400" size={24} />
@@ -703,11 +795,11 @@ const Relatorios: React.FC = () => {
                 </div>
               </div>
 
-              {/* Status dos Produtos */}
+              {/* Status do Estoque */}
               <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                    Status dos Produtos
+                    Status do Estoque
                   </h2>
                   <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
                     <Package size={20} className="text-green-600 dark:text-green-400" />
@@ -718,29 +810,29 @@ const Relatorios: React.FC = () => {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="text-center p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
                       <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-                        {produtos.filter(p => p.disponivel).length}
+                        {insumosEstoqueBaixo.filter(i => i.quantidade > i.quantidade_minima).length}
                       </p>
-                      <p className="text-sm text-green-700 dark:text-green-300">Disponíveis</p>
+                      <p className="text-sm text-green-700 dark:text-green-300">Em Dia</p>
                     </div>
                     <div className="text-center p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
                       <p className="text-2xl font-bold text-red-600 dark:text-red-400">
-                        {produtos.filter(p => !p.disponivel).length}
+                        {insumosEstoqueBaixo.length}
                       </p>
-                      <p className="text-sm text-red-700 dark:text-red-300">Indisponíveis</p>
+                      <p className="text-sm text-red-700 dark:text-red-300">Estoque Baixo</p>
                     </div>
                   </div>
                   
-                  {produtosEstoqueBaixo.length > 0 && (
+                  {insumosEstoqueBaixo.length > 0 && (
                     <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
                       <h4 className="font-medium text-gray-900 dark:text-white mb-3">
-                        Produtos com Estoque Baixo
+                        Insumos com Estoque Baixo
                       </h4>
                       <div className="space-y-2">
-                        {produtosEstoqueBaixo.slice(0, 3).map(produto => (
-                          <div key={produto.id} className="flex items-center justify-between p-2 bg-red-50 dark:bg-red-900/20 rounded">
-                            <span className="text-sm text-gray-900 dark:text-white">{produto.nome}</span>
+                        {insumosEstoqueBaixo.slice(0, 3).map(insumo => (
+                          <div key={insumo.id} className="flex items-center justify-between p-2 bg-red-50 dark:bg-red-900/20 rounded">
+                            <span className="text-sm text-gray-900 dark:text-white">{insumo.nome}</span>
                             <span className="text-sm text-red-600 dark:text-red-400 font-medium">
-                              {produto.estoque}/{produto.estoque_minimo}
+                              {insumo.quantidade}/{insumo.quantidade_minima} {insumo.unidade_medida}
                             </span>
                           </div>
                         ))}
