@@ -3,7 +3,7 @@ import {
   Package, Plus, Search, Filter, AlertTriangle, TrendingUp, 
   Edit, Trash2, ArrowUp, ArrowDown, Calendar, Download,
   FileSpreadsheet, RefreshCw, Eye, Clock, User, Zap,
-  CheckCircle, XCircle, Activity, BarChart3
+  CheckCircle, XCircle, Activity, BarChart3, X
 } from 'lucide-react';
 import Button from '../components/ui/Button';
 import { formatarDinheiro } from '../utils/formatters';
