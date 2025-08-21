@@ -93,13 +93,19 @@ export class CRUDService {
 
   // Produtos
   static async getProdutosByRestaurante(restauranteId: string) {
+    console.log('Loading produtos for restaurant:', restauranteId);
     const { data, error } = await supabase
       .from('produtos')
       .select('*')
       .eq('restaurante_id', restauranteId)
       .order('nome');
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error loading produtos:', error);
+      throw error;
+    }
+    
+    console.log('Produtos loaded:', data?.length || 0);
     return data || [];
   }
 
@@ -205,6 +211,7 @@ export class CRUDService {
 
   // Estoque
   static async getEstoqueBaixo(restauranteId: string) {
+    console.log('Loading estoque baixo for restaurant:', restauranteId);
     const { data, error } = await supabase
       .from('insumos')
       .select('*')
@@ -212,8 +219,12 @@ export class CRUDService {
       .eq('ativo', true)
       .order('quantidade');
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error loading insumos:', error);
+      throw error;
+    }
     
+    console.log('Insumos loaded:', data?.length || 0);
     return (data || []).filter(insumo => 
       Number(insumo.quantidade) <= Number(insumo.quantidade_minima)
     );

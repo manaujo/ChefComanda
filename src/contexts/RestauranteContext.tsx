@@ -264,6 +264,7 @@ export const RestauranteProvider: React.FC<RestauranteProviderProps> = ({ childr
       }
     } catch (error) {
       console.error('Error loading funcionarios:', error);
+      setFuncionarios([]);
     }
   };
 

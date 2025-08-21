@@ -5,6 +5,7 @@ import { CRUDService } from '../services/CRUDService';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../services/supabase';
 import toast from 'react-hot-toast';
+import { useRestaurante } from '../contexts/RestauranteContext';
 
 interface Produto {
   id: string;
@@ -28,6 +29,7 @@ interface Categoria {
 
 export default function Produtos() {
   const { user } = useAuth();
+  const { restaurante } = useRestaurante();
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [loading, setLoading] = useState(true);
@@ -64,37 +66,9 @@ export default function Produtos() {
     try {
       setLoading(true);
       
-      // Get or create user's restaurant
-      let { data: restaurante, error: restauranteError } = await supabase
-        .from('restaurantes')
-        .select('*')
-        .eq('user_id', user?.id)
-        .maybeSingle();
-
-      if (restauranteError && restauranteError.code !== 'PGRST116') {
-        console.error('Error getting restaurant:', restauranteError);
-        throw new Error('Restaurante não encontrado');
-      }
-
-      // Create restaurant if it doesn't exist
-      if (!restaurante) {
-        console.log('Creating restaurant for user:', user?.id);
-        const { data: newRestaurante, error: createError } = await supabase
-          .from('restaurantes')
-          .insert({
-            user_id: user?.id,
-            nome: `Restaurante de ${user?.user_metadata?.name || 'Usuário'}`,
-            telefone: ""
-          })
-          .select()
-          .single();
-
-        if (createError) {
-          console.error('Error creating restaurant:', createError);
-          throw new Error('Erro ao criar restaurante');
-        }
-        
-        restaurante = newRestaurante;
+      // Use restaurant from context (works for both owners and employees)
+      if (!restaurante?.id) {
+        throw new Error('Restaurante não encontrado no contexto');
       }
 
       const data = await CRUDService.getProdutosByRestaurante(restaurante.id);
@@ -109,36 +83,9 @@ export default function Produtos() {
 
   const loadCategorias = async () => {
     try {
-      // Get or create user's restaurant
-      let { data: restaurante, error: restauranteError } = await supabase
-        .from('restaurantes')
-        .select('*')
-        .eq('user_id', user?.id)
-        .maybeSingle();
-
-      if (restauranteError && restauranteError.code !== 'PGRST116') {
-        console.error('Error getting restaurant:', restauranteError);
-        throw new Error('Restaurante não encontrado');
-      }
-
-      // Create restaurant if it doesn't exist
-      if (!restaurante) {
-        const { data: newRestaurante, error: createError } = await supabase
-          .from('restaurantes')
-          .insert({
-            user_id: user?.id,
-            nome: `Restaurante de ${user?.user_metadata?.name || 'Usuário'}`,
-            telefone: ""
-          })
-          .select()
-          .single();
-
-        if (createError) {
-          console.error('Error creating restaurant:', createError);
-          throw new Error('Erro ao criar restaurante');
-        }
-        
-        restaurante = newRestaurante;
+      // Use restaurant from context (works for both owners and employees)
+      if (!restaurante?.id) {
+        throw new Error('Restaurante não encontrado no contexto');
       }
 
       const data = await CRUDService.getCategoriasByRestaurante(restaurante.id);
@@ -153,36 +100,9 @@ export default function Produtos() {
     e.preventDefault();
     
     try {
-      // Get or create restaurant ID first
-      let { data: restaurante, error: restauranteError } = await supabase
-        .from('restaurantes')
-        .select('*')
-        .eq('user_id', user?.id)
-        .maybeSingle();
-
-      if (restauranteError && restauranteError.code !== 'PGRST116') {
-        console.error('Error getting restaurant:', restauranteError);
-        throw new Error('Restaurante não encontrado');
-      }
-
-      // Create restaurant if it doesn't exist
-      if (!restaurante) {
-        const { data: newRestaurante, error: createError } = await supabase
-          .from('restaurantes')
-          .insert({
-            user_id: user?.id,
-            nome: `Restaurante de ${user?.user_metadata?.name || 'Usuário'}`,
-            telefone: ""
-          })
-          .select()
-          .single();
-
-        if (createError) {
-          console.error('Error creating restaurant:', createError);
-          throw new Error('Erro ao criar restaurante');
-        }
-        
-        restaurante = newRestaurante;
+      // Use restaurant from context
+      if (!restaurante?.id) {
+        throw new Error('Restaurante não encontrado no contexto');
       }
 
       const productData = {
@@ -209,36 +129,9 @@ export default function Produtos() {
     e.preventDefault();
     
     try {
-      // Get or create restaurant ID first
-      let { data: restaurante, error: restauranteError } = await supabase
-        .from('restaurantes')
-        .select('*')
-        .eq('user_id', user?.id)
-        .maybeSingle();
-
-      if (restauranteError && restauranteError.code !== 'PGRST116') {
-        console.error('Error getting restaurant:', restauranteError);
-        throw new Error('Restaurante não encontrado');
-      }
-
-      // Create restaurant if it doesn't exist
-      if (!restaurante) {
-        const { data: newRestaurante, error: createError } = await supabase
-          .from('restaurantes')
-          .insert({
-            user_id: user?.id,
-            nome: `Restaurante de ${user?.user_metadata?.name || 'Usuário'}`,
-            telefone: ""
-          })
-          .select()
-          .single();
-
-        if (createError) {
-          console.error('Error creating restaurant:', createError);
-          throw new Error('Erro ao criar restaurante');
-        }
-        
-        restaurante = newRestaurante;
+      // Use restaurant from context
+      if (!restaurante?.id) {
+        throw new Error('Restaurante não encontrado no contexto');
       }
 
       const categoryData = {

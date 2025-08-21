@@ -11,6 +11,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { usePermissions } from '../hooks/useEmployeeAuth';
 import ProfileDropdown from '../components/profile/ProfileDropdown';
 import NotificationDropdown from '../components/NotificationDropdown';
+import EmployeeDebugPanel from '../components/debug/EmployeeDebugPanel';
 
 const DashboardLayout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -219,6 +220,7 @@ const DashboardLayout: React.FC = () => {
       <main className="pt-16 min-h-screen">
         <div className="p-4 sm:p-6 lg:p-8">
           <Outlet />
+          <EmployeeDebugPanel />
         </div>
       </main>
     </div>
