@@ -50,16 +50,16 @@ const CardapioOnline: React.FC = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4">
-      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+    <div className="max-w-4xl mx-auto px-4 min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300 py-8">
+      <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 dark:border-gray-700/50 overflow-hidden">
         <div className="p-6">
           <div className="flex items-center mb-6">
-            <div className="p-2 bg-blue-100 text-blue-600 rounded-lg mr-4">
+            <div className="p-3 bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 rounded-2xl mr-4 shadow-md">
               <QrCode size={24} />
             </div>
             <div>
-              <h2 className="text-lg font-medium">QR Code para Cardápio Online</h2>
-              <p className="text-sm text-gray-500">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">QR Code para Cardápio Online</h2>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
                 Compartilhe seu cardápio digital com seus clientes
               </p>
             </div>
@@ -67,7 +67,7 @@ const CardapioOnline: React.FC = () => {
 
           <div className="flex flex-col md:flex-row items-center gap-8">
             {qrCodeUrl && (
-              <div className="w-64 h-64 p-4 bg-white border border-gray-200 rounded-lg shadow-sm">
+              <div className="w-64 h-64 p-4 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-3xl shadow-xl">
                 <img
                   src={qrCodeUrl}
                   alt="QR Code do Cardápio"
@@ -78,7 +78,7 @@ const CardapioOnline: React.FC = () => {
 
             <div className="flex-1 space-y-6">
               <div>
-                <h3 className="text-sm font-medium text-gray-700 mb-2">
+                <h3 className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3">
                   Link do Cardápio
                 </h3>
                 <div className="flex gap-2">
@@ -86,12 +86,13 @@ const CardapioOnline: React.FC = () => {
                     type="text"
                     value={cardapioUrl}
                     readOnly
-                    className="flex-1 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                    className="flex-1 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-sm rounded-2xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 block w-full p-3 transition-all duration-200"
                   />
                   <Button
                     variant="primary"
                     onClick={handleCopyLink}
                     icon={<LinkIcon size={18} />}
+                    className="rounded-2xl"
                   >
                     Copiar
                   </Button>
@@ -99,10 +100,10 @@ const CardapioOnline: React.FC = () => {
               </div>
 
               <div>
-                <h3 className="text-sm font-medium text-gray-700 mb-2">
+                <h3 className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3">
                   Instruções
                 </h3>
-                <ul className="space-y-2 text-sm text-gray-600">
+                <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
                   <li>1. Baixe o QR Code em alta qualidade</li>
                   <li>2. Imprima e coloque nas mesas do seu estabelecimento</li>
                   <li>3. Os clientes podem escanear e fazer pedidos diretamente</li>
@@ -114,6 +115,7 @@ const CardapioOnline: React.FC = () => {
                 onClick={handleDownloadQR}
                 icon={<Download size={18} />}
                 fullWidth
+                className="rounded-2xl py-4 font-semibold"
               >
                 Baixar QR Code
               </Button>

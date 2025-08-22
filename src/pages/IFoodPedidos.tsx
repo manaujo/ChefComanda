@@ -124,7 +124,7 @@ const DeliveryPedidos: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Pedidos Delivery</h1>
@@ -145,7 +145,7 @@ const DeliveryPedidos: React.FC = () => {
       </div>
 
       {/* Filtros */}
-      <div className="bg-white rounded-lg shadow-sm p-4">
+      <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 dark:border-gray-700/50 p-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="relative">
             <Search className="absolute left-3 top-2.5 text-gray-400" size={20} />
@@ -154,15 +154,16 @@ const DeliveryPedidos: React.FC = () => {
               placeholder="Buscar por cliente ou número do pedido..."
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
-              className="pl-10 w-full rounded-lg border border-gray-300 py-2 px-4 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="pl-10 w-full rounded-2xl border border-gray-200/50 dark:border-gray-600/50 py-3 px-4 bg-gray-50/50 dark:bg-gray-700/50 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-200 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
             />
           </div>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-3">
             <Button
               variant={filtroStatus === 'todos' ? 'primary' : 'ghost'}
               size="sm"
               onClick={() => setFiltroStatus('todos')}
+              className="rounded-2xl font-semibold"
             >
               Todos
             </Button>
@@ -170,6 +171,7 @@ const DeliveryPedidos: React.FC = () => {
               variant={filtroStatus === 'novo' ? 'warning' : 'ghost'}
               size="sm"
               onClick={() => setFiltroStatus('novo')}
+              className="rounded-2xl font-semibold"
             >
               Novos
             </Button>
@@ -177,6 +179,7 @@ const DeliveryPedidos: React.FC = () => {
               variant={filtroStatus === 'preparando' ? 'primary' : 'ghost'}
               size="sm"
               onClick={() => setFiltroStatus('preparando')}
+              className="rounded-2xl font-semibold"
             >
               Preparando
             </Button>
@@ -184,6 +187,7 @@ const DeliveryPedidos: React.FC = () => {
               variant={filtroStatus === 'pronto' ? 'success' : 'ghost'}
               size="sm"
               onClick={() => setFiltroStatus('pronto')}
+              className="rounded-2xl font-semibold"
             >
               Prontos
             </Button>

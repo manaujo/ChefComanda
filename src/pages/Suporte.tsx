@@ -64,10 +64,10 @@ const Suporte: React.FC = () => {
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
       <div className="text-center mb-8">
         <div className="flex justify-center mb-4">
-          <div className="p-4 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl shadow-lg">
+          <div className="p-4 bg-gradient-to-br from-blue-500 to-blue-600 rounded-3xl shadow-2xl">
             <Headphones className="w-8 h-8 text-white" />
           </div>
         </div>
@@ -80,15 +80,15 @@ const Suporte: React.FC = () => {
       </div>
 
       {/* Navigation Tabs */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm mb-8">
-        <div className="border-b border-gray-200 dark:border-gray-700">
+      <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 dark:border-gray-700/50 mb-8">
+        <div className="border-b border-gray-200/50 dark:border-gray-700/50">
           <nav className="flex space-x-8 px-6">
             <button
               onClick={() => setActiveTab('contato')}
               className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
                 activeTab === 'contato'
-                  ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                  ? 'border-blue-500 text-blue-600 dark:text-blue-400 font-bold'
+                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 font-semibold'
               }`}
             >
               Fale Conosco
@@ -97,8 +97,8 @@ const Suporte: React.FC = () => {
               onClick={() => setActiveTab('faq')}
               className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
                 activeTab === 'faq'
-                  ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                  ? 'border-blue-500 text-blue-600 dark:text-blue-400 font-bold'
+                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 font-semibold'
               }`}
             >
               FAQ

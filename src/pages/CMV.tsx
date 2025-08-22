@@ -300,7 +300,7 @@ const CMV: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6 p-6 min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
       <div className="flex justify-between items-start">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
@@ -315,6 +315,7 @@ const CMV: React.FC = () => {
             variant="ghost"
             icon={<FileSpreadsheet size={18} />}
             onClick={() => exportarDados("excel")}
+            className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm"
           >
             Excel
           </Button>
@@ -322,6 +323,7 @@ const CMV: React.FC = () => {
             variant="ghost"
             icon={<Download size={18} />}
             onClick={() => exportarDados("pdf")}
+            className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm"
           >
             PDF
           </Button>

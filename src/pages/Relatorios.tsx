@@ -378,7 +378,7 @@ const Relatorios: React.FC = () => {
   const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#F97316'];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Relatórios</h1>
@@ -391,7 +391,7 @@ const Relatorios: React.FC = () => {
             <select
               value={periodoSelecionado}
               onChange={(e) => setPeriodoSelecionado(e.target.value)}
-              className="appearance-none bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg py-2 pl-3 pr-10 focus:ring-red-500 focus:border-red-500 dark:text-white"
+              className="appearance-none bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm border border-gray-200/50 dark:border-gray-600/50 rounded-2xl py-3 pl-4 pr-10 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-200 text-gray-900 dark:text-white shadow-md"
             >
               <option value="hoje">Hoje</option>
               <option value="7dias">Últimos 7 dias</option>
@@ -406,6 +406,7 @@ const Relatorios: React.FC = () => {
             icon={<RefreshCw size={18} />}
             onClick={handleRefresh}
             isLoading={refreshing}
+            className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm"
           >
             Atualizar
           </Button>
@@ -414,6 +415,7 @@ const Relatorios: React.FC = () => {
             variant="ghost"
             icon={<FileSpreadsheet size={18} />}
             onClick={() => exportarRelatorio('excel')}
+            className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm"
           >
             Excel
           </Button>
@@ -421,6 +423,7 @@ const Relatorios: React.FC = () => {
             variant="ghost"
             icon={<Download size={18} />}
             onClick={() => exportarRelatorio('pdf')}
+            className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm"
           >
             PDF
           </Button>

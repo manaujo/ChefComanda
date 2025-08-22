@@ -267,7 +267,7 @@ const Dashboard: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
       {/* Header */}
       <div className="flex justify-between items-start">
         <div>
@@ -283,6 +283,7 @@ const Dashboard: React.FC = () => {
           icon={<RefreshCw size={18} />}
           onClick={handleRefresh}
           isLoading={refreshing}
+          className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm"
         >
           Atualizar
         </Button>

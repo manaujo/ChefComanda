@@ -439,7 +439,7 @@ const CardapioOnlineEditor: React.FC = () => {
   });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Editar Cardápio Online</h1>
@@ -453,6 +453,7 @@ const CardapioOnlineEditor: React.FC = () => {
             icon={<Sync size={18} />}
             onClick={syncFromProdutos}
             isLoading={loading}
+            className="rounded-2xl"
           >
             Sincronizar Produtos
           </Button>
@@ -463,6 +464,7 @@ const CardapioOnlineEditor: React.FC = () => {
               resetForm();
               setShowModal(true);
             }}
+            className="rounded-2xl"
           >
             Novo Item
           </Button>
@@ -470,15 +472,15 @@ const CardapioOnlineEditor: React.FC = () => {
       </div>
 
       {/* Tabs */}
-      <div className="bg-white rounded-lg shadow-sm">
-        <div className="border-b border-gray-200">
+      <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 dark:border-gray-700/50">
+        <div className="border-b border-gray-200/50 dark:border-gray-700/50">
           <nav className="flex space-x-8 px-6">
             <button
               onClick={() => setActiveTab('items')}
               className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
                 activeTab === 'items'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
+                  ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
               }`}
             >
               Itens do Cardápio
@@ -487,8 +489,8 @@ const CardapioOnlineEditor: React.FC = () => {
               onClick={() => setActiveTab('config')}
               className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
                 activeTab === 'config'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
+                  ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
               }`}
             >
               Configurações do Restaurante

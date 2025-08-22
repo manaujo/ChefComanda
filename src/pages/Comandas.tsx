@@ -129,15 +129,15 @@ const Comandas: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
       {/* Header */}
-      <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
+      <header className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm shadow-lg border-b border-gray-200/50 dark:border-gray-700/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
               <button
                 onClick={() => navigate(-1)}
-                className="mr-4 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+                className="mr-4 p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-all duration-200"
               >
                 <ArrowLeft size={24} />
               </button>
@@ -147,7 +147,7 @@ const Comandas: React.FC = () => {
               </div>
             </div>
             <div className="flex items-center space-x-3">
-              <div className="flex items-center bg-white dark:bg-gray-700 rounded-md shadow-sm px-3 py-2 text-sm">
+              <div className="flex items-center bg-white/80 dark:bg-gray-700/80 backdrop-blur-sm rounded-xl shadow-md px-4 py-2 text-sm border border-white/20 dark:border-gray-600/50">
                 <Calendar size={16} className="text-gray-400 dark:text-gray-500 mr-2" />
                 <span className="text-gray-700 dark:text-gray-300">Hoje</span>
               </div>
@@ -158,20 +158,21 @@ const Comandas: React.FC = () => {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Filtros */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 mb-6">
+        <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 dark:border-gray-700/50 p-6 mb-6">
           <div className="flex items-center mb-3">
             <Filter size={16} className="text-gray-500 dark:text-gray-400 mr-2" />
-            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Filtros</h3>
+            <h3 className="text-sm font-bold text-gray-700 dark:text-gray-300">Filtros</h3>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="text-sm text-gray-700 dark:text-gray-300 block mb-2">Status</label>
-              <div className="flex flex-wrap gap-2">
+              <label className="text-sm font-bold text-gray-700 dark:text-gray-300 block mb-3">Status</label>
+              <div className="flex flex-wrap gap-3">
                 <Button
                   variant={filtroStatus === 'todos' ? 'primary' : 'ghost'}
                   size="sm"
                   onClick={() => setFiltroStatus('todos')}
+                  className="rounded-2xl font-semibold"
                 >
                   Todos
                 </Button>
@@ -179,6 +180,7 @@ const Comandas: React.FC = () => {
                   variant={filtroStatus === 'pendente' ? 'warning' : 'ghost'}
                   size="sm"
                   onClick={() => setFiltroStatus('pendente')}
+                  className="rounded-2xl font-semibold"
                 >
                   Pendentes
                 </Button>
@@ -186,6 +188,7 @@ const Comandas: React.FC = () => {
                   variant={filtroStatus === 'preparando' ? 'primary' : 'ghost'}
                   size="sm"
                   onClick={() => setFiltroStatus('preparando')}
+                  className="rounded-2xl font-semibold"
                 >
                   Preparando
                 </Button>
@@ -193,6 +196,7 @@ const Comandas: React.FC = () => {
                   variant={filtroStatus === 'pronto' ? 'success' : 'ghost'}
                   size="sm"
                   onClick={() => setFiltroStatus('pronto')}
+                  className="rounded-2xl font-semibold"
                 >
                   Prontos
                 </Button>
@@ -200,12 +204,13 @@ const Comandas: React.FC = () => {
             </div>
             
             <div>
-              <label className="text-sm text-gray-700 dark:text-gray-300 block mb-2">Mesa</label>
-              <div className="flex flex-wrap gap-2">
+              <label className="text-sm font-bold text-gray-700 dark:text-gray-300 block mb-3">Mesa</label>
+              <div className="flex flex-wrap gap-3">
                 <Button
                   variant={filtroMesa === null ? 'primary' : 'ghost'}
                   size="sm"
                   onClick={() => setFiltroMesa(null)}
+                  className="rounded-2xl font-semibold"
                 >
                   Todas
                 </Button>
@@ -217,6 +222,7 @@ const Comandas: React.FC = () => {
                       variant={filtroMesa === mesa.id ? 'secondary' : 'ghost'}
                       size="sm"
                       onClick={() => setFiltroMesa(mesa.id)}
+                      className="rounded-2xl font-semibold"
                     >
                       Mesa {mesa.numero}
                     </Button>

@@ -62,7 +62,7 @@ const Mesas: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Mesas</h1>
@@ -75,6 +75,7 @@ const Mesas: React.FC = () => {
             variant="ghost" 
             icon={<RefreshCcw size={18} />}
             onClick={handleRefresh}
+            className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm"
           >
             Atualizar
           </Button>
@@ -89,16 +90,17 @@ const Mesas: React.FC = () => {
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-lg shadow-sm p-4">
+      <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 dark:border-gray-700/50 p-6">
         <div className="flex items-center mb-2">
           <Filter size={16} className="text-gray-500 mr-2" />
-          <h3 className="text-sm font-medium">Filtrar por status</h3>
+          <h3 className="text-sm font-bold text-gray-700 dark:text-gray-300">Filtrar por status</h3>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-3">
           <Button
             variant={filtro === 'todas' ? 'primary' : 'ghost'}
             size="sm"
             onClick={() => setFiltro('todas')}
+            className="rounded-2xl font-semibold"
           >
             Todas ({contadores.todas})
           </Button>
@@ -106,6 +108,7 @@ const Mesas: React.FC = () => {
             variant={filtro === 'livre' ? 'success' : 'ghost'}
             size="sm"
             onClick={() => setFiltro('livre')}
+            className="rounded-2xl font-semibold"
           >
             Livres ({contadores.livre})
           </Button>
@@ -113,6 +116,7 @@ const Mesas: React.FC = () => {
             variant={filtro === 'ocupada' ? 'secondary' : 'ghost'}
             size="sm"
             onClick={() => setFiltro('ocupada')}
+            className="rounded-2xl font-semibold"
           >
             Ocupadas ({contadores.ocupada})
           </Button>
@@ -120,6 +124,7 @@ const Mesas: React.FC = () => {
             variant={filtro === 'aguardando' ? 'warning' : 'ghost'}
             size="sm"
             onClick={() => setFiltro('aguardando')}
+            className="rounded-2xl font-semibold"
           >
             Aguardando ({contadores.aguardando})
           </Button>
