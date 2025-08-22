@@ -4,6 +4,7 @@ import Button from '../ui/Button';
 import { formatarDinheiro } from '../../utils/formatters';
 import { supabase } from '../../services/supabase';
 import { useAuth } from '../../contexts/AuthContext';
+import { useRestaurante } from '../../contexts/RestauranteContext';
 import toast from 'react-hot-toast';
 
 interface MovimentacaoEstoque {
@@ -30,6 +31,7 @@ const HistoricoMovimentacoes: React.FC<HistoricoMovimentacoesProps> = ({
   insumoNome
 }) => {
   const { user } = useAuth();
+  const { restaurante } = useRestaurante();
   const [movimentacoes, setMovimentacoes] = useState<MovimentacaoEstoque[]>([]);
   const [loading, setLoading] = useState(false);
   const [filtroTipo, setFiltroTipo] = useState<'todos' | 'entrada' | 'saida'>('todos');
@@ -43,9 +45,6 @@ const HistoricoMovimentacoes: React.FC<HistoricoMovimentacoesProps> = ({
     try {
       setLoading(true);
 
-      // Use restaurant from context (works for both owners and employees)
-      const { restaurante } = await import('../../contexts/RestauranteContext');
-      
       if (!restaurante) {
         throw new Error('Restaurante não encontrado no contexto');
       }
