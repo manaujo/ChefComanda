@@ -43,36 +43,11 @@ const HistoricoMovimentacoes: React.FC<HistoricoMovimentacoesProps> = ({
     try {
       setLoading(true);
 
-      // Get or create user's restaurant
-      let { data: restaurante, error: restauranteError } = await supabase
-        .from('restaurantes')
-        .select('*')
-        .eq('user_id', user?.id)
-        .maybeSingle();
-
-      if (restauranteError && restauranteError.code !== 'PGRST116') {
-        console.error('Error getting restaurant:', restauranteError);
-        throw new Error('Restaurante não encontrado');
-      }
-
+      // Use restaurant from context (works for both owners and employees)
+      const { restaurante } = await import('../../contexts/RestauranteContext');
+      
       if (!restaurante) {
-        console.log('Creating restaurant for user:', user?.id);
-        const { data: newRestaurante, error: createError } = await supabase
-          .from('restaurantes')
-          .insert({
-            user_id: user?.id,
-            nome: `Restaurante de ${user?.user_metadata?.name || 'Usuário'}`,
-            telefone: ""
-          })
-          .select()
-          .single();
-
-        if (createError) {
-          console.error('Error creating restaurant:', createError);
-          throw new Error('Erro ao criar restaurante');
-        }
-
-        restaurante = newRestaurante;
+        throw new Error('Restaurante não encontrado no contexto');
       }
 
       // Calculate date range
@@ -91,14 +66,10 @@ const HistoricoMovimentacoes: React.FC<HistoricoMovimentacoesProps> = ({
           break;
       }
 
-      // Build query
+      // Use the view for better access control
       let query = supabase
-        .from('movimentacoes_estoque')
-        .select(`
-          *,
-          insumo:insumos!inner(nome, unidade_medida),
-          usuario:profiles(name)
-        `)
+        .from('view_movimentacoes_estoque_detalhadas')
+        .select('*')
         .eq('restaurante_id', restaurante.id)
         .gte('created_at', startDate.toISOString())
         .lte('created_at', endDate.toISOString())
@@ -118,8 +89,8 @@ const HistoricoMovimentacoes: React.FC<HistoricoMovimentacoesProps> = ({
 
       if (error) throw error;
 
-      // Format data
-      const formattedMovimentacoes: MovimentacaoEstoque[] = (data || []).map((mov: any) => ({
+      // Data is already formatted from the view
+      const formattedMovimentacoes: MovimentacaoEstoque[] = (data || []).map((mov) => ({
         id: mov.id,
         tipo: mov.tipo,
         quantidade: mov.quantidade,
@@ -128,9 +99,9 @@ const HistoricoMovimentacoes: React.FC<HistoricoMovimentacoesProps> = ({
         motivo: mov.motivo,
         observacao: mov.observacao,
         created_at: mov.created_at,
-        insumo_nome: mov.insumo.nome,
-        unidade_medida: mov.insumo.unidade_medida,
-        usuario_nome: mov.usuario?.name || 'Usuário'
+        insumo_nome: mov.insumo_nome,
+        unidade_medida: mov.unidade_medida,
+        usuario_nome: mov.usuario_nome
       }));
 
       setMovimentacoes(formattedMovimentacoes);

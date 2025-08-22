@@ -79,6 +79,8 @@ const CardapioPublico: React.FC = () => {
 
   const loadRestauranteData = async () => {
     try {
+      console.log('Loading restaurant data for ID:', restauranteId);
+      
       const { data, error } = await supabase
         .from("restaurantes")
         .select("*")
@@ -87,20 +89,20 @@ const CardapioPublico: React.FC = () => {
 
       if (error) {
         console.error("Error loading restaurant data:", error);
-        toast.error("Erro ao carregar dados do restaurante");
+        console.log("Error details:", error);
         return;
       }
 
       if (!data) {
+        console.log("No restaurant data found for ID:", restauranteId);
         setRestaurante(null);
-        toast.error("Restaurante não encontrado");
         return;
       }
 
+      console.log("Restaurant data loaded successfully:", data);
       setRestaurante(data);
     } catch (error) {
       console.error("Error loading restaurant data:", error);
-      toast.error("Erro ao carregar dados do restaurante");
     }
   };
 
@@ -112,6 +114,8 @@ const CardapioPublico: React.FC = () => {
         throw new Error('ID do restaurante não fornecido');
       }
       
+      console.log('Loading cardapio items for restaurant:', restauranteId);
+      
       const { data, error } = await supabase
         .from("cardapio_online")
         .select("*")
@@ -120,8 +124,12 @@ const CardapioPublico: React.FC = () => {
         .eq("disponivel_online", true)
         .order("ordem");
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error loading cardapio items:", error);
+        throw error;
+      }
 
+      console.log('Cardapio items loaded:', data?.length || 0);
       setItems(data || []);
 
       // Extract unique categories
@@ -131,7 +139,6 @@ const CardapioPublico: React.FC = () => {
       setCategorias(uniqueCategories);
     } catch (error) {
       console.error("Error loading cardapio items:", error);
-      toast.error("Erro ao carregar cardápio");
     } finally {
       setLoading(false);
     }

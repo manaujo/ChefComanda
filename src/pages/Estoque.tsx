@@ -89,15 +89,29 @@ const Estoque: React.FC = () => {
         throw new Error('Restaurante não encontrado no contexto');
       }
 
+      // Converter valores para números sem multiplicação
+      const quantidade = parseFloat(formData.quantidade);
+      const quantidadeMinima = parseFloat(formData.quantidade_minima);
+      const precoUnitario = formData.preco_unitario ? parseFloat(formData.preco_unitario) : null;
+      
+      // Validar valores
+      if (isNaN(quantidade) || quantidade < 0) {
+        throw new Error('Quantidade atual inválida');
+      }
+      
+      if (isNaN(quantidadeMinima) || quantidadeMinima < 0) {
+        throw new Error('Quantidade mínima inválida');
+      }
+
       const insumoData = {
         restaurante_id: restaurante.id,
         nome: formData.nome,
         descricao: formData.descricao || null,
         unidade_medida: formData.unidade_medida,
-        quantidade: parseFloat(formData.quantidade) || 0,
-        quantidade_minima: parseFloat(formData.quantidade_minima) || 0,
+        quantidade: quantidade,
+        quantidade_minima: quantidadeMinima,
         data_validade: formData.data_validade || null,
-        preco_unitario: formData.preco_unitario ? parseFloat(formData.preco_unitario) : null,
+        preco_unitario: precoUnitario,
         ativo: true
       };
 

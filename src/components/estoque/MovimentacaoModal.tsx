@@ -64,6 +64,7 @@ const MovimentacaoModal: React.FC<MovimentacaoModalProps> = ({
     
     if (!insumo) return;
     
+    // Converter quantidade diretamente sem multiplicação
     const qtd = parseFloat(quantidade);
     if (isNaN(qtd) || qtd <= 0) {
       toast.error('Quantidade deve ser maior que zero');
@@ -82,6 +83,14 @@ const MovimentacaoModal: React.FC<MovimentacaoModalProps> = ({
 
     setLoading(true);
     try {
+      console.log('Registrando movimentação:', {
+        insumoId: insumo.id,
+        tipo,
+        quantidade: qtd,
+        motivo,
+        observacao
+      });
+      
       await onMovimentacao(insumo.id, tipo, qtd, motivo, observacao || undefined);
       resetForm();
       onClose();
