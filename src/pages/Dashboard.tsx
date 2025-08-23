@@ -199,11 +199,22 @@ const Dashboard: React.FC = () => {
 
   // Itens pendentes na cozinha
   const itensPendentes = itensComanda.filter(
-    (item) => item.status === "pendente" || item.status === "preparando"
+    (item) => {
+      // Verificar se o item pertence a uma mesa atualmente ocupada
+      const mesa = mesas.find(m => m.id === item.mesa_id);
+      return mesa && mesa.status === "ocupada" && 
+             (item.status === "pendente" || item.status === "preparando");
+    }
   );
 
   // Produtos mais vendidos hoje
+  const hoje = new Date().toISOString().split('T')[0];
   const produtosMaisVendidos = itensComanda
+    .filter(item => {
+      // Filtrar apenas itens do dia atual e de mesas que foram finalizadas (entregues)
+      const itemDate = new Date(item.created_at).toISOString().split('T')[0];
+      return itemDate === hoje && item.status === "entregue";
+    })
     .reduce((acc, item) => {
       const existing = acc.find((p) => p.nome === item.nome);
       if (existing) {
@@ -506,8 +517,11 @@ const Dashboard: React.FC = () => {
               .filter((mesa) => mesa.status === "ocupada")
               .slice(0, 5)
               .map((mesa) => {
+                // Filtrar apenas itens ativos da mesa (não entregues ou cancelados)
                 const itensMesa = itensComanda.filter(
-                  (item) => item.mesa_id === mesa.id
+                  (item) => item.mesa_id === mesa.id && 
+                           item.status !== 'entregue' && 
+                           item.status !== 'cancelado'
                 );
                 const valorMesa = itensMesa.reduce(
                   (acc, item) => acc + item.preco_unitario * item.quantidade,

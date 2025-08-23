@@ -484,19 +484,35 @@ export const RestauranteProvider: React.FC<RestauranteProviderProps> = ({ childr
         
         // Register cash movement if there's an open cash register
         try {
-          // Try to find any open cash register for this restaurant
-          const { data: caixasAbertos, error: caixaError } = await supabase
-            .from('caixas_operadores')
-            .select('*')
-            .eq('restaurante_id', restaurante.id)
-            .eq('status', 'aberto')
-            .limit(1);
-
-          if (caixaError) {
-            console.error('Error finding open cash register:', caixaError);
+          // Find the appropriate cash register for the current user
+          let caixaAberto = null;
+          
+          if (isEmployee && authRestaurantId) {
+            // For employees, find their own open cash register
+            const { data: employeeCaixa, error: empCaixaError } = await supabase
+              .from('caixas_operadores')
+              .select('*')
+              .eq('operador_id', user?.id)
+              .eq('status', 'aberto')
+              .maybeSingle();
+            
+            if (!empCaixaError && employeeCaixa) {
+              caixaAberto = employeeCaixa;
+            }
+          } else {
+            // For restaurant owners, find any open cash register in the restaurant
+            const { data: ownerCaixa, error: ownerCaixaError } = await supabase
+              .from('caixas_operadores')
+              .select('*')
+              .eq('restaurante_id', restaurante.id)
+              .eq('status', 'aberto')
+              .limit(1);
+            
+            if (!ownerCaixaError && ownerCaixa && ownerCaixa.length > 0) {
+              caixaAberto = ownerCaixa[0];
+            }
           }
 
-          const caixaAberto = caixasAbertos?.[0];
           if (caixaAberto) {
             const mesaNumero = mesas.find(m => m.id === mesaId)?.numero || 'N/A';
             await DatabaseService.createMovimentacaoCaixa({
@@ -510,40 +526,42 @@ export const RestauranteProvider: React.FC<RestauranteProviderProps> = ({ childr
             });
 
             // Update cash register system value
-            const { data: caixaAtual } = await supabase
+            const { data: caixaAtual, error: caixaAtualError } = await supabase
               .from('caixas_operadores')
               .select('valor_inicial')
               .eq('id', caixaAberto.id)
               .single();
 
-            if (caixaAtual) {
+            if (!caixaAtualError && caixaAtual) {
               // Calculate total movements
-              const { data: movimentacoes } = await supabase
+              const { data: movimentacoes, error: movError } = await supabase
                 .from('movimentacoes_caixa')
                 .select('tipo, valor')
                 .eq('caixa_operador_id', caixaAberto.id);
 
-              const totais = (movimentacoes || []).reduce(
-                (acc, mov) => {
-                  if (mov.tipo === 'entrada') {
-                    acc.entradas += Number(mov.valor);
-                  } else {
-                    acc.saidas += Number(mov.valor);
-                  }
-                  return acc;
-                },
-                { entradas: 0, saidas: 0 }
-              );
+              if (!movError) {
+                const totais = (movimentacoes || []).reduce(
+                  (acc, mov) => {
+                    if (mov.tipo === 'entrada') {
+                      acc.entradas += Number(mov.valor);
+                    } else {
+                      acc.saidas += Number(mov.valor);
+                    }
+                    return acc;
+                  },
+                  { entradas: 0, saidas: 0 }
+                );
 
-              const novoValorSistema = Number(caixaAtual.valor_inicial) + totais.entradas - totais.saidas;
+                const novoValorSistema = Number(caixaAtual.valor_inicial) + totais.entradas - totais.saidas;
 
-              await supabase
-                .from('caixas_operadores')
-                .update({ valor_sistema: novoValorSistema })
-                .eq('id', caixaAberto.id);
+                await supabase
+                  .from('caixas_operadores')
+                  .update({ valor_sistema: novoValorSistema })
+                  .eq('id', caixaAberto.id);
+              }
             }
           } else {
-            console.warn('No open cash register found for payment registration');
+            console.warn(`No open cash register found for ${isEmployee ? 'employee' : 'restaurant owner'} payment registration`);
           }
         } catch (caixaError) {
           console.error('Error registering cash movement:', caixaError);

@@ -76,8 +76,19 @@ const CaixaRegistradora: React.FC = () => {
     try {
       if (!restaurante?.id) return;
 
-      const operadorAtual = isEmployee && employeeData ? employeeData.id : user?.id;
-      const caixa = await CaixaService.getCaixaAberto(restaurante.id, operadorAtual);
+      // Para funcionários, buscar apenas o caixa do próprio funcionário
+      // Para administradores, buscar qualquer caixa aberto
+      let caixa = null;
+      
+      if (isEmployee && employeeData) {
+        // Funcionário: buscar apenas seu próprio caixa
+        caixa = await CaixaService.getOperadorCaixaAberto(employeeData.id);
+      } else {
+        // Administrador: buscar qualquer caixa aberto no restaurante
+        const operadorAtual = user?.id;
+        caixa = await CaixaService.getCaixaAberto(restaurante.id, operadorAtual);
+      }
+      
       setCaixaAtual(caixa);
     } catch (error) {
       console.error('Error loading current cash register:', error);

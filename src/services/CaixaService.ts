@@ -97,6 +97,24 @@ class CaixaService {
     }
   }
 
+  // Verificar se operador tem caixa aberto
+  async getOperadorCaixaAberto(operadorId: string): Promise<CaixaOperador | null> {
+    try {
+      const { data, error } = await supabase
+        .from('caixas_operadores')
+        .select('*')
+        .eq('operador_id', operadorId)
+        .eq('status', 'aberto')
+        .maybeSingle();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error getting operator cash register:', error);
+      return null;
+    }
+  }
+
   // Abrir novo caixa
   async abrirCaixa(data: {
     restauranteId: string;
@@ -237,11 +255,23 @@ class CaixaService {
   // Obter movimentações do caixa
   async getMovimentacoesCaixa(caixaId: string): Promise<MovimentacaoCaixa[]> {
     try {
+      // Use explicit query to avoid ambiguous column references
       const { data, error } = await supabase
         .from('movimentacoes_caixa')
-        .select('*')
+        .select(`
+          id,
+          caixa_id,
+          caixa_operador_id,
+          tipo,
+          valor,
+          motivo,
+          observacao,
+          forma_pagamento,
+          usuario_id,
+          created_at
+        `)
         .eq('caixa_operador_id', caixaId)
-        .order('created_at');
+        .order('created_at', { ascending: true });
 
       if (error) throw error;
       return data || [];
@@ -258,11 +288,24 @@ class CaixaService {
     endDate: string
   ): Promise<CaixaDetalhado[]> {
     try {
+      // Use explicit select to avoid ambiguous column references
       const { data: caixas, error } = await supabase
         .from('caixas_operadores')
         .select(`
-          *,
-          movimentacoes:movimentacoes_caixa(*)
+          id,
+          restaurante_id,
+          operador_id,
+          operador_nome,
+          operador_tipo,
+          valor_inicial,
+          valor_final,
+          valor_sistema,
+          status,
+          data_abertura,
+          data_fechamento,
+          observacao,
+          created_at,
+          updated_at
         `)
         .eq('restaurante_id', restauranteId)
         .gte('data_abertura', startDate)
@@ -272,35 +315,44 @@ class CaixaService {
       if (error) throw error;
 
       // Processar dados
-      const caixasDetalhados: CaixaDetalhado[] = (caixas || []).map(caixa => {
-        const movimentacoes = caixa.movimentacoes || [];
-        const entradas_total = movimentacoes
-          .filter((m: any) => m.tipo === 'entrada')
-          .reduce((acc: number, m: any) => acc + Number(m.valor), 0);
-        const saidas_total = movimentacoes
-          .filter((m: any) => m.tipo === 'saida')
-          .reduce((acc: number, m: any) => acc + Number(m.valor), 0);
+      const caixasDetalhados: CaixaDetalhado[] = await Promise.all(
+        (caixas || []).map(async (caixa) => {
+          // Buscar movimentações separadamente para evitar problemas de join
+          const { data: movimentacoes } = await supabase
+            .from('movimentacoes_caixa')
+            .select('*')
+            .eq('caixa_operador_id', caixa.id)
+            .order('created_at');
+          
+          const movs = movimentacoes || [];
+          const entradas_total = movs
+            .filter((m: any) => m.tipo === 'entrada')
+            .reduce((acc: number, m: any) => acc + Number(m.valor), 0);
+          const saidas_total = movs
+            .filter((m: any) => m.tipo === 'saida')
+            .reduce((acc: number, m: any) => acc + Number(m.valor), 0);
         
-        const saldo_calculado = Number(caixa.valor_inicial) + entradas_total - saidas_total;
-        const diferenca = caixa.valor_final ? Number(caixa.valor_final) - saldo_calculado : 0;
+          const saldo_calculado = Number(caixa.valor_inicial) + entradas_total - saidas_total;
+          const diferenca = caixa.valor_final ? Number(caixa.valor_final) - saldo_calculado : 0;
         
-        let tempo_operacao_horas;
-        if (caixa.data_fechamento) {
-          const inicio = new Date(caixa.data_abertura);
-          const fim = new Date(caixa.data_fechamento);
-          tempo_operacao_horas = (fim.getTime() - inicio.getTime()) / (1000 * 60 * 60);
-        }
+          let tempo_operacao_horas;
+          if (caixa.data_fechamento) {
+            const inicio = new Date(caixa.data_abertura);
+            const fim = new Date(caixa.data_fechamento);
+            tempo_operacao_horas = (fim.getTime() - inicio.getTime()) / (1000 * 60 * 60);
+          }
 
-        return {
-          ...caixa,
-          movimentacoes,
-          entradas_total,
-          saidas_total,
-          saldo_calculado,
-          diferenca,
-          tempo_operacao_horas
-        };
-      });
+          return {
+            ...caixa,
+            movimentacoes: movs,
+            entradas_total,
+            saidas_total,
+            saldo_calculado,
+            diferenca,
+            tempo_operacao_horas
+          };
+        })
+      );
 
       return caixasDetalhados;
     } catch (error) {
