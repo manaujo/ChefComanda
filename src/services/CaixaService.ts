@@ -183,6 +183,14 @@ class CaixaService {
     usuarioId: string;
   }): Promise<void> {
     try {
+      console.log('CaixaService.adicionarMovimentacao called:', {
+        caixaId: data.caixaId,
+        tipo: data.tipo,
+        valor: data.valor,
+        motivo: data.motivo,
+        usuarioId: data.usuarioId
+      });
+
       const { error } = await supabase
         .from('movimentacoes_caixa')
         .insert({
@@ -197,60 +205,13 @@ class CaixaService {
 
       if (error) throw error;
 
-      // Atualizar valor do sistema
-      await this.atualizarValorSistema(data.caixaId);
+      console.log('Movimentação adicionada com sucesso');
     } catch (error) {
       console.error('Error adding cash movement:', error);
       throw error;
     }
   }
 
-  // Atualizar valor do sistema baseado nas movimentações
-  private async atualizarValorSistema(caixaId: string): Promise<void> {
-    try {
-      // Obter caixa atual
-      const { data: caixa, error: caixaError } = await supabase
-        .from('caixas_operadores')
-        .select('valor_inicial')
-        .eq('id', caixaId)
-        .single();
-
-      if (caixaError) throw caixaError;
-
-      // Calcular total de movimentações
-      const { data: movimentacoes, error: movError } = await supabase
-        .from('movimentacoes_caixa')
-        .select('tipo, valor')
-        .eq('caixa_operador_id', caixaId);
-
-      if (movError) throw movError;
-
-      const totais = (movimentacoes || []).reduce(
-        (acc, mov) => {
-          if (mov.tipo === 'entrada') {
-            acc.entradas += Number(mov.valor);
-          } else {
-            acc.saidas += Number(mov.valor);
-          }
-          return acc;
-        },
-        { entradas: 0, saidas: 0 }
-      );
-
-      const valorSistema = Number(caixa.valor_inicial) + totais.entradas - totais.saidas;
-
-      // Atualizar valor do sistema
-      const { error: updateError } = await supabase
-        .from('caixas_operadores')
-        .update({ valor_sistema: valorSistema })
-        .eq('id', caixaId);
-
-      if (updateError) throw updateError;
-    } catch (error) {
-      console.error('Error updating system value:', error);
-      throw error;
-    }
-  }
 
   // Obter movimentações do caixa
   async getMovimentacoesCaixa(caixaId: string): Promise<MovimentacaoCaixa[]> {

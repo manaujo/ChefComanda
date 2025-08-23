@@ -58,6 +58,51 @@ const PagamentoModal: React.FC<PagamentoModalProps> = ({ isOpen, onClose, mesa }
   const valorDesconto = calcularDesconto();
   const valorTotal = valorTotalItens + valorTaxaServico + valorCouvert - valorDesconto;
 
+  const registrarMovimentacaoCaixa = async (valor: number, formaPagamento: string, mesaNumero: number) => {
+    try {
+      // Buscar caixa aberto do operador atual
+      const { data: caixaAberto, error: caixaError } = await supabase
+        .from('caixas_operadores')
+        .select('*')
+        .eq('operador_id', user?.id)
+        .eq('status', 'aberto')
+        .maybeSingle();
+
+      if (caixaError) {
+        console.error('Error finding cash register:', caixaError);
+        return;
+      }
+
+      if (!caixaAberto) {
+        console.warn('No open cash register found for current operator');
+        return;
+      }
+
+      // Registrar movimentação
+      const { error: movError } = await supabase
+        .from('movimentacoes_caixa')
+        .insert({
+          caixa_operador_id: caixaAberto.id,
+          tipo: 'entrada',
+          valor: valor,
+          motivo: `Pagamento Mesa ${mesaNumero}`,
+          observacao: `${formaPagamento.toUpperCase()} - ${itensComanda.length} ${itensComanda.length === 1 ? 'item' : 'itens'}${taxaServico ? ' + Taxa 10%' : ''}${couvertArtistico ? ` + Couvert` : ''}${valorDesconto > 0 ? ` - Desconto` : ''}`,
+          forma_pagamento: formaPagamento,
+          usuario_id: user?.id || ''
+        });
+
+      if (movError) {
+        console.error('Error registering cash movement:', movError);
+        throw movError;
+      }
+
+      console.log(`Movimentação registrada no caixa ${caixaAberto.id} - Operador: ${caixaAberto.operador_nome} - Valor: ${valor}`);
+    } catch (error) {
+      console.error('Error in registrarMovimentacaoCaixa:', error);
+      // Don't throw error to avoid breaking payment flow
+    }
+  };
+
   const handlePagamento = async () => {
     if (!formaPagamento) {
       toast.error('Selecione uma forma de pagamento');
@@ -67,59 +112,7 @@ const PagamentoModal: React.FC<PagamentoModalProps> = ({ isOpen, onClose, mesa }
     setLoading(true);
     try {
       // Registrar movimentação no caixa se houver caixa aberto
-      const savedCaixa = localStorage.getItem('caixaAtual');
-      if (savedCaixa) {
-        const caixaAtual = JSON.parse(savedCaixa);
-        
-        const { error: movError } = await supabase
-          .from('movimentacoes_caixa')
-          .insert({
-            caixa_operador_id: caixaAtual.id,
-            tipo: 'entrada',
-            valor: valorTotal,
-            motivo: `Pagamento Mesa ${mesa.numero}`,
-            observacao: `${formaPagamento.toUpperCase()} - ${itensComanda.length} ${itensComanda.length === 1 ? 'item' : 'itens'}${taxaServico ? ' + Taxa 10%' : ''}${couvertArtistico ? ` + Couvert` : ''}${valorDesconto > 0 ? ` - Desconto` : ''}`,
-            forma_pagamento: formaPagamento,
-            usuario_id: user?.id || ''
-          });
-
-        if (movError) {
-          console.error('Error registering cash movement:', movError);
-        } else {
-          // Atualizar valor do sistema no caixa
-          const { data: caixaData } = await supabase
-            .from('caixas_operadores')
-            .select('valor_inicial')
-            .eq('id', caixaAtual.id)
-            .single();
-
-          if (caixaData) {
-            const { data: movimentacoes } = await supabase
-              .from('movimentacoes_caixa')
-              .select('tipo, valor')
-              .eq('caixa_operador_id', caixaAtual.id);
-
-            const totais = (movimentacoes || []).reduce(
-              (acc, mov) => {
-                if (mov.tipo === 'entrada') {
-                  acc.entradas += Number(mov.valor);
-                } else {
-                  acc.saidas += Number(mov.valor);
-                }
-                return acc;
-              },
-              { entradas: 0, saidas: 0 }
-            );
-
-            const novoValorSistema = Number(caixaData.valor_inicial) + totais.entradas - totais.saidas;
-
-            await supabase
-              .from('caixas_operadores')
-              .update({ valor_sistema: novoValorSistema })
-              .eq('id', caixaAtual.id);
-          }
-        }
-      }
+      await registrarMovimentacaoCaixa(valorTotal, formaPagamento, mesa.numero);
 
       await finalizarPagamento(mesa.id, formaPagamento);
       await refreshData(); // Refresh data to update UI
