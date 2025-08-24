@@ -5,7 +5,21 @@ import {
   TrendingUp,
   AlertTriangle,
   Download,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Plus,
+  Edit,
+  Trash2,
+  Search,
+  Filter,
+  Calendar,
+  DollarSign,
+  Package,
+  BarChart3,
+  RefreshCw,
+  Target,
+  Zap,
+  Sparkles,
+  X
 } from "lucide-react";
 import Button from "../components/ui/Button";
 import { formatarDinheiro } from "../utils/formatters";
@@ -17,678 +31,840 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
-  ResponsiveContainer
+  ResponsiveContainer,
+  PieChart as RechartsPieChart,
+  Pie,
+  Cell
 } from "recharts";
 import toast from "react-hot-toast";
 import { supabase } from "../services/supabase";
 import { useAuth } from "../contexts/AuthContext";
+import { useRestaurante } from "../contexts/RestauranteContext";
+
+interface CMVProduto {
+  id: string;
+  produto_id: string;
+  produto_nome: string;
+  categoria: string;
+  custo_unitario: number;
+  quantidade_vendida: number;
+  receita_total: number;
+  custo_total: number;
+  margem_lucro: number;
+  percentual_cmv: number;
+  periodo_inicio: string;
+  periodo_fim: string;
+}
 
 interface Produto {
-  id: number;
+  id: string;
   nome: string;
-  custoUnitario: number;
-  precoVenda: number;
-  quantidadeVendida: number;
-  custoTotal: number;
-  receitaTotal: number;
-  margemLucro: number;
-  percentualCMV: number;
+  categoria: string;
+  preco: number;
 }
 
 const CMV: React.FC = () => {
   const { user } = useAuth();
-  const [produtos, setProdutos] = useState<Produto[]>([]);
+  const { restaurante, produtos } = useRestaurante();
+  const [cmvProdutos, setCmvProdutos] = useState<CMVProduto[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [editingItem, setEditingItem] = useState<CMVProduto | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('todas');
+  const [periodoInicio, setPeriodoInicio] = useState(() => {
+    const date = new Date();
+    date.setDate(date.getDate() - 30);
+    return date.toISOString().split('T')[0];
+  });
+  const [periodoFim, setPeriodoFim] = useState(() => {
+    return new Date().toISOString().split('T')[0];
+  });
   const [formData, setFormData] = useState({
-    nome: "",
-    custoUnitario: "",
-    precoVenda: "",
-    quantidadeVendida: ""
+    produto_id: '',
+    custo_unitario: ''
   });
 
   useEffect(() => {
-    loadCMVData();
-  }, []);
+    if (restaurante?.id) {
+      loadCMVData();
+    }
+  }, [restaurante?.id, periodoInicio, periodoFim]);
 
   const loadCMVData = async () => {
-    if (!user) return;
+    if (!restaurante?.id) return;
 
     setLoading(true);
     try {
-      // Get or create user's restaurant
-      let { data: restaurante, error: restauranteError } = await supabase
-        .from("restaurantes")
-        .select("*")
-        .eq("user_id", user?.id)
-        .maybeSingle();
-
-      if (restauranteError && restauranteError.code !== 'PGRST116') {
-        console.error('Error getting restaurant:', restauranteError);
-        throw new Error('Restaurante não encontrado');
-      }
-
-      // Create restaurant if it doesn't exist
-      if (!restaurante) {
-        console.log('Creating restaurant for user:', user?.id);
-        const { data: newRestaurante, error: createError } = await supabase
-          .from('restaurantes')
-          .insert({
-            user_id: user?.id,
-            nome: `Restaurante de ${user?.user_metadata?.name || 'Usuário'}`,
-            telefone: ""
-          })
-          .select()
-          .single();
-
-        if (createError) {
-          console.error('Error creating restaurant:', createError);
-          throw new Error('Erro ao criar restaurante');
-        }
-        
-        restaurante = newRestaurante;
-      }
-
-      // Obter produtos e vendas
-      const { data: produtos } = await supabase
-        .from("produtos")
-        .select("*")
-        .eq("restaurante_id", restaurante.id);
-
-      // Obter itens vendidos
-      const { data: itensVendidos } = await supabase
-        .from("itens_comanda")
-        .select(
-          `
-          produto_id,
-          quantidade,
-          preco_unitario,
-          produtos(nome, preco)
-        `
-        )
-        .gte(
-          "created_at",
-          new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
-        );
-
-      // Calcular CMV
-      const produtosMap = new Map();
-
-      itensVendidos?.forEach((item: any) => {
-        const produtoId = item.produto_id;
-        const produto = produtos?.find((p) => p.id === produtoId);
-
-        if (produto) {
-          const custoUnitario = produto.preco * 0.4; // Estimativa de custo (40% do preço)
-          const quantidade = item.quantidade;
-          const precoVenda = item.preco_unitario;
-
-          if (!produtosMap.has(produtoId)) {
-            produtosMap.set(produtoId, {
-              id: produtoId,
-              nome: produto.nome,
-              custoUnitario,
-              precoVenda,
-              quantidadeVendida: 0,
-              custoTotal: 0,
-              receitaTotal: 0,
-              margemLucro: 0,
-              percentualCMV: 0
-            });
-          }
-
-          const produtoStats = produtosMap.get(produtoId);
-          produtoStats.quantidadeVendida += quantidade;
-          produtoStats.custoTotal += custoUnitario * quantidade;
-          produtoStats.receitaTotal += precoVenda * quantidade;
-        }
+      const { data, error } = await supabase.rpc('get_cmv_report', {
+        p_restaurante_id: restaurante.id,
+        p_periodo_inicio: periodoInicio,
+        p_periodo_fim: periodoFim
       });
 
-      // Calcular margens e percentuais
-      const produtosCMV: Produto[] = [];
-      produtosMap.forEach((produto) => {
-        produto.margemLucro =
-          ((produto.receitaTotal - produto.custoTotal) / produto.receitaTotal) *
-          100;
-        produto.percentualCMV =
-          (produto.custoTotal / produto.receitaTotal) * 100;
-        produtosCMV.push(produto);
-      });
-
-      // Ordenar por quantidade vendida
-      produtosCMV.sort((a, b) => b.quantidadeVendida - a.quantidadeVendida);
-
-      // Se não houver dados reais, usar dados fictícios
-      if (produtosCMV.length === 0) {
-        setProdutos([
-          {
-            id: 1,
-            nome: "Picanha Grelhada",
-            custoUnitario: 45.9,
-            precoVenda: 89.9,
-            quantidadeVendida: 50,
-            custoTotal: 2295,
-            receitaTotal: 4495,
-            margemLucro: 48.94,
-            percentualCMV: 51.06
-          },
-          {
-            id: 2,
-            nome: "Frango à Parmegiana",
-            custoUnitario: 25.5,
-            precoVenda: 59.9,
-            quantidadeVendida: 75,
-            custoTotal: 1912.5,
-            receitaTotal: 4492.5,
-            margemLucro: 57.43,
-            percentualCMV: 42.57
-          },
-          {
-            id: 3,
-            nome: "Salmão Grelhado",
-            custoUnitario: 38.9,
-            precoVenda: 79.9,
-            quantidadeVendida: 30,
-            custoTotal: 1167,
-            receitaTotal: 2397,
-            margemLucro: 51.31,
-            percentualCMV: 48.69
-          }
-        ]);
-      } else {
-        setProdutos(produtosCMV);
-      }
+      if (error) throw error;
+      setCmvProdutos(data || []);
     } catch (error) {
       console.error("Error loading CMV data:", error);
       toast.error("Erro ao carregar dados de CMV");
-
-      // Usar dados fictícios em caso de erro
-      setProdutos([
-        {
-          id: 1,
-          nome: "Picanha Grelhada",
-          custoUnitario: 45.9,
-          precoVenda: 89.9,
-          quantidadeVendida: 50,
-          custoTotal: 2295,
-          receitaTotal: 4495,
-          margemLucro: 48.94,
-          percentualCMV: 51.06
-        },
-        {
-          id: 2,
-          nome: "Frango à Parmegiana",
-          custoUnitario: 25.5,
-          precoVenda: 59.9,
-          quantidadeVendida: 75,
-          custoTotal: 1912.5,
-          receitaTotal: 4492.5,
-          margemLucro: 57.43,
-          percentualCMV: 42.57
-        },
-        {
-          id: 3,
-          nome: "Salmão Grelhado",
-          custoUnitario: 38.9,
-          precoVenda: 79.9,
-          quantidadeVendida: 30,
-          custoTotal: 1167,
-          receitaTotal: 2397,
-          margemLucro: 51.31,
-          percentualCMV: 48.69
-        }
-      ]);
     } finally {
       setLoading(false);
     }
   };
 
-  const totalCMV = produtos.reduce(
-    (acc, produto) => acc + produto.custoTotal,
-    0
-  );
-  const totalReceita = produtos.reduce(
-    (acc, produto) => acc + produto.receitaTotal,
-    0
-  );
-  const lucroBruto = totalReceita - totalCMV;
-  const percentualCMVGeral = (totalCMV / totalReceita) * 100;
-  const margemLucroBruta = (lucroBruto / totalReceita) * 100;
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!restaurante?.id) {
+      toast.error('Restaurante não encontrado');
+      return;
+    }
 
-    const custoUnitario = parseFloat(formData.custoUnitario);
-    const precoVenda = parseFloat(formData.precoVenda);
-    const quantidadeVendida = parseInt(formData.quantidadeVendida);
+    if (!formData.produto_id || !formData.custo_unitario) {
+      toast.error('Preencha todos os campos');
+      return;
+    }
 
-    const custoTotal = custoUnitario * quantidadeVendida;
-    const receitaTotal = precoVenda * quantidadeVendida;
-    const margemLucro = ((receitaTotal - custoTotal) / receitaTotal) * 100;
-    const percentualCMV = (custoTotal / receitaTotal) * 100;
+    const custoUnitario = parseFloat(formData.custo_unitario);
+    if (isNaN(custoUnitario) || custoUnitario < 0) {
+      toast.error('Custo unitário inválido');
+      return;
+    }
 
-    const novoProduto: Produto = {
-      id: Math.max(0, ...produtos.map((p) => p.id)) + 1,
-      nome: formData.nome,
-      custoUnitario,
-      precoVenda,
-      quantidadeVendida,
-      custoTotal,
-      receitaTotal,
-      margemLucro,
-      percentualCMV
-    };
+    try {
+      setLoading(true);
 
-    setProdutos([...produtos, novoProduto]);
-    setFormData({
-      nome: "",
-      custoUnitario: "",
-      precoVenda: "",
-      quantidadeVendida: ""
-    });
-    setShowForm(false);
-    toast.success("Produto adicionado com sucesso!");
+      // Calcular CMV usando a função do banco
+      const { data: cmvData, error: cmvError } = await supabase.rpc('calcular_cmv_produto', {
+        p_restaurante_id: restaurante.id,
+        p_produto_id: formData.produto_id,
+        p_custo_unitario: custoUnitario,
+        p_periodo_inicio: periodoInicio,
+        p_periodo_fim: periodoFim
+      });
+
+      if (cmvError) throw cmvError;
+
+      const cmvResult = cmvData[0];
+
+      // Salvar ou atualizar registro de CMV
+      const cmvRecord = {
+        restaurante_id: restaurante.id,
+        produto_id: formData.produto_id,
+        custo_unitario: custoUnitario,
+        periodo_inicio: periodoInicio,
+        periodo_fim: periodoFim,
+        quantidade_vendida: cmvResult.quantidade_vendida,
+        receita_total: cmvResult.receita_total,
+        custo_total: cmvResult.custo_total,
+        margem_lucro: cmvResult.margem_lucro,
+        percentual_cmv: cmvResult.percentual_cmv,
+        ativo: true
+      };
+
+      if (editingItem) {
+        const { error } = await supabase
+          .from('cmv_produtos')
+          .update(cmvRecord)
+          .eq('id', editingItem.id);
+
+        if (error) throw error;
+        toast.success('CMV atualizado com sucesso!');
+      } else {
+        const { error } = await supabase
+          .from('cmv_produtos')
+          .upsert(cmvRecord, {
+            onConflict: 'restaurante_id,produto_id,periodo_inicio,periodo_fim'
+          });
+
+        if (error) throw error;
+        toast.success('CMV adicionado com sucesso!');
+      }
+
+      await loadCMVData();
+      resetForm();
+      setShowModal(false);
+    } catch (error) {
+      console.error('Error saving CMV:', error);
+      toast.error('Erro ao salvar CMV');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleDeleteProduto = (id: number) => {
-    setProdutos(produtos.filter((p) => p.id !== id));
-    toast.success("Produto removido com sucesso!");
+  const handleEdit = (item: CMVProduto) => {
+    setEditingItem(item);
+    setFormData({
+      produto_id: item.produto_id,
+      custo_unitario: item.custo_unitario.toString()
+    });
+    setShowModal(true);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Tem certeza que deseja excluir este registro de CMV?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('cmv_produtos')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      
+      await loadCMVData();
+      toast.success('Registro excluído com sucesso!');
+    } catch (error) {
+      console.error('Error deleting CMV:', error);
+      toast.error('Erro ao excluir registro');
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      produto_id: '',
+      custo_unitario: ''
+    });
+    setEditingItem(null);
   };
 
   const exportarDados = (formato: "excel" | "pdf") => {
-    toast.success(`Relatório exportado em ${formato.toUpperCase()}`);
+    toast.success(`Relatório CMV exportado em ${formato.toUpperCase()}`);
   };
 
+  // Filtrar produtos
+  const filteredCMV = cmvProdutos.filter(item => {
+    const matchSearch = item.produto_nome.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchCategory = categoryFilter === 'todas' || item.categoria === categoryFilter;
+    return matchSearch && matchCategory;
+  });
+
+  // Calcular totais
+  const totalCMV = filteredCMV.reduce((acc, item) => acc + item.custo_total, 0);
+  const totalReceita = filteredCMV.reduce((acc, item) => acc + item.receita_total, 0);
+  const lucroBruto = totalReceita - totalCMV;
+  const percentualCMVGeral = totalReceita > 0 ? (totalCMV / totalReceita) * 100 : 0;
+  const margemLucroBruta = totalReceita > 0 ? (lucroBruto / totalReceita) * 100 : 0;
+
+  // Dados para gráficos
+  const chartData = filteredCMV.map(item => ({
+    nome: item.produto_nome,
+    custo: item.custo_total,
+    receita: item.receita_total,
+    margem: item.margem_lucro
+  }));
+
+  const pieData = filteredCMV.slice(0, 5).map(item => ({
+    name: item.produto_nome,
+    value: item.custo_total,
+    percentage: totalCMV > 0 ? (item.custo_total / totalCMV) * 100 : 0
+  }));
+
+  const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
+
+  // Obter categorias únicas
+  const categorias = Array.from(new Set(produtos.map(p => p.categoria)));
+
+  // Produtos disponíveis para seleção (que ainda não têm CMV no período)
+  const produtosDisponiveis = produtos.filter(produto => 
+    !cmvProdutos.some(cmv => 
+      cmv.produto_id === produto.id && 
+      cmv.periodo_inicio === periodoInicio && 
+      cmv.periodo_fim === periodoFim
+    )
+  );
+
   return (
-    <div className="space-y-6 p-6 min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
-      <div className="flex justify-between items-start">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            Custo da Mercadoria Vendida (CMV)
-          </h1>
-          <p className="mt-1 text-gray-500">
-            Análise e controle dos custos dos produtos vendidos
-          </p>
-        </div>
-        <div className="flex space-x-3">
-          <Button
-            variant="ghost"
-            icon={<FileSpreadsheet size={18} />}
-            onClick={() => exportarDados("excel")}
-            className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm"
-          >
-            Excel
-          </Button>
-          <Button
-            variant="ghost"
-            icon={<Download size={18} />}
-            onClick={() => exportarDados("pdf")}
-            className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm"
-          >
-            PDF
-          </Button>
-        </div>
-      </div>
-
-      {loading ? (
-        <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-        </div>
-      ) : (
-        <>
-          {/* Cards de Métricas */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">CMV Total</p>
-                  <p className="text-2xl font-bold mt-1">
-                    {formatarDinheiro(totalCMV)}
-                  </p>
-                  <p className="text-sm text-gray-500 mt-1">
-                    {percentualCMVGeral.toFixed(2)}% da receita
-                  </p>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-indigo-50/30 dark:from-gray-900 dark:via-gray-800 dark:to-gray-700">
+      <div className="p-6 max-w-7xl mx-auto">
+        {/* Header Moderno */}
+        <div className="mb-8">
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center">
+            <div className="mb-6 lg:mb-0">
+              <div className="flex items-center mb-4">
+                <div className="relative">
+                  <div className="p-4 bg-gradient-to-br from-purple-500 via-purple-600 to-indigo-600 rounded-3xl shadow-2xl mr-6 transform rotate-3 hover:rotate-0 transition-transform duration-300">
+                    <Calculator size={32} className="text-white" />
+                  </div>
+                  <div className="absolute -top-2 -right-2 w-6 h-6 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full flex items-center justify-center shadow-lg">
+                    <Sparkles className="w-3 h-3 text-white" />
+                  </div>
                 </div>
-                <div className="p-3 bg-blue-100 rounded-full">
-                  <Calculator size={24} className="text-blue-600" />
+                <div>
+                  <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-900 via-purple-800 to-indigo-900 dark:from-white dark:via-purple-200 dark:to-indigo-200 bg-clip-text text-transparent">
+                    Custo da Mercadoria Vendida
+                  </h1>
+                  <p className="text-xl text-gray-600 dark:text-gray-400 mt-2">
+                    Análise detalhada de custos e margens de lucro
+                  </p>
                 </div>
               </div>
             </div>
-
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">Receita Total</p>
-                  <p className="text-2xl font-bold mt-1">
-                    {formatarDinheiro(totalReceita)}
-                  </p>
-                  <p className="text-sm text-gray-500 mt-1">
-                    Faturamento bruto
-                  </p>
-                </div>
-                <div className="p-3 bg-green-100 rounded-full">
-                  <TrendingUp size={24} className="text-green-600" />
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">Lucro Bruto</p>
-                  <p className="text-2xl font-bold mt-1">
-                    {formatarDinheiro(lucroBruto)}
-                  </p>
-                  <p className="text-sm text-gray-500 mt-1">
-                    Margem: {margemLucroBruta.toFixed(2)}%
-                  </p>
-                </div>
-                <div className="p-3 bg-purple-100 rounded-full">
-                  <PieChart size={24} className="text-purple-600" />
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">Produtos Analisados</p>
-                  <p className="text-2xl font-bold mt-1">{produtos.length}</p>
-                  <p className="text-sm text-gray-500 mt-1">Em monitoramento</p>
-                </div>
-                <div className="p-3 bg-orange-100 rounded-full">
-                  <AlertTriangle size={24} className="text-orange-600" />
-                </div>
-              </div>
+            
+            <div className="flex flex-wrap gap-3">
+              <Button
+                variant="ghost"
+                icon={<RefreshCw size={18} />}
+                onClick={loadCMVData}
+                isLoading={loading}
+                className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300 border border-white/20 dark:border-gray-700/50"
+              >
+                Atualizar
+              </Button>
+              <Button
+                variant="ghost"
+                icon={<FileSpreadsheet size={18} />}
+                onClick={() => exportarDados("excel")}
+                className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300 border border-white/20 dark:border-gray-700/50"
+              >
+                Excel
+              </Button>
+              <Button
+                variant="ghost"
+                icon={<Download size={18} />}
+                onClick={() => exportarDados("pdf")}
+                className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300 border border-white/20 dark:border-gray-700/50"
+              >
+                PDF
+              </Button>
+              <Button
+                onClick={() => {
+                  resetForm();
+                  setShowModal(true);
+                }}
+                className="bg-gradient-to-r from-purple-600 via-purple-700 to-indigo-700 hover:from-purple-700 hover:via-purple-800 hover:to-indigo-800 text-white px-8 py-3 rounded-2xl flex items-center gap-3 transition-all duration-300 shadow-xl hover:shadow-2xl transform hover:scale-105 active:scale-95"
+              >
+                <Plus className="w-5 h-5" />
+                <span className="font-semibold">Adicionar Produto</span>
+              </Button>
             </div>
           </div>
+        </div>
 
-          {/* Gráfico de Análise */}
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-lg font-medium mb-6">Análise por Produto</h2>
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={produtos}
-                  margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="nome" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="custoTotal" name="Custo Total" fill="#3B82F6" />
-                  <Bar
-                    dataKey="receitaTotal"
-                    name="Receita Total"
-                    fill="#10B981"
-                  />
-                </BarChart>
-              </ResponsiveContainer>
+        {/* Filtros de Período */}
+        <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 dark:border-gray-700/50 p-6 mb-8">
+          <div className="flex items-center mb-4">
+            <Calendar size={20} className="text-purple-600 dark:text-purple-400 mr-3" />
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white">Período de Análise</h3>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Data Início
+              </label>
+              <input
+                type="date"
+                value={periodoInicio}
+                onChange={(e) => setPeriodoInicio(e.target.value)}
+                className="w-full px-4 py-3 bg-gray-50/50 dark:bg-gray-700/50 border border-gray-200/50 dark:border-gray-600/50 rounded-2xl focus:ring-2 focus:ring-purple-500 dark:focus:ring-purple-400 focus:border-purple-500 dark:focus:border-purple-400 transition-all duration-200 text-gray-900 dark:text-white"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Data Fim
+              </label>
+              <input
+                type="date"
+                value={periodoFim}
+                onChange={(e) => setPeriodoFim(e.target.value)}
+                className="w-full px-4 py-3 bg-gray-50/50 dark:bg-gray-700/50 border border-gray-200/50 dark:border-gray-600/50 rounded-2xl focus:ring-2 focus:ring-purple-500 dark:focus:ring-purple-400 focus:border-purple-500 dark:focus:border-purple-400 transition-all duration-200 text-gray-900 dark:text-white"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Buscar Produto
+              </label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <input
+                  type="text"
+                  placeholder="Nome do produto..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 bg-gray-50/50 dark:bg-gray-700/50 border border-gray-200/50 dark:border-gray-600/50 rounded-2xl focus:ring-2 focus:ring-purple-500 dark:focus:ring-purple-400 focus:border-purple-500 dark:focus:border-purple-400 transition-all duration-200 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Categoria
+              </label>
+              <select
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                className="w-full px-4 py-3 bg-gray-50/50 dark:bg-gray-700/50 border border-gray-200/50 dark:border-gray-600/50 rounded-2xl focus:ring-2 focus:ring-purple-500 dark:focus:ring-purple-400 focus:border-purple-500 dark:focus:border-purple-400 transition-all duration-200 text-gray-900 dark:text-white"
+              >
+                <option value="todas">Todas as categorias</option>
+                {categorias.map(categoria => (
+                  <option key={categoria} value={categoria}>{categoria}</option>
+                ))}
+              </select>
             </div>
           </div>
+        </div>
 
-          {/* Lista de Produtos */}
-          <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-            <div className="p-6 border-b border-gray-200">
-              <div className="flex justify-between items-center">
-                <h2 className="text-lg font-medium">Produtos Analisados</h2>
-                <Button variant="primary" onClick={() => setShowForm(true)}>
-                  Adicionar Produto
-                </Button>
+        {loading ? (
+          <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
+            <div className="text-center">
+              <div className="relative">
+                <div className="w-20 h-20 border-4 border-purple-200 dark:border-purple-800 border-t-purple-600 dark:border-t-purple-400 rounded-full animate-spin mx-auto mb-4"></div>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <Calculator className="w-8 h-8 text-purple-600 dark:text-purple-400" />
+                </div>
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                Calculando CMV
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400">
+                Analisando custos e margens de lucro...
+              </p>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Cards de Métricas */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+              <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-3xl shadow-xl p-6 text-white transform hover:scale-105 transition-all duration-300">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-blue-100 text-sm font-medium">CMV Total</p>
+                    <p className="text-3xl font-bold mt-1">
+                      {formatarDinheiro(totalCMV)}
+                    </p>
+                    <p className="text-blue-100 text-sm mt-1">
+                      {percentualCMVGeral.toFixed(2)}% da receita
+                    </p>
+                  </div>
+                  <div className="p-4 bg-white/20 backdrop-blur-sm rounded-2xl">
+                    <Calculator size={28} />
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-3xl shadow-xl p-6 text-white transform hover:scale-105 transition-all duration-300">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-green-100 text-sm font-medium">Receita Total</p>
+                    <p className="text-3xl font-bold mt-1">
+                      {formatarDinheiro(totalReceita)}
+                    </p>
+                    <p className="text-green-100 text-sm mt-1">
+                      Faturamento bruto
+                    </p>
+                  </div>
+                  <div className="p-4 bg-white/20 backdrop-blur-sm rounded-2xl">
+                    <TrendingUp size={28} />
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-3xl shadow-xl p-6 text-white transform hover:scale-105 transition-all duration-300">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-purple-100 text-sm font-medium">Lucro Bruto</p>
+                    <p className="text-3xl font-bold mt-1">
+                      {formatarDinheiro(lucroBruto)}
+                    </p>
+                    <p className="text-purple-100 text-sm mt-1">
+                      Margem: {margemLucroBruta.toFixed(2)}%
+                    </p>
+                  </div>
+                  <div className="p-4 bg-white/20 backdrop-blur-sm rounded-2xl">
+                    <Target size={28} />
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-3xl shadow-xl p-6 text-white transform hover:scale-105 transition-all duration-300">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-orange-100 text-sm font-medium">Produtos Analisados</p>
+                    <p className="text-3xl font-bold mt-1">{filteredCMV.length}</p>
+                    <p className="text-orange-100 text-sm mt-1">Com CMV calculado</p>
+                  </div>
+                  <div className="p-4 bg-white/20 backdrop-blur-sm rounded-2xl">
+                    <Package size={28} />
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th
-                      scope="col"
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                    >
-                      Produto
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                    >
-                      Custo Unit.
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                    >
-                      Preço Venda
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                    >
-                      Qtd. Vendida
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                    >
-                      CMV Total
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                    >
-                      Receita Total
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                    >
-                      Margem
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                    >
-                      Ações
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {produtos.map((produto) => (
-                    <tr key={produto.id}>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">
-                          {produto.nome}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">
-                          {formatarDinheiro(produto.custoUnitario)}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">
-                          {formatarDinheiro(produto.precoVenda)}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">
-                          {produto.quantidadeVendida}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">
-                          {formatarDinheiro(produto.custoTotal)}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">
-                          {formatarDinheiro(produto.receitaTotal)}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span
-                          className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            produto.margemLucro >= 40
-                              ? "bg-green-100 text-green-800"
-                              : produto.margemLucro >= 30
-                              ? "bg-yellow-100 text-yellow-800"
-                              : "bg-red-100 text-red-800"
-                          }`}
-                        >
-                          {produto.margemLucro.toFixed(2)}%
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-red-600 hover:text-red-700"
-                          onClick={() => handleDeleteProduto(produto.id)}
-                        >
-                          Excluir
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Modal de Novo Produto */}
-          {showForm && (
-            <div className="fixed inset-0 z-50 overflow-y-auto">
-              <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-                <div
-                  className="fixed inset-0 transition-opacity"
-                  aria-hidden="true"
-                >
-                  <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
+            {/* Gráficos */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+              {/* Gráfico de Barras - Custo vs Receita */}
+              <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 dark:border-gray-700/50 p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                    Análise Custo vs Receita
+                  </h2>
+                  <div className="p-2 bg-blue-100 dark:bg-blue-900/50 rounded-xl">
+                    <BarChart3 size={20} className="text-blue-600 dark:text-blue-400" />
+                  </div>
                 </div>
+                <div className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={chartData.slice(0, 8)}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                      <XAxis 
+                        dataKey="nome" 
+                        stroke="#6B7280" 
+                        fontSize={12}
+                        angle={-45}
+                        textAnchor="end"
+                        height={80}
+                      />
+                      <YAxis stroke="#6B7280" fontSize={12} />
+                      <Tooltip
+                        formatter={(value: any, name: string) => [
+                          formatarDinheiro(value),
+                          name === "custo" ? "Custo Total" : "Receita Total"
+                        ]}
+                        labelStyle={{ color: "#374151" }}
+                        contentStyle={{
+                          backgroundColor: "#F9FAFB",
+                          border: "1px solid #E5E7EB",
+                          borderRadius: "12px"
+                        }}
+                      />
+                      <Legend />
+                      <Bar dataKey="custo" name="Custo Total" fill="#EF4444" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="receita" name="Receita Total" fill="#10B981" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
 
-                <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-                  <form onSubmit={handleSubmit}>
-                    <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                      <h3 className="text-lg font-medium text-gray-900 mb-4">
-                        Novo Produto
-                      </h3>
+              {/* Gráfico de Pizza - Distribuição de Custos */}
+              <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 dark:border-gray-700/50 p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                    Distribuição de Custos
+                  </h2>
+                  <div className="p-2 bg-purple-100 dark:bg-purple-900/50 rounded-xl">
+                    <PieChart size={20} className="text-purple-600 dark:text-purple-400" />
+                  </div>
+                </div>
+                <div className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RechartsPieChart>
+                      <Pie
+                        data={pieData}
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={100}
+                        fill="#8884d8"
+                        dataKey="value"
+                        label={({ name, percentage }) => `${name}: ${percentage.toFixed(1)}%`}
+                      >
+                        {pieData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        formatter={(value: any) => [formatarDinheiro(value), "Custo"]}
+                        contentStyle={{
+                          backgroundColor: "#F9FAFB",
+                          border: "1px solid #E5E7EB",
+                          borderRadius: "12px"
+                        }}
+                      />
+                    </RechartsPieChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </div>
 
-                      <div className="space-y-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700">
-                            Nome do Produto
-                          </label>
-                          <input
-                            type="text"
-                            value={formData.nome}
-                            onChange={(e) =>
-                              setFormData({ ...formData, nome: e.target.value })
-                            }
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                            required
-                          />
-                        </div>
+            {/* Lista de Produtos */}
+            <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 dark:border-gray-700/50 overflow-hidden">
+              <div className="p-6 border-b border-gray-200/50 dark:border-gray-700/50">
+                <div className="flex justify-between items-center">
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">Produtos Analisados</h2>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">
+                    Período: {new Date(periodoInicio).toLocaleDateString('pt-BR')} - {new Date(periodoFim).toLocaleDateString('pt-BR')}
+                  </div>
+                </div>
+              </div>
 
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700">
-                            Custo Unitário
-                          </label>
-                          <div className="mt-1 relative rounded-md shadow-sm">
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                              <span className="text-gray-500 sm:text-sm">
-                                R$
-                              </span>
+              {filteredCMV.length === 0 ? (
+                <div className="text-center py-16">
+                  <div className="relative mb-8">
+                    <div className="w-32 h-32 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 rounded-full mx-auto flex items-center justify-center shadow-2xl">
+                      <Calculator className="w-16 h-16 text-gray-400 dark:text-gray-500" />
+                    </div>
+                    <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-r from-purple-500 to-indigo-600 rounded-full flex items-center justify-center shadow-lg transform translate-x-16">
+                      <Sparkles className="w-4 h-4 text-white" />
+                    </div>
+                  </div>
+                  <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+                    Nenhum produto com CMV calculado
+                  </h3>
+                  <p className="text-lg text-gray-600 dark:text-gray-400 mb-8 max-w-md mx-auto">
+                    Adicione produtos com seus custos unitários para começar a analisar a margem de lucro
+                  </p>
+                  <Button
+                    onClick={() => {
+                      resetForm();
+                      setShowModal(true);
+                    }}
+                    className="bg-gradient-to-r from-purple-600 via-purple-700 to-indigo-700 hover:from-purple-700 hover:via-purple-800 hover:to-indigo-800 text-white px-8 py-4 rounded-2xl font-semibold shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300"
+                    icon={<Plus size={20} />}
+                  >
+                    Adicionar Primeiro Produto
+                  </Button>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200/50 dark:divide-gray-700/50">
+                    <thead className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-600">
+                      <tr>
+                        <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                          Produto
+                        </th>
+                        <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                          Custo Unit.
+                        </th>
+                        <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                          Qtd. Vendida
+                        </th>
+                        <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                          CMV Total
+                        </th>
+                        <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                          Receita Total
+                        </th>
+                        <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                          Margem
+                        </th>
+                        <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                          Ações
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200/50 dark:divide-gray-700/50">
+                      {filteredCMV.map((item) => (
+                        <tr key={item.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-700/50 transition-colors">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div>
+                              <div className="text-sm font-bold text-gray-900 dark:text-white">
+                                {item.produto_nome}
+                              </div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400">
+                                {item.categoria}
+                              </div>
                             </div>
-                            <input
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              value={formData.custoUnitario}
-                              onChange={(e) =>
-                                setFormData({
-                                  ...formData,
-                                  custoUnitario: e.target.value
-                                })
-                              }
-                              className="pl-8 block w-full rounded-md border-gray-300 focus:ring-blue-500 focus:border-blue-500"
-                              required
-                            />
-                          </div>
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700">
-                            Preço de Venda
-                          </label>
-                          <div className="mt-1 relative rounded-md shadow-sm">
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                              <span className="text-gray-500 sm:text-sm">
-                                R$
-                              </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm font-medium text-gray-900 dark:text-white">
+                              {formatarDinheiro(item.custo_unitario)}
                             </div>
-                            <input
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              value={formData.precoVenda}
-                              onChange={(e) =>
-                                setFormData({
-                                  ...formData,
-                                  precoVenda: e.target.value
-                                })
-                              }
-                              className="pl-8 block w-full rounded-md border-gray-300 focus:ring-blue-500 focus:border-blue-500"
-                              required
-                            />
-                          </div>
-                        </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm font-medium text-gray-900 dark:text-white">
+                              {item.quantidade_vendida}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm font-bold text-red-600 dark:text-red-400">
+                              {formatarDinheiro(item.custo_total)}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm font-bold text-green-600 dark:text-green-400">
+                              {formatarDinheiro(item.receita_total)}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span
+                              className={`px-3 py-2 inline-flex text-xs leading-5 font-bold rounded-full ${
+                                item.margem_lucro >= 40
+                                  ? "bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200"
+                                  : item.margem_lucro >= 30
+                                  ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-200"
+                                  : "bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-200"
+                              }`}
+                            >
+                              {item.margem_lucro.toFixed(2)}%
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <div className="flex space-x-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                icon={<Edit size={16} />}
+                                onClick={() => handleEdit(item)}
+                                className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                              >
+                                Editar
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                icon={<Trash2 size={16} />}
+                                onClick={() => handleDelete(item.id)}
+                                className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                              >
+                                Excluir
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </>
+        )}
 
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700">
-                            Quantidade Vendida
-                          </label>
-                          <input
-                            type="number"
-                            min="1"
-                            value={formData.quantidadeVendida}
-                            onChange={(e) =>
-                              setFormData({
-                                ...formData,
-                                quantidadeVendida: e.target.value
-                              })
-                            }
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                            required
-                          />
-                        </div>
+        {/* Modal de Adicionar/Editar CMV */}
+        {showModal && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-white/20 dark:border-gray-700/50">
+              {/* Header do Modal */}
+              <div className="relative overflow-hidden">
+                <div className="bg-gradient-to-r from-purple-600 via-purple-700 to-indigo-700 p-8">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
+                  <div className="relative flex justify-between items-center">
+                    <div className="flex items-center">
+                      <div className="p-3 bg-white/20 backdrop-blur-sm rounded-2xl mr-4">
+                        <Calculator size={24} className="text-white" />
+                      </div>
+                      <div className="text-white">
+                        <h2 className="text-2xl font-bold">
+                          {editingItem ? 'Editar CMV' : 'Adicionar Produto ao CMV'}
+                        </h2>
+                        <p className="text-purple-100">
+                          {editingItem ? 'Atualize o custo do produto' : 'Selecione um produto e defina seu custo'}
+                        </p>
                       </div>
                     </div>
-
-                    <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                      <Button
-                        type="submit"
-                        variant="primary"
-                        className="w-full sm:w-auto sm:ml-3"
-                      >
-                        Adicionar
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        onClick={() => setShowForm(false)}
-                        className="w-full sm:w-auto mt-3 sm:mt-0"
-                      >
-                        Cancelar
-                      </Button>
-                    </div>
-                  </form>
+                    <button
+                      onClick={() => {
+                        setShowModal(false);
+                        resetForm();
+                      }}
+                      className="p-2 text-white/70 hover:text-white hover:bg-white/20 rounded-xl transition-colors"
+                    >
+                      <X size={24} />
+                    </button>
+                  </div>
                 </div>
               </div>
+              
+              <form onSubmit={handleSubmit} className="p-8 space-y-6">
+                <div className="grid grid-cols-1 gap-6">
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-3">
+                      Produto
+                    </label>
+                    <select
+                      value={formData.produto_id}
+                      onChange={(e) => setFormData({ ...formData, produto_id: e.target.value })}
+                      className="w-full px-4 py-4 bg-gray-50/50 dark:bg-gray-700/50 border border-gray-200/50 dark:border-gray-600/50 rounded-2xl focus:ring-2 focus:ring-purple-500 dark:focus:ring-purple-400 focus:border-purple-500 dark:focus:border-purple-400 transition-all duration-200 text-gray-900 dark:text-white"
+                      required
+                      disabled={!!editingItem}
+                    >
+                      <option value="">Selecione um produto</option>
+                      {editingItem ? (
+                        <option value={editingItem.produto_id}>
+                          {editingItem.produto_nome} - {editingItem.categoria}
+                        </option>
+                      ) : (
+                        produtosDisponiveis.map(produto => (
+                          <option key={produto.id} value={produto.id}>
+                            {produto.nome} - {produto.categoria} - {formatarDinheiro(produto.preco)}
+                          </option>
+                        ))
+                      )}
+                    </select>
+                    {!editingItem && produtosDisponiveis.length === 0 && (
+                      <p className="text-sm text-amber-600 dark:text-amber-400 mt-2">
+                        Todos os produtos já têm CMV calculado para este período
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-3">
+                      Custo Unitário
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <DollarSign className="w-5 h-5 text-gray-400 dark:text-gray-500" />
+                      </div>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={formData.custo_unitario}
+                        onChange={(e) => setFormData({ ...formData, custo_unitario: e.target.value })}
+                        className="w-full pl-12 pr-4 py-4 bg-gray-50/50 dark:bg-gray-700/50 border border-gray-200/50 dark:border-gray-600/50 rounded-2xl focus:ring-2 focus:ring-purple-500 dark:focus:ring-purple-400 focus:border-purple-500 dark:focus:border-purple-400 transition-all duration-200 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+                        placeholder="0,00"
+                        required
+                      />
+                    </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                      Custo real de produção/compra do produto (sem margem de lucro)
+                    </p>
+                  </div>
+
+                  {/* Preview do Cálculo */}
+                  {formData.produto_id && formData.custo_unitario && (
+                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-2xl p-6 border border-blue-200/50 dark:border-blue-700/50">
+                      <div className="flex items-center mb-4">
+                        <Zap className="w-5 h-5 text-blue-600 dark:text-blue-400 mr-2" />
+                        <h4 className="font-bold text-blue-800 dark:text-blue-200">
+                          Preview do Cálculo
+                        </h4>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <p className="text-blue-700 dark:text-blue-300">Produto selecionado:</p>
+                          <p className="font-medium text-blue-900 dark:text-blue-100">
+                            {produtos.find(p => p.id === formData.produto_id)?.nome}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-blue-700 dark:text-blue-300">Custo informado:</p>
+                          <p className="font-medium text-blue-900 dark:text-blue-100">
+                            {formatarDinheiro(parseFloat(formData.custo_unitario) || 0)}
+                          </p>
+                        </div>
+                      </div>
+                      <p className="text-xs text-blue-600 dark:text-blue-400 mt-3">
+                        O CMV será calculado automaticamente com base nas vendas do período selecionado
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex gap-4 pt-6">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => {
+                      setShowModal(false);
+                      resetForm();
+                    }}
+                    className="flex-1 bg-gray-100/80 dark:bg-gray-700/80 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-2xl py-4 font-semibold transition-all duration-200"
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    type="submit"
+                    className="flex-1 bg-gradient-to-r from-purple-600 via-purple-700 to-indigo-700 hover:from-purple-700 hover:via-purple-800 hover:to-indigo-800 text-white rounded-2xl py-4 font-semibold shadow-xl hover:shadow-2xl transition-all duration-200 transform hover:scale-105"
+                    isLoading={loading}
+                  >
+                    {editingItem ? 'Atualizar' : 'Calcular'} CMV
+                  </Button>
+                </div>
+              </form>
             </div>
-          )}
-        </>
-      )}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
