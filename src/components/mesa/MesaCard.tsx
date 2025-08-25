@@ -4,7 +4,8 @@ import { formatarTempo, formatarDinheiro } from '../../utils/formatters';
 import { useRestaurante } from '../../contexts/RestauranteContext';
 import Button from '../ui/Button';
 import ComandaModal from '../comanda/ComandaModal';
-import AdicionarItemModal from '../comanda/AdicionarItemModal';
+import CarrinhoMesaModal from './CarrinhoMesaModal';
+import AdicionarItemRapidoModal from './AdicionarItemRapidoModal';
 import PagamentoModal from './PagamentoModal';
 import toast from 'react-hot-toast';
 import { Database } from '../../types/database';
@@ -17,7 +18,8 @@ interface MesaCardProps {
 
 const MesaCard: React.FC<MesaCardProps> = ({ mesa }) => {
   const [comandaModalAberta, setComandaModalAberta] = useState(false);
-  const [adicionarItemModalAberto, setAdicionarItemModalAberto] = useState(false);
+  const [carrinhoModalAberto, setCarrinhoModalAberto] = useState(false);
+  const [itemRapidoModalAberto, setItemRapidoModalAberto] = useState(false);
   const [pagamentoModalAberto, setPagamentoModalAberto] = useState(false);
   const [menuAberto, setMenuAberto] = useState(false);
   
@@ -51,15 +53,10 @@ const MesaCard: React.FC<MesaCardProps> = ({ mesa }) => {
           setComandaModalAberta(true);
           break;
         case 'adicionar':
-          // Check if there's an open comanda for this mesa
-          let comandaAberta = comandas.find(c => c.mesa_id === mesa.id && c.status === 'aberta');
-          if (!comandaAberta) {
-            // Create new comanda
-            const novaComandaId = await criarComanda(mesa.id);
-            // Refresh comandas to get the new one
-            await refreshData();
-          }
-          setAdicionarItemModalAberto(true);
+          setCarrinhoModalAberto(true);
+          break;
+        case 'item-rapido':
+          setItemRapidoModalAberto(true);
           break;
         case 'imprimir':
           toast.success('Comanda enviada para impressão!');
@@ -129,7 +126,13 @@ const MesaCard: React.FC<MesaCardProps> = ({ mesa }) => {
                           onClick={() => handleAcao('adicionar')}
                           className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                         >
-                          Criar Pedido
+                          Adicionar Itens
+                        </button>
+                        <button 
+                          onClick={() => handleAcao('item-rapido')}
+                          className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        >
+                          Item Rápido
                         </button>
                         <button 
                           onClick={() => handleAcao('imprimir')}
@@ -222,7 +225,16 @@ const MesaCard: React.FC<MesaCardProps> = ({ mesa }) => {
                   icon={<Plus size={16} />}
                   onClick={() => handleAcao('adicionar')}
                 >
-                  Criar Pedido
+                  Adicionar Itens
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  icon={<Plus size={16} />}
+                  onClick={() => handleAcao('item-rapido')}
+                  className="text-purple-600 hover:text-purple-700"
+                >
+                  Item Rápido
                 </Button>
                 <Button 
                   variant="ghost" 
@@ -275,12 +287,17 @@ const MesaCard: React.FC<MesaCardProps> = ({ mesa }) => {
         mesaId={mesa.id} 
       />
       
-      <AdicionarItemModal
-        isOpen={adicionarItemModalAberto}
-        onClose={() => setAdicionarItemModalAberto(false)}
+      <CarrinhoMesaModal
+        isOpen={carrinhoModalAberto}
+        onClose={() => setCarrinhoModalAberto(false)}
         mesaId={mesa.id}
       />
 
+      <AdicionarItemRapidoModal
+        isOpen={itemRapidoModalAberto}
+        onClose={() => setItemRapidoModalAberto(false)}
+        mesaId={mesa.id}
+      />
       <PagamentoModal
         isOpen={pagamentoModalAberto}
         onClose={() => setPagamentoModalAberto(false)}

@@ -95,7 +95,7 @@ function App() {
                 <Route path="cardapio-online/editor" element={<PrivateRoute requiredPermission="cardapio-online-editor"><CardapioOnlineEditor /></PrivateRoute>} />
                 <Route path="cmv" element={<PrivateRoute requiredPermission="cmv"><CMV /></PrivateRoute>} />
                 <Route path="suporte" element={<PrivateRoute><Suporte /></PrivateRoute>} />
-                <Route path="pedidos-rapidos" element={<PrivateRoute requiredPermission="pdv"><PedidosRapidos /></PrivateRoute>} />
+                <Route path="pedidos-rapidos" element={<PrivateRoute requiredPermission="pedidos-rapidos"><PedidosRapidos /></PrivateRoute>} />
                 
                 {/* Profile Routes */}
                 <Route path="profile">
