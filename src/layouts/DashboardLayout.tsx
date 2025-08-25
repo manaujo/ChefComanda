@@ -37,6 +37,7 @@ const DashboardLayout: React.FC = () => {
       { name: 'Dashboard', path: '/dashboard', icon: <LayoutDashboard size={20} />, permission: 'dashboard' },
       { name: 'Mesas', path: '/dashboard/mesas', icon: <Coffee size={20} />, permission: 'mesas' },
       { name: 'Comandas', path: '/dashboard/comandas', icon: <ClipboardList size={20} />, permission: 'comandas' },
+      { name: 'Pedidos Rápidos', path: '/dashboard/pedidos-rapidos', icon: <Zap size={20} />, permission: 'pdv' },
       { name: 'PDV', path: '/dashboard/pdv', icon: <CreditCard size={20} />, permission: 'pdv' },
       { name: 'Caixa', path: '/dashboard/caixa', icon: <CreditCard size={20} />, permission: 'caixa' },
       { name: 'Cardápio', path: '/dashboard/cardapio', icon: <ShoppingBag size={20} />, permission: 'produtos' },
@@ -47,7 +48,6 @@ const DashboardLayout: React.FC = () => {
       { name: 'Cardápio Online', path: '/dashboard/cardapio-online', icon: <QrCode size={20} />, permission: 'cardapio-online' },
       { name: 'Editor de Cardápio', path: '/dashboard/cardapio-online/editor', icon: <PenSquare size={20} />, permission: 'cardapio-online-editor' },
       { name: 'Suporte', path: '/dashboard/suporte', icon: <Headphones size={20} />, permission: 'suporte' },
-      { name: 'Pedidos Rápidos', path: '/dashboard/pedidos-rapidos', icon: <Zap size={20} />, permission: 'pdv' }
     ];
 
     // Filtrar itens com base nas permissões
