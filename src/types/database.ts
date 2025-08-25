@@ -176,6 +176,88 @@ export interface Database {
           updated_at?: string;
         };
       };
+      pedidos: {
+        Row: {
+          id: string;
+          restaurante_id: string;
+          numero: number;
+          cliente_nome: string;
+          cliente_telefone: string | null;
+          tipo: 'balcao' | 'delivery' | 'rapido';
+          status: 'aberto' | 'em_preparo' | 'pronto' | 'entregue' | 'pago' | 'cancelado';
+          valor_total: number;
+          observacao: string | null;
+          endereco_entrega: string | null;
+          usuario_id: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          restaurante_id: string;
+          numero?: number;
+          cliente_nome: string;
+          cliente_telefone?: string | null;
+          tipo: 'balcao' | 'delivery' | 'rapido';
+          status?: 'aberto' | 'em_preparo' | 'pronto' | 'entregue' | 'pago' | 'cancelado';
+          valor_total?: number;
+          observacao?: string | null;
+          endereco_entrega?: string | null;
+          usuario_id: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          restaurante_id?: string;
+          numero?: number;
+          cliente_nome?: string;
+          cliente_telefone?: string | null;
+          tipo?: 'balcao' | 'delivery' | 'rapido';
+          status?: 'aberto' | 'em_preparo' | 'pronto' | 'entregue' | 'pago' | 'cancelado';
+          valor_total?: number;
+          observacao?: string | null;
+          endereco_entrega?: string | null;
+          usuario_id?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      itens_pedido: {
+        Row: {
+          id: string;
+          pedido_id: string;
+          produto_id: string;
+          quantidade: number;
+          preco_unitario: number;
+          observacao: string | null;
+          status: 'pendente' | 'preparando' | 'pronto' | 'entregue' | 'cancelado';
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          pedido_id: string;
+          produto_id: string;
+          quantidade?: number;
+          preco_unitario: number;
+          observacao?: string | null;
+          status?: 'pendente' | 'preparando' | 'pronto' | 'entregue' | 'cancelado';
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          pedido_id?: string;
+          produto_id?: string;
+          quantidade?: number;
+          preco_unitario?: number;
+          observacao?: string | null;
+          status?: 'pendente' | 'preparando' | 'pronto' | 'entregue' | 'cancelado';
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
       caixas: {
         Row: {
           id: string;

@@ -3,7 +3,7 @@ import { Link, useLocation, Outlet, useNavigate } from 'react-router-dom';
 import {
   Menu, ChefHat, LayoutDashboard, Users, ShoppingBag,
   ClipboardList, PieChart, Settings, Coffee, QrCode,
-  CreditCard, Moon, Sun, Globe, PenSquare, Calculator,
+  CreditCard, Moon, Sun, Globe, PenSquare, Calculator, Zap,
   HelpCircle, Headphones
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -47,6 +47,7 @@ const DashboardLayout: React.FC = () => {
       { name: 'Cardápio Online', path: '/dashboard/cardapio-online', icon: <QrCode size={20} />, permission: 'cardapio-online' },
       { name: 'Editor de Cardápio', path: '/dashboard/cardapio-online/editor', icon: <PenSquare size={20} />, permission: 'cardapio-online-editor' },
       { name: 'Suporte', path: '/dashboard/suporte', icon: <Headphones size={20} />, permission: 'suporte' },
+      { name: 'Pedidos Rápidos', path: '/dashboard/pedidos-rapidos', icon: <Zap size={20} />, permission: 'pdv' }
     ];
 
     // Filtrar itens com base nas permissões
