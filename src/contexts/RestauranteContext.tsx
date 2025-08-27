@@ -428,68 +428,14 @@ export const RestauranteProvider: React.FC<RestauranteProviderProps> = ({ childr
 
   const finalizarPagamento = async (mesaId: string, formaPagamento: string) => {
     try {
-      // Refresh data to ensure comandas state is up to date
-      await refreshData();
-      
-      // Get the most recent open comanda for this mesa
-      const { data: comandaAtual, error: comandaError } = await supabase
-        .from('comandas')
-        .select('*')
-        .eq('mesa_id', mesaId)
-        .eq('status', 'aberta')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      
-      if (comandaError) throw comandaError;
-      const comanda = comandaAtual;
-      if (!comanda) throw new Error('Comanda não encontrada');
-      
-      // Calculate total value from items of this specific comanda
-      const itensComandaMesa = itensComanda.filter(item => 
-        item.mesa_id === mesaId && 
-        item.comanda_id === comanda.id &&
-        item.status !== 'entregue' && 
-        item.status !== 'cancelado'
-      );
-      
-      const valorTotal = itensComandaMesa.reduce((total, item) => {
-        return total + (item.preco_unitario * item.quantidade);
-      }, 0);
-      
-      // Mark all items as delivered before closing comanda
-      await Promise.all(
-        itensComandaMesa.map(item => 
-          DatabaseService.updateItemComanda(item.id, { status: 'entregue' })
-        )
-      );
-      
-      // Close comanda
-      await DatabaseService.updateComanda(comanda.id, { 
-        status: 'fechada',
-        valor_total: valorTotal
+      // Use the stored function to finalize payment
+      const { error } = await supabase.rpc('finalizar_pagamento_mesa', {
+        p_mesa_id: mesaId,
+        p_forma_pagamento: formaPagamento,
+        p_usuario_id: user?.id
       });
-      
-      // Create venda record
-      if (restaurante) {
-        await DatabaseService.createVenda({
-          restaurante_id: restaurante.id,
-          mesa_id: mesaId,
-          comanda_id: comanda.id,
-          valor_total: valorTotal,
-          forma_pagamento: formaPagamento,
-          status: 'concluida',
-          usuario_id: user?.id || ''
-        });
-      }
-      
-      // Update mesa status to livre and reset values
-      await DatabaseService.updateMesa(mesaId, { 
-        status: 'livre',
-        horario_abertura: null,
-        garcom: null,
-        valor_total: 0
-      });
+
+      if (error) throw error;
       
       // Refresh data
       await refreshData();

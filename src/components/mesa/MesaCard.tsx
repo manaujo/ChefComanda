@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
-import { Clock, Users, CreditCard, MoreVertical, ClipboardEdit, Printer, Plus, Trash2, Receipt } from 'lucide-react';
+import { Clock, Users, CreditCard, MoreVertical, ClipboardEdit, Plus, Trash2, Receipt } from 'lucide-react';
 import { formatarTempo, formatarDinheiro } from '../../utils/formatters';
 import { useRestaurante } from '../../contexts/RestauranteContext';
 import Button from '../ui/Button';
 import ComandaModal from '../comanda/ComandaModal';
 import CarrinhoMesaModal from './CarrinhoMesaModal';
-import AdicionarItemRapidoModal from './AdicionarItemRapidoModal';
 import PagamentoModal from './PagamentoModal';
 import toast from 'react-hot-toast';
 import { Database } from '../../types/database';
@@ -19,7 +18,6 @@ interface MesaCardProps {
 const MesaCard: React.FC<MesaCardProps> = ({ mesa }) => {
   const [comandaModalAberta, setComandaModalAberta] = useState(false);
   const [carrinhoModalAberto, setCarrinhoModalAberto] = useState(false);
-  const [itemRapidoModalAberto, setItemRapidoModalAberto] = useState(false);
   const [pagamentoModalAberto, setPagamentoModalAberto] = useState(false);
   const [menuAberto, setMenuAberto] = useState(false);
   
@@ -54,9 +52,6 @@ const MesaCard: React.FC<MesaCardProps> = ({ mesa }) => {
           break;
         case 'adicionar':
           setCarrinhoModalAberto(true);
-          break;
-        case 'item-rapido':
-          setItemRapidoModalAberto(true);
           break;
         case 'imprimir':
           toast.success('Comanda enviada para impressão!');
@@ -127,18 +122,6 @@ const MesaCard: React.FC<MesaCardProps> = ({ mesa }) => {
                           className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                         >
                           Adicionar Itens
-                        </button>
-                        <button 
-                          onClick={() => handleAcao('item-rapido')}
-                          className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                        >
-                          Item Rápido
-                        </button>
-                        <button 
-                          onClick={() => handleAcao('imprimir')}
-                          className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                        >
-                          Imprimir Comanda
                         </button>
                         <button 
                           onClick={() => handleAcao('pagamento')}
@@ -228,23 +211,6 @@ const MesaCard: React.FC<MesaCardProps> = ({ mesa }) => {
                   Adicionar Itens
                 </Button>
                 <Button 
-                  variant="ghost" 
-                  size="sm"
-                  icon={<Plus size={16} />}
-                  onClick={() => handleAcao('item-rapido')}
-                  className="text-purple-600 hover:text-purple-700"
-                >
-                  Item Rápido
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  icon={<Receipt size={16} />}
-                  onClick={() => handleAcao('imprimir')}
-                >
-                  Imprimir
-                </Button>
-                <Button 
                   variant="warning" 
                   size="sm"
                   icon={<CreditCard size={16} />}
@@ -293,11 +259,6 @@ const MesaCard: React.FC<MesaCardProps> = ({ mesa }) => {
         mesaId={mesa.id}
       />
 
-      <AdicionarItemRapidoModal
-        isOpen={itemRapidoModalAberto}
-        onClose={() => setItemRapidoModalAberto(false)}
-        mesaId={mesa.id}
-      />
       <PagamentoModal
         isOpen={pagamentoModalAberto}
         onClose={() => setPagamentoModalAberto(false)}

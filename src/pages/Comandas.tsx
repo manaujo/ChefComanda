@@ -27,7 +27,7 @@ interface ComandaItem {
   observacao?: string;
   status: 'pendente' | 'preparando' | 'pronto' | 'entregue' | 'cancelado';
   created_at: string;
-  tipo_origem: 'mesa' | 'pedido_rapido';
+  tipo_origem: 'mesa' | 'pedido_avulso';
   cliente_nome?: string;
   tipo_pedido?: 'balcao' | 'delivery' | 'rapido';
 }
@@ -164,7 +164,7 @@ const Comandas: React.FC = () => {
           created_at: item.created_at,
           tipo_origem: 'mesa' as const
         })),
-        // Itens de pedidos rápidos
+        // Itens de pedidos avulsos
         ...(itensPedidoData || []).map((item: any) => ({
           id: item.id,
           pedido_id: item.pedido_id,
@@ -177,7 +177,7 @@ const Comandas: React.FC = () => {
           observacao: item.observacao,
           status: item.status,
           created_at: item.created_at,
-          tipo_origem: 'pedido_rapido' as const,
+          tipo_origem: 'pedido_avulso' as const,
           cliente_nome: item.pedido.cliente_nome,
           tipo_pedido: item.pedido.tipo
         }))
@@ -195,7 +195,7 @@ const Comandas: React.FC = () => {
     }
   };
 
-  const atualizarStatusItem = async (itemId: string, novoStatus: 'preparando' | 'pronto', tipoOrigem: 'mesa' | 'pedido_rapido') => {
+  const atualizarStatusItem = async (itemId: string, novoStatus: 'preparando' | 'pronto', tipoOrigem: 'mesa' | 'pedido_avulso') => {
     try {
       const tabela = tipoOrigem === 'mesa' ? 'itens_comanda' : 'itens_pedido';
       
@@ -270,7 +270,7 @@ const Comandas: React.FC = () => {
     if (tipoFilter === 'mesas') {
       matchTipo = item.tipo_origem === 'mesa';
     } else if (tipoFilter === 'pedidos') {
-      matchTipo = item.tipo_origem === 'pedido_rapido';
+      matchTipo = item.tipo_origem === 'pedido_avulso';
     }
     
     return matchSearch && matchStatus && matchTipo;
@@ -385,7 +385,7 @@ const Comandas: React.FC = () => {
             >
               <option value="todos">Todos os tipos</option>
               <option value="mesas">Mesas</option>
-              <option value="pedidos">Pedidos Rápidos</option>
+              <option value="pedidos">Pedidos Avulsos</option>
             </select>
 
             <div className="flex items-center justify-center">
@@ -528,13 +528,13 @@ const Comandas: React.FC = () => {
             <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
               {searchTerm || statusFilter !== 'todos' || tipoFilter !== 'todos'
                 ? 'Nenhum item encontrado'
-                : 'Nenhum pedido na cozinha'
+                : 'Nenhum item na cozinha'
               }
             </h3>
             <p className="text-lg text-gray-600 dark:text-gray-400 mb-8 max-w-md mx-auto">
               {searchTerm || statusFilter !== 'todos' || tipoFilter !== 'todos'
                 ? 'Tente ajustar os filtros de busca para encontrar o que procura'
-                : 'Quando houver pedidos de mesas ou pedidos rápidos, eles aparecerão aqui para preparo'
+                : 'Quando houver pedidos de mesas ou pedidos avulsos, eles aparecerão aqui para preparo'
               }
             </p>
           </div>
