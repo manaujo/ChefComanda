@@ -97,24 +97,6 @@ class CaixaService {
     }
   }
 
-  // Verificar se operador tem caixa aberto
-  async getOperadorCaixaAberto(operadorId: string): Promise<CaixaOperador | null> {
-    try {
-      const { data, error } = await supabase
-        .from('caixas_operadores')
-        .select('*')
-        .eq('operador_id', operadorId)
-        .eq('status', 'aberto')
-        .maybeSingle();
-
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      console.error('Error getting operator cash register:', error);
-      return null;
-    }
-  }
-
   // Abrir novo caixa
   async abrirCaixa(data: {
     restauranteId: string;
@@ -191,6 +173,18 @@ class CaixaService {
         usuarioId: data.usuarioId
       });
 
+      // Verificar se o caixa existe e está aberto
+      const { data: caixa, error: caixaError } = await supabase
+        .from('caixas_operadores')
+        .select('*')
+        .eq('id', data.caixaId)
+        .eq('status', 'aberto')
+        .single();
+
+      if (caixaError || !caixa) {
+        throw new Error('Caixa não encontrado ou não está aberto');
+      }
+
       const { error } = await supabase
         .from('movimentacoes_caixa')
         .insert({
@@ -205,7 +199,7 @@ class CaixaService {
 
       if (error) throw error;
 
-      console.log('Movimentação adicionada com sucesso');
+      console.log(`Movimentação adicionada com sucesso no caixa ${data.caixaId} - Operador: ${caixa.operador_nome}`);
     } catch (error) {
       console.error('Error adding cash movement:', error);
       throw error;

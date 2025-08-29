@@ -60,7 +60,7 @@ const PagamentoModal: React.FC<PagamentoModalProps> = ({ isOpen, onClose, mesa }
 
   const registrarMovimentacaoCaixa = async (valor: number, formaPagamento: string, mesaNumero: number) => {
     try {
-      // Buscar caixa aberto do operador atual
+      // PRIORIDADE 1: Buscar caixa aberto do operador atual (funcionário ou usuário principal)
       const { data: caixaAberto, error: caixaError } = await supabase
         .from('caixas_operadores')
         .select('*')
@@ -70,11 +70,44 @@ const PagamentoModal: React.FC<PagamentoModalProps> = ({ isOpen, onClose, mesa }
 
       if (caixaError) {
         console.error('Error finding cash register:', caixaError);
-        return;
+        // Não retornar aqui, tentar buscar qualquer caixa aberto
       }
 
       if (!caixaAberto) {
-        console.warn('No open cash register found for current operator');
+        // PRIORIDADE 2: Se não encontrou caixa do operador atual, buscar qualquer caixa aberto do restaurante
+        const { data: qualquerCaixa, error: qualquerCaixaError } = await supabase
+          .from('caixas_operadores')
+          .select('*')
+          .eq('restaurante_id', restaurante?.id)
+          .eq('status', 'aberto')
+          .order('data_abertura', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (qualquerCaixaError || !qualquerCaixa) {
+          console.warn('No open cash register found for restaurant');
+          return;
+        }
+
+        // Usar o caixa encontrado
+        const { error: movError } = await supabase
+          .from('movimentacoes_caixa')
+          .insert({
+            caixa_operador_id: qualquerCaixa.id,
+            tipo: 'entrada',
+            valor: valor,
+            motivo: `Pagamento Mesa ${mesaNumero}`,
+            observacao: `${formaPagamento.toUpperCase()} - ${itensComanda.length} ${itensComanda.length === 1 ? 'item' : 'itens'}${taxaServico ? ' + Taxa 10%' : ''}${couvertArtistico ? ` + Couvert` : ''}${valorDesconto > 0 ? ` - Desconto` : ''} - Finalizado por funcionário`,
+            forma_pagamento: formaPagamento,
+            usuario_id: user?.id || ''
+          });
+
+        if (movError) {
+          console.error('Error registering cash movement:', movError);
+          throw movError;
+        }
+
+        console.log(`Movimentação registrada no caixa ${qualquerCaixa.id} (fallback) - Operador: ${qualquerCaixa.operador_nome} - Valor: ${valor}`);
         return;
       }
 
@@ -86,7 +119,7 @@ const PagamentoModal: React.FC<PagamentoModalProps> = ({ isOpen, onClose, mesa }
           tipo: 'entrada',
           valor: valor,
           motivo: `Pagamento Mesa ${mesaNumero}`,
-          observacao: `${formaPagamento.toUpperCase()} - ${itensComanda.length} ${itensComanda.length === 1 ? 'item' : 'itens'}${taxaServico ? ' + Taxa 10%' : ''}${couvertArtistico ? ` + Couvert` : ''}${valorDesconto > 0 ? ` - Desconto` : ''}`,
+          observacao: `${formaPagamento.toUpperCase()} - ${itensComanda.length} ${itensComanda.length === 1 ? 'item' : 'itens'}${taxaServico ? ' + Taxa 10%' : ''}${couvertArtistico ? ` + Couvert` : ''}${valorDesconto > 0 ? ` - Desconto` : ''} - Operador: ${caixaAberto.operador_nome}`,
           forma_pagamento: formaPagamento,
           usuario_id: user?.id || ''
         });

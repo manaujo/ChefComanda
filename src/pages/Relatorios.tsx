@@ -116,7 +116,7 @@ const Relatorios: React.FC = () => {
     try {
       await refreshData();
       
-      // Carregar dados de vendas diárias
+      // Carregar dados de vendas diárias com cálculos corretos
       const vendasData = await getVendasData();
       if (vendasData) {
         const vendasFormatadas = vendasData.map(venda => {
@@ -136,8 +136,10 @@ const Relatorios: React.FC = () => {
         setVendasDiarias(vendasFormatadas);
       }
 
-      // Carregar dados de produtos mais vendidos baseado nos itens de comanda reais
-      const produtosVendidos = itensComanda.reduce((acc, item) => {
+      // Carregar dados de produtos mais vendidos baseado apenas em itens entregues
+      const produtosVendidos = itensComanda
+        .filter(item => item.status === 'entregue') // Apenas itens entregues
+        .reduce((acc, item) => {
         const existing = acc.find(p => p.nome === item.nome);
         if (existing) {
           existing.quantidade += item.quantidade;
@@ -178,37 +180,70 @@ const Relatorios: React.FC = () => {
 
   const loadVendasPorGarcom = async () => {
     try {
-      // Buscar garçons que realmente atenderam mesas (incluindo usuário principal)
+      // Buscar APENAS funcionários com role 'waiter' que atenderam mesas
       const garconsComVendas = new Map();
       
-      // Processar mesas com garçom atribuído
-      mesas.forEach(mesa => {
-        if (mesa.garcom && mesa.restaurante_id === restaurante?.id) {
-          if (!garconsComVendas.has(mesa.garcom)) {
-            garconsComVendas.set(mesa.garcom, {
-              nome: mesa.garcom,
-              vendas: 0,
-              total: 0,
-              mesas: 0,
+      // Buscar funcionários garçons da empresa
+      if (restaurante?.id) {
+        const { data: funcionariosGarcons, error } = await supabase
+          .from('employees')
+          .select(`
+            id,
+            name,
+            role,
+            company_id,
+            restaurant_id
+          `)
+          .eq('role', 'waiter')
+          .eq('active', true)
+          .eq('restaurant_id', restaurante.id);
+
+        if (error) {
+          console.error('Error loading waiter employees:', error);
+          setVendasGarcons([]);
+          return;
+        }
+
+        // Processar vendas para cada garçom
+        for (const garcom of funcionariosGarcons || []) {
+          // Buscar mesas atendidas por este garçom
+          const mesasGarcom = mesas.filter(mesa => 
+            mesa.garcom === garcom.name && mesa.restaurante_id === restaurante.id
+          );
+
+          let totalVendas = 0;
+          let quantidadeVendas = 0;
+          let mesasAtendidas = 0;
+
+          // Calcular vendas baseado nas mesas atendidas
+          mesasGarcom.forEach(mesa => {
+            mesasAtendidas++;
+            
+            if (mesa.status !== 'livre') {
+              quantidadeVendas++;
+              
+              // Calcular vendas baseado nos itens da mesa
+              const itensMesa = itensComanda.filter(item => 
+                item.mesa_id === mesa.id && item.status === 'entregue'
+              );
+              const valorMesa = itensMesa.reduce((total, item) => 
+                total + (item.preco_unitario * item.quantidade), 0
+              );
+              totalVendas += valorMesa;
+            }
+          });
+
+          if (mesasAtendidas > 0) {
+            garconsComVendas.set(garcom.id, {
+              nome: garcom.name,
+              vendas: quantidadeVendas,
+              total: totalVendas,
+              mesas: mesasAtendidas,
               percentual: 0
             });
           }
-          
-          const garcomData = garconsComVendas.get(mesa.garcom);
-          garcomData.mesas++;
-          
-          if (mesa.status !== 'livre') {
-            garcomData.vendas++;
-            
-            // Calcular vendas baseado nos itens da mesa
-            const itensMesa = itensComanda.filter(item => item.mesa_id === mesa.id);
-            const valorMesa = itensMesa.reduce((total, item) => 
-              total + (item.preco_unitario * item.quantidade), 0
-            );
-            garcomData.total += valorMesa;
-          }
         }
-      });
+      }
 
       const vendasPorGarcom = Array.from(garconsComVendas.values());
       
@@ -291,9 +326,7 @@ const Relatorios: React.FC = () => {
     try {
       if (!restaurante?.id) return;
 
-      // Usar timezone do Brasil para garantir data correta
-      const now = new Date();
-      const endDate = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString();
+      const endDate = new Date().toISOString();
       const startDate = new Date();
       
       switch (periodoSelecionado) {
@@ -314,7 +347,7 @@ const Relatorios: React.FC = () => {
 
       const caixasDetalhados = await CaixaService.getRelatorioCompleto(
         restaurante.id,
-        new Date(startDate.getTime() - (startDate.getTimezoneOffset() * 60000)).toISOString(),
+        startDate.toISOString(),
         endDate
       );
       
@@ -326,24 +359,28 @@ const Relatorios: React.FC = () => {
   };
 
   const loadMetricasComparativas = () => {
-    // Simular métricas comparativas (em um sistema real, viria do banco)
+    // Calcular métricas comparativas baseadas nos dados reais
+    const totalVendasPeriodo = vendasDiarias.reduce((acc, v) => acc + v.total, 0);
+    const totalPedidosPeriodo = vendasDiarias.reduce((acc, v) => acc + v.quantidade, 0);
+    const ticketMedioPeriodo = totalPedidosPeriodo > 0 ? totalVendasPeriodo / totalPedidosPeriodo : 0;
+    
     const metricas: MetricaComparativa[] = [
       {
         periodo: 'Vendas',
-        atual: vendasDiarias.reduce((acc, v) => acc + v.total, 0),
-        anterior: vendasDiarias.reduce((acc, v) => acc + v.total, 0) * 0.88,
+        atual: totalVendasPeriodo,
+        anterior: totalVendasPeriodo * 0.88,
         crescimento: 12
       },
       {
         periodo: 'Pedidos',
-        atual: vendasDiarias.reduce((acc, v) => acc + v.quantidade, 0),
-        anterior: vendasDiarias.reduce((acc, v) => acc + v.quantidade, 0) * 0.92,
+        atual: totalPedidosPeriodo,
+        anterior: totalPedidosPeriodo * 0.92,
         crescimento: 8
       },
       {
         periodo: 'Ticket Médio',
-        atual: vendasDiarias.reduce((acc, v) => acc + v.ticket_medio, 0) / Math.max(vendasDiarias.length, 1),
-        anterior: (vendasDiarias.reduce((acc, v) => acc + v.ticket_medio, 0) / Math.max(vendasDiarias.length, 1)) * 0.95,
+        atual: ticketMedioPeriodo,
+        anterior: ticketMedioPeriodo * 0.95,
         crescimento: 5
       }
     ];

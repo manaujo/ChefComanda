@@ -515,57 +515,117 @@ export const RestauranteProvider: React.FC<RestauranteProviderProps> = ({ childr
     }
   };
 
-  // Dashboard and reports
+
+  const getVendasData = async () => {
+    if (!restaurante) return [];
+    
+    try {
+      const endDate = new Date().toISOString();
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - 7);
+      
+      // Buscar vendas diretamente da tabela vendas para garantir dados corretos
+      const { data: vendas, error } = await supabase
+        .from('vendas')
+        .select('*')
+        .eq('restaurante_id', restaurante.id)
+        .eq('status', 'concluida')
+        .gte('created_at', startDate.toISOString())
+        .lte('created_at', endDate)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      // Agrupar vendas por data
+      const vendasPorData = new Map();
+      
+      (vendas || []).forEach(venda => {
+        const data = new Date(venda.created_at).toISOString().split('T')[0];
+        if (!vendasPorData.has(data)) {
+          vendasPorData.set(data, {
+            data,
+            total_vendas: 0,
+            quantidade_pedidos: 0
+          });
+        }
+        
+        const dadosData = vendasPorData.get(data);
+        dadosData.total_vendas += Number(venda.valor_total);
+        dadosData.quantidade_pedidos += 1;
+      });
+
+      // Preencher dias sem vendas com zeros
+      for (let i = 0; i < 7; i++) {
+        const data = new Date();
+        data.setDate(data.getDate() - i);
+        const dataStr = data.toISOString().split('T')[0];
+        
+        if (!vendasPorData.has(dataStr)) {
+          vendasPorData.set(dataStr, {
+            data: dataStr,
+            total_vendas: 0,
+            quantidade_pedidos: 0
+          });
+        }
+      }
+
+      return Array.from(vendasPorData.values())
+        .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
+    } catch (error) {
+      console.error('Error getting vendas data:', error);
+      return [];
+    }
+  };
+
   const getDashboardData = async () => {
     if (!restaurante) return null;
     
     try {
-      // Get dashboard data using the database function
-      const { data: dashboardData, error } = await supabase.rpc('get_dashboard_data', {
-        p_restaurante_id: restaurante.id
-      });
+      // Calcular dados do dashboard baseados em dados reais
+      const hoje = new Date().toISOString().split('T')[0];
+      const inicioMes = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
+      const agora = new Date().toISOString();
+
+      // Vendas de hoje
+      const { data: vendasHoje, error: vendasHojeError } = await supabase
+        .from('vendas')
+        .select('valor_total')
+        .eq('restaurante_id', restaurante.id)
+        .eq('status', 'concluida')
+        .gte('created_at', hoje + 'T00:00:00.000Z')
+        .lte('created_at', agora);
+
+      if (vendasHojeError) throw vendasHojeError;
+
+      // Vendas do mês
+      const { data: vendasMes, error: vendasMesError } = await supabase
+        .from('vendas')
+        .select('valor_total')
+        .eq('restaurante_id', restaurante.id)
+        .eq('status', 'concluida')
+        .gte('created_at', inicioMes)
+        .lte('created_at', agora);
+
+      if (vendasMesError) throw vendasMesError;
+
+      const totalVendasHoje = (vendasHoje || []).reduce((acc, v) => acc + Number(v.valor_total), 0);
+      const totalVendasMes = (vendasMes || []).reduce((acc, v) => acc + Number(v.valor_total), 0);
+      const pedidosHoje = vendasHoje?.length || 0;
+      const pedidosMes = vendasMes?.length || 0;
+      const ticketMedio = pedidosHoje > 0 ? totalVendasHoje / pedidosHoje : 0;
       
-      if (error) {
-        console.error('Error getting dashboard data:', error);
-        // Fallback to manual calculation
-        const hoje = new Date().toISOString().split('T')[0];
-        const inicioMes = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
-        
-        const [vendasHoje, vendasMes] = await Promise.all([
-          supabase.from('vendas')
-            .select('valor_total')
-            .eq('restaurante_id', restaurante.id)
-            .eq('status', 'concluida')
-            .gte('created_at', hoje),
-          supabase.from('vendas')
-            .select('valor_total')
-            .eq('restaurante_id', restaurante.id)
-            .eq('status', 'concluida')
-            .gte('created_at', inicioMes)
-        ]);
-        
-        const totalVendasHoje = (vendasHoje.data || []).reduce((acc, v) => acc + Number(v.valor_total), 0);
-        const totalVendasMes = (vendasMes.data || []).reduce((acc, v) => acc + Number(v.valor_total), 0);
-        
-        return {
-          vendas_hoje: totalVendasHoje,
-          vendas_mes: totalVendasMes,
-          pedidos_hoje: vendasHoje.data?.length || 0,
-          pedidos_mes: vendasMes.data?.length || 0,
-          mesas_ocupadas: mesas.filter(m => m.status === 'ocupada').length,
-          comandas_abertas: comandas.filter(c => c.status === 'aberta').length,
-          ticket_medio: vendasHoje.data?.length ? totalVendasHoje / vendasHoje.data.length : 0
-        };
-      }
-      
-      // Also get real-time metrics from current state
+      // Métricas em tempo real do estado atual
       const mesasOcupadas = mesas.filter(m => m.status === 'ocupada').length;
       const comandasAbertas = comandas.filter(c => c.status === 'aberta').length;
       
       return {
-        ...dashboardData,
-        mesas_ocupadas_realtime: mesasOcupadas,
-        comandas_abertas_realtime: comandasAbertas
+        vendas_hoje: totalVendasHoje,
+        vendas_mes: totalVendasMes,
+        pedidos_hoje: pedidosHoje,
+        pedidos_mes: pedidosMes,
+        mesas_ocupadas: mesasOcupadas,
+        comandas_abertas: comandasAbertas,
+        ticket_medio: ticketMedio
       };
     } catch (error) {
       console.error('Error getting dashboard data:', error);
@@ -573,7 +633,7 @@ export const RestauranteProvider: React.FC<RestauranteProviderProps> = ({ childr
     }
   };
 
-  const getVendasData = async () => {
+  const getVendasDataOld = async () => {
     if (!restaurante) return [];
     
     try {
