@@ -17,8 +17,12 @@ import {
   Eye,
   RefreshCw,
   ClipboardList,
-  Calculator
+  Calculator,
+  Crown,
+  Lock,
+  ArrowRight
 } from "lucide-react";
+import { Link } from 'react-router-dom';
 import { useRestaurante } from "../contexts/RestauranteContext";
 import { formatarDinheiro, formatarTempo } from "../utils/formatters";
 import {
@@ -41,6 +45,8 @@ import Button from "../components/ui/Button";
 import toast from "react-hot-toast";
 import { supabase } from "../services/supabase";
 import { useAuth } from "../contexts/AuthContext";
+import StripeService from "../services/StripeService";
+import { hasActiveSubscription } from "../stripe-config";
 
 const Dashboard: React.FC = () => {
   const { user, isEmployee, userRole } = useAuth();
@@ -60,6 +66,8 @@ const Dashboard: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [dataInitialized, setDataInitialized] = useState(false);
   const [insumosEstoqueBaixo, setInsumosEstoqueBaixo] = useState<any[]>([]);
+  const [subscription, setSubscription] = useState<any>(null);
+  const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
 
   // Redirecionar funcionários para suas páginas específicas
   useEffect(() => {
@@ -85,8 +93,23 @@ const Dashboard: React.FC = () => {
     // Só carrega dados uma vez quando o componente monta
     if (!dataInitialized) {
       loadDashboardData();
+      loadSubscriptionStatus();
     }
   }, [dataInitialized]);
+
+  const loadSubscriptionStatus = async () => {
+    try {
+      const subscriptionData = await StripeService.getUserSubscription();
+      setSubscription(subscriptionData);
+      
+      // Mostrar prompt de upgrade se não tem plano ativo
+      if (!hasActiveSubscription(subscriptionData)) {
+        setShowUpgradePrompt(true);
+      }
+    } catch (error) {
+      console.error('Error loading subscription:', error);
+    }
+  };
 
   const loadDashboardData = async () => {
     if (!user) return;
@@ -298,6 +321,47 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="space-y-6 min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+      {/* Upgrade Prompt for Users Without Active Subscription */}
+      {showUpgradePrompt && !hasActiveSubscription(subscription) && (
+        <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border-l-4 border-yellow-400 p-6 rounded-lg shadow-lg">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <div className="p-3 bg-yellow-100 rounded-full mr-4">
+                <Crown className="w-6 h-6 text-yellow-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-yellow-800">
+                  🚀 Desbloqueie o Potencial Completo do ChefComanda
+                </h3>
+                <p className="text-yellow-700 mt-1">
+                  Você está no Dashboard básico. Assine um plano para acessar todas as funcionalidades: 
+                  Mesas, Comandas, PDV, Estoque, Relatórios e muito mais!
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-3">
+              <Button
+                variant="ghost"
+                onClick={() => setShowUpgradePrompt(false)}
+                size="sm"
+                className="text-yellow-700 hover:text-yellow-800"
+              >
+                Dispensar
+              </Button>
+              <Link to="/dashboard/profile/planos">
+                <Button
+                  variant="warning"
+                  icon={<ArrowRight size={16} />}
+                  className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white font-semibold"
+                >
+                  Ver Planos
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex justify-between items-start">
         <div>
@@ -812,45 +876,78 @@ const Dashboard: React.FC = () => {
       {/* Ações Rápidas */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-          Ações Rápidas
+          {hasActiveSubscription(subscription) ? 'Ações Rápidas' : 'Funcionalidades Disponíveis com Plano Ativo'}
         </h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className={`grid grid-cols-2 md:grid-cols-4 gap-4 ${!hasActiveSubscription(subscription) ? 'opacity-50' : ''}`}>
           <Button
             variant="primary"
             className="h-20 flex-col space-y-2"
-            onClick={() => (window.location.href = "/dashboard/mesas")}
+            onClick={() => hasActiveSubscription(subscription) ? (window.location.href = "/dashboard/mesas") : null}
+            disabled={!hasActiveSubscription(subscription)}
           >
             <Coffee size={24} />
             <span>Mesas</span>
+            {!hasActiveSubscription(subscription) && (
+              <Lock size={12} className="absolute top-2 right-2 text-gray-400" />
+            )}
           </Button>
 
           <Button
             variant="secondary"
             className="h-20 flex-col space-y-2"
-            onClick={() => (window.location.href = "/dashboard/comandas")}
+            onClick={() => hasActiveSubscription(subscription) ? (window.location.href = "/dashboard/comandas") : null}
+            disabled={!hasActiveSubscription(subscription)}
           >
             <ClipboardList size={24} />
             <span>Comandas</span>
+            {!hasActiveSubscription(subscription) && (
+              <Lock size={12} className="absolute top-2 right-2 text-gray-400" />
+            )}
           </Button>
 
           <Button
             variant="success"
             className="h-20 flex-col space-y-2"
-            onClick={() => (window.location.href = "/dashboard/pdv")}
+            onClick={() => hasActiveSubscription(subscription) ? (window.location.href = "/dashboard/pdv") : null}
+            disabled={!hasActiveSubscription(subscription)}
           >
             <CreditCard size={24} />
             <span>PDV</span>
+            {!hasActiveSubscription(subscription) && (
+              <Lock size={12} className="absolute top-2 right-2 text-gray-400" />
+            )}
           </Button>
 
           <Button
             variant="warning"
             className="h-20 flex-col space-y-2"
-            onClick={() => (window.location.href = "/dashboard/estoque")}
+            onClick={() => hasActiveSubscription(subscription) ? (window.location.href = "/dashboard/estoque") : null}
+            disabled={!hasActiveSubscription(subscription)}
           >
             <Package size={24} />
             <span>Estoque</span>
+            {!hasActiveSubscription(subscription) && (
+              <Lock size={12} className="absolute top-2 right-2 text-gray-400" />
+            )}
           </Button>
         </div>
+        
+        {!hasActiveSubscription(subscription) && (
+          <div className="mt-6 text-center">
+            <p className="text-gray-600 dark:text-gray-400 mb-4">
+              Assine um plano para desbloquear todas as funcionalidades
+            </p>
+            <Link to="/dashboard/profile/planos">
+              <Button
+                variant="primary"
+                icon={<Crown size={18} />}
+                className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800"
+              >
+                Ver Planos Disponíveis
+              </Button>
+            </Link>
+          </div>
+        )}
       </div>
     </div>
   );

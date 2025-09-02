@@ -40,8 +40,8 @@ const LandingPage: React.FC = () => {
     },
     {
       icon: <ShoppingCart className="w-8 h-8" />,
-      title: "Pedidos iFood Integrados",
-      description: "Gerencie pedidos de delivery diretamente no sistema"
+      title: "Sistema de Pedidos Rápidos",
+      description: "Gerencie pedidos de balcão e delivery diretamente no sistema"
     },
     {
       icon: <BarChart3 className="w-8 h-8" />,
@@ -305,13 +305,13 @@ const LandingPage: React.FC = () => {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-8 max-w-6xl mx-auto">
             {stripeProducts.map((product, index) => (
               <div 
                 key={product.id}
-                className={`bg-white rounded-2xl shadow-xl overflow-hidden border hover:shadow-2xl transition-all duration-300 relative ${
+                className={`bg-white rounded-2xl shadow-xl overflow-hidden border hover:shadow-2xl transition-all duration-300 relative transform hover:scale-105 ${
                   product.popular 
-                    ? 'border-2 border-yellow-400 transform scale-105' 
+                    ? 'border-2 border-yellow-400 ring-4 ring-yellow-100' 
                     : 'border border-gray-200'
                 }`}
               >
@@ -327,19 +327,22 @@ const LandingPage: React.FC = () => {
                 <div className={`px-6 py-6 ${
                   index === 0 ? 'bg-gradient-to-r from-blue-600 to-blue-700' :
                   index === 1 ? 'bg-gradient-to-r from-purple-600 to-purple-700' :
-                  'bg-gradient-to-r from-yellow-500 to-orange-500'
+                  index === 2 ? 'bg-gradient-to-r from-yellow-500 to-orange-500' :
+                  'bg-gradient-to-r from-green-500 to-green-600'
                 }`}>
                   <div className="text-center">
                     <div className="p-3 bg-white/20 rounded-full w-fit mx-auto mb-4">
                       {index === 0 ? <Calendar className="w-6 h-6 text-white" /> :
                        index === 1 ? <Star className="w-6 h-6 text-white" /> :
-                       <Award className="w-6 h-6 text-white" />}
+                       index === 2 ? <Award className="w-6 h-6 text-white" /> :
+                       <Zap className="w-6 h-6 text-white" />}
                     </div>
                     <h3 className="text-xl font-bold text-white">{product.name}</h3>
                     <p className={`mt-2 text-sm ${
                       index === 0 ? 'text-blue-100' :
                       index === 1 ? 'text-purple-100' :
-                      'text-yellow-100'
+                      index === 2 ? 'text-yellow-100' :
+                      'text-green-100'
                     }`}>
                       {product.description}
                     </p>
@@ -361,11 +364,11 @@ const LandingPage: React.FC = () => {
                       </p>
                     )}
                     {product.discount && (
-                      <div className="inline-block bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-medium mt-2">
-                        <TrendingUp className="w-3 h-3 inline mr-1" />
-                        Economia de {formatPrice(product.discount.savings)}/ano
-                      </div>
-                    )}
+                        <div className="inline-block bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-3 py-1 rounded-full text-xs font-medium">
+                          <TrendingUp className="w-3 h-3 inline mr-1" />
+                          Economia de {formatPrice(product.discount.savings)}/ano
+                        </div>
+                      )}
                   </div>
                   
                   <ul className="space-y-3 mb-6">
@@ -387,11 +390,12 @@ const LandingPage: React.FC = () => {
                       className={`${
                         index === 0 ? 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800' :
                         index === 1 ? 'bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800' :
-                        'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700'
+                        index === 2 ? 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700' :
+                        'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800'
                       } font-semibold`}
-                      icon={product.name === 'Plano Trimestral' || product.interval === 'year' ? <Zap size={18} /> : undefined}
+                      icon={product.name === 'Plano Trimestral' || product.interval === 'year' || product.name === 'Plano Teste' ? <Zap size={18} /> : undefined}
                     >
-                      {product.name === 'Plano Trimestral' || product.interval === 'year' ? 
+                      {product.name === 'Plano Trimestral' || product.interval === 'year' || product.name === 'Plano Teste' ? 
                         'Teste Grátis 7 Dias' : 'Começar Agora'}
                     </Button>
                   </Link>

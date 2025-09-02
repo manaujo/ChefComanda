@@ -28,6 +28,8 @@ const Planos: React.FC = () => {
   const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
   const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState<any[]>([]);
+  const [canceling, setCanceling] = useState(false);
+  const [upgrading, setUpgrading] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -55,6 +57,40 @@ const Planos: React.FC = () => {
     } catch (error) {
       console.error('Error loading orders:', error);
     }
+  };
+
+  const handleUpgrade = async (targetProduct: any) => {
+    try {
+      setUpgrading(targetProduct.id);
+      
+      // Create checkout session for upgrade
+      const { url } = await StripeService.createCheckoutSession({
+        priceId: targetProduct.priceId,
+        mode: targetProduct.mode,
+        successUrl: `${window.location.origin}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
+        cancelUrl: window.location.href
+      });
+      
+      if (url) {
+        window.location.href = url;
+      }
+    } catch (error) {
+      console.error('Error upgrading subscription:', error);
+      toast.error('Erro ao fazer upgrade do plano');
+    } finally {
+      setUpgrading(null);
+    }
+  };
+
+  const canUpgrade = (product: any) => {
+    if (!subscription) return true;
+    
+    const currentProduct = getProductByPriceId(subscription.price_id);
+    if (!currentProduct) return true;
+    
+    // Allow upgrade if target product has higher price or longer duration
+    return product.price > currentProduct.price || 
+           product.accessDuration > currentProduct.accessDuration;
   };
 
   const formatDate = (timestamp: number) => {
@@ -168,11 +204,66 @@ const Planos: React.FC = () => {
               )}
             </div>
           </div>
+
+          {/* Cancel Subscription */}
+          {subscription && subscription.subscription_status === 'active' && !subscription.cancel_at_period_end && (
+            <div className="mt-8 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <h4 className="font-medium text-red-800 mb-2">Cancelar Assinatura</h4>
+              <p className="text-sm text-red-700 mb-4">
+                Sua assinatura será cancelada no final do período atual.
+              </p>
+              <Button
+                variant="danger"
+                isLoading={canceling}
+                onClick={async () => {
+                  if (confirm('Tem certeza que deseja cancelar sua assinatura?')) {
+                    try {
+                      setCanceling(true);
+                      await StripeService.cancelSubscription(subscription.subscription_id!);
+                      await loadSubscriptionData();
+                      await refreshSubscription();
+                      toast.success('Assinatura cancelada com sucesso');
+                    } catch (error) {
+                      console.error('Error canceling subscription:', error);
+                      toast.error('Erro ao cancelar assinatura');
+                    } finally {
+                      setCanceling(false);
+                    }
+                  }
+                }}
+                size="sm"
+              >
+                {canceling ? 'Cancelando...' : 'Cancelar Assinatura'}
+              </Button>
+            </div>
+          )}
+
+          {/* Subscription Canceled Notice */}
+          {subscription && subscription.cancel_at_period_end && (
+            <div className="mt-8 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <h4 className="font-medium text-yellow-800 mb-2">Assinatura Cancelada</h4>
+              <p className="text-sm text-yellow-700 mb-4">
+                Sua assinatura será encerrada em {formatDate(subscription.current_period_end!)}. 
+                Você ainda tem acesso completo até esta data.
+              </p>
+              <div className="flex space-x-3">
+                <a 
+                  href="https://wa.me/5562982760471?text=Olá! Gostaria de reativar minha assinatura do ChefComanda."
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                >
+                  <Button variant="ghost" size="sm">
+                    Reativar Assinatura
+                  </Button>
+                </a>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
       {/* Plans Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-5xl mx-auto mb-12">
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-8 max-w-6xl mx-auto mb-12">
         {stripeProducts.map((product, index) => (
           <div 
             key={product.id}
@@ -194,28 +285,31 @@ const Planos: React.FC = () => {
             <div className={`px-8 py-6 ${
               index === 0 ? 'bg-gradient-to-r from-blue-600 to-blue-700' :
               index === 1 ? 'bg-gradient-to-r from-purple-600 to-purple-700' :
-              'bg-gradient-to-r from-yellow-500 to-orange-500'
+              index === 2 ? 'bg-gradient-to-r from-yellow-500 to-orange-500' :
+              'bg-gradient-to-r from-green-500 to-green-600'
             }`}>
               <div className="text-center">
                 <div className="p-3 bg-white/20 rounded-full w-fit mx-auto mb-4">
                   {index === 0 ? <Calendar className="w-6 h-6 text-white" /> :
                    index === 1 ? <Star className="w-6 h-6 text-white" /> :
-                   <Award className="w-6 h-6 text-white" />}
+                   index === 2 ? <Award className="w-6 h-6 text-white" /> :
+                   <Zap className="w-6 h-6 text-white" />}
                 </div>
                 <h3 className="text-2xl font-bold text-white">{product.name}</h3>
                 <p className={`mt-2 text-sm ${
                   index === 0 ? 'text-blue-100' :
                   index === 1 ? 'text-purple-100' :
-                  'text-yellow-100'
+                  index === 2 ? 'text-yellow-100' :
+                  'text-green-100'
                 }`}>
                   {product.description}
                 </p>
               </div>
             </div>
             
-            <div className="p-8">
-              <div className="text-center mb-8">
-                <div className="text-5xl font-bold text-gray-900 dark:text-white mb-2">
+            <div className="px-8 py-6">
+              <div className="text-center mb-6">
+                <div className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
                   {formatPrice(product.price)}
                   <span className="text-lg font-normal text-gray-500 dark:text-gray-400">
                     /{product.interval === 'year' ? 'ano' : 
@@ -238,14 +332,14 @@ const Planos: React.FC = () => {
               </div>
               
               <ul className="space-y-4 mb-8">
-                {product.features.map((feature, featureIndex) => (
-                  <li key={featureIndex} className="flex items-center">
-                    <div className="p-1 bg-green-100 dark:bg-green-900 rounded-full mr-3">
-                      <Check className="w-4 h-4 text-green-600 dark:text-green-400" />
-                    </div>
-                    <span className="text-gray-700 dark:text-gray-300">{feature}</span>
-                  </li>
-                ))}
+                  {product.features.map((feature, featureIndex) => (
+                    <li key={featureIndex} className="flex items-center">
+                      <div className="p-1 bg-green-100 dark:bg-green-900 rounded-full mr-3">
+                        <Check className="w-4 h-4 text-green-600 dark:text-green-400" />
+                      </div>
+                      <span className="text-gray-700 dark:text-gray-300">{feature}</span>
+                    </li>
+                  ))}
               </ul>
 
               {isCurrentPlan(product) ? (
@@ -258,29 +352,32 @@ const Planos: React.FC = () => {
                 >
                   Plano Atual
                 </Button>
-              ) : (
-                <StripeCheckout
-                  product={product}
-                  onSuccess={() => {
-                    toast.success('Redirecionando para o checkout...');
-                    refreshSubscription();
-                  }}
-                  onError={(error) => toast.error(error)}
-                  className={`w-full font-semibold py-4 text-lg ${
+              ) : canUpgrade(product) ? (
+                <Button
+                  variant="primary"
+                  fullWidth
+                  size="lg"
+                  onClick={() => handleUpgrade(product)}
+                  isLoading={upgrading === product.id}
+                  className={`font-semibold py-4 text-lg ${
                     index === 0 ? 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800' :
                     index === 1 ? 'bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800' :
-                    'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700'
+                    index === 2 ? 'bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600' :
+                    'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800'
                   } text-white`}
                 >
-                  {product.name === 'Plano Trimestral' || product.interval === 'year' ? (
-                    <div className="flex items-center justify-center">
-                      <Zap className="w-5 h-5 mr-2" />
-                      Teste Grátis 7 Dias
-                    </div>
-                  ) : (
-                    'Começar Agora'
-                  )}
-                </StripeCheckout>
+                  {upgrading === product.id ? 'Processando...' : 'Assinar Agora'}
+                </Button>
+              ) : (
+                <Button 
+                  variant="ghost" 
+                  fullWidth 
+                  size="lg"
+                  disabled
+                  className="bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
+                >
+                  Downgrade Não Disponível
+                </Button>
               )}
             </div>
           </div>

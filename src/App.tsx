@@ -21,7 +21,6 @@ import Comandas from './pages/Comandas';
 import Cardapio from './pages/Produtos';
 import Estoque from './pages/Estoque';
 import Relatorios from './pages/Relatorios';
-import IFoodPedidos from './pages/IFoodPedidos';
 import CaixaRegistradora from './pages/CaixaRegistradora';
 import PDV from './pages/PDV';
 import CardapioOnline from './pages/CardapioOnline';
@@ -38,6 +37,7 @@ import EmployeeManagement from './pages/profile/EmployeeManagement';
 import { AuthProvider } from './contexts/AuthContext';
 import { RestauranteProvider } from './contexts/RestauranteContext';
 import { ThemeProvider } from './contexts/ThemeContext';
+import SubscriptionGuard from './components/SubscriptionGuard';
 
 // Components
 import PrivateRoute from './components/PrivateRoute';
@@ -78,31 +78,32 @@ function App() {
               {/* Protected Routes */}
               <Route path="/dashboard" element={
                 <PrivateRoute>
-                  <DashboardLayout />
+                  <SubscriptionGuard allowDashboard={true} requireActiveSubscription={false}>
+                    <DashboardLayout />
+                  </SubscriptionGuard>
                 </PrivateRoute>
               }>
-                <Route index element={<Dashboard />} />
-                <Route path="mesas" element={<PrivateRoute allowedRoles={['admin', 'waiter', 'cashier']}><Mesas /></PrivateRoute>} />
-                <Route path="comandas" element={<PrivateRoute requiredPermission="comandas"><Comandas /></PrivateRoute>} />
-                <Route path="cardapio" element={<PrivateRoute requiredPermission="produtos"><Cardapio /></PrivateRoute>} />
-                <Route path="estoque" element={<PrivateRoute requiredPermission="estoque"><Estoque /></PrivateRoute>} />
-                <Route path="relatorios" element={<PrivateRoute allowedRoles={['admin']}><Relatorios /></PrivateRoute>} />
-                <Route path="ifood" element={<PrivateRoute requiredPermission="pdv"><IFoodPedidos /></PrivateRoute>} />
-                <Route path="caixa" element={<PrivateRoute requiredPermission="caixa"><CaixaRegistradora /></PrivateRoute>} />
-                <Route path="pdv" element={<PrivateRoute requiredPermission="pdv"><PDV /></PrivateRoute>} />
-                <Route path="cardapio-online" element={<PrivateRoute requiredPermission="cardapio-online"><CardapioOnline /></PrivateRoute>} />
-                <Route path="cardapio-online/editor" element={<PrivateRoute requiredPermission="cardapio-online-editor"><CardapioOnlineEditor /></PrivateRoute>} />
-                <Route path="cmv" element={<PrivateRoute requiredPermission="cmv"><CMV /></PrivateRoute>} />
-                <Route path="suporte" element={<PrivateRoute><Suporte /></PrivateRoute>} />
+                <Route index element={<SubscriptionGuard allowDashboard={true} requireActiveSubscription={false}><Dashboard /></SubscriptionGuard>} />
+                <Route path="mesas" element={<PrivateRoute allowedRoles={['admin', 'waiter', 'cashier']}><SubscriptionGuard requireActiveSubscription={true}><Mesas /></SubscriptionGuard></PrivateRoute>} />
+                <Route path="comandas" element={<PrivateRoute requiredPermission="comandas"><SubscriptionGuard requireActiveSubscription={true}><Comandas /></SubscriptionGuard></PrivateRoute>} />
+                <Route path="cardapio" element={<PrivateRoute requiredPermission="produtos"><SubscriptionGuard requireActiveSubscription={true}><Cardapio /></SubscriptionGuard></PrivateRoute>} />
+                <Route path="estoque" element={<PrivateRoute requiredPermission="estoque"><SubscriptionGuard requireActiveSubscription={true}><Estoque /></SubscriptionGuard></PrivateRoute>} />
+                <Route path="relatorios" element={<PrivateRoute allowedRoles={['admin']}><SubscriptionGuard requireActiveSubscription={true}><Relatorios /></SubscriptionGuard></PrivateRoute>} />
+                <Route path="caixa" element={<PrivateRoute requiredPermission="caixa"><SubscriptionGuard requireActiveSubscription={true}><CaixaRegistradora /></SubscriptionGuard></PrivateRoute>} />
+                <Route path="pdv" element={<PrivateRoute requiredPermission="pdv"><SubscriptionGuard requireActiveSubscription={true}><PDV /></SubscriptionGuard></PrivateRoute>} />
+                <Route path="cardapio-online" element={<PrivateRoute requiredPermission="cardapio-online"><SubscriptionGuard requireActiveSubscription={true}><CardapioOnline /></SubscriptionGuard></PrivateRoute>} />
+                <Route path="cardapio-online/editor" element={<PrivateRoute requiredPermission="cardapio-online-editor"><SubscriptionGuard requireActiveSubscription={true}><CardapioOnlineEditor /></SubscriptionGuard></PrivateRoute>} />
+                <Route path="cmv" element={<PrivateRoute requiredPermission="cmv"><SubscriptionGuard requireActiveSubscription={true}><CMV /></SubscriptionGuard></PrivateRoute>} />
+                <Route path="suporte" element={<PrivateRoute><SubscriptionGuard requireActiveSubscription={true}><Suporte /></SubscriptionGuard></PrivateRoute>} />
                 
                 {/* Profile Routes */}
                 <Route path="profile">
-                  <Route path="user" element={<PrivateRoute><UserProfile /></PrivateRoute>} />
+                  <Route path="user" element={<PrivateRoute><SubscriptionGuard allowDashboard={true} requireActiveSubscription={false}><UserProfile /></SubscriptionGuard></PrivateRoute>} />
                 <Route index element={<Navigate to="user" replace />} />
-                  <Route path="settings" element={<PrivateRoute><Settings /></PrivateRoute>} />
-                  <Route path="company" element={<PrivateRoute allowedRoles={['admin']}><CompanyProfile /></PrivateRoute>} />
-                  <Route path="employees" element={<PrivateRoute allowedRoles={['admin']}><EmployeeManagement /></PrivateRoute>} />
-                  <Route path="planos" element={<PrivateRoute allowedRoles={['admin']}><Planos /></PrivateRoute>} />
+                  <Route path="settings" element={<PrivateRoute><SubscriptionGuard allowDashboard={true} requireActiveSubscription={false}><Settings /></SubscriptionGuard></PrivateRoute>} />
+                  <Route path="company" element={<PrivateRoute allowedRoles={['admin']}><SubscriptionGuard allowDashboard={true} requireActiveSubscription={false}><CompanyProfile /></SubscriptionGuard></PrivateRoute>} />
+                  <Route path="employees" element={<PrivateRoute allowedRoles={['admin']}><SubscriptionGuard allowDashboard={true} requireActiveSubscription={false}><EmployeeManagement /></SubscriptionGuard></PrivateRoute>} />
+                  <Route path="planos" element={<PrivateRoute allowedRoles={['admin']}><SubscriptionGuard allowDashboard={true} requireActiveSubscription={false}><Planos /></SubscriptionGuard></PrivateRoute>} />
                 </Route>
               </Route>
               

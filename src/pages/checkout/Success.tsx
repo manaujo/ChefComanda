@@ -30,9 +30,13 @@ const Success: React.FC = () => {
       setSubscription(subscriptionData);
       
       // Refresh auth context subscription data
-      const { refreshSubscription } = await import('../../contexts/AuthContext');
-      if (refreshSubscription) {
-        refreshSubscription();
+      try {
+        const { refreshSubscription } = await import('../../contexts/AuthContext');
+        if (refreshSubscription) {
+          await refreshSubscription();
+        }
+      } catch (error) {
+        console.error('Error refreshing subscription in auth context:', error);
       }
     } catch (error) {
       console.error('Error loading subscription:', error);
@@ -73,10 +77,7 @@ const Success: React.FC = () => {
               </p>
             ) : subscription ? (
               <p className="text-gray-600 mb-6">
-                {subscription.subscription_status === 'trialing' 
-                  ? 'Seu período de teste gratuito foi iniciado com sucesso!'
-                  : 'Obrigado por escolher o ChefComanda. Sua assinatura foi ativada com sucesso.'
-                }
+                Obrigado por escolher o ChefComanda. Sua assinatura foi ativada com sucesso.
               </p>
             ) : (
               <p className="text-gray-600 mb-6">
@@ -113,18 +114,8 @@ const Success: React.FC = () => {
                 </p>
                 {subscription.current_period_end && (
                   <p className="text-blue-600 text-sm">
-                    {subscription.subscription_status === 'trialing' 
-                      ? `Teste grátis até: ${new Date(subscription.current_period_end * 1000).toLocaleDateString('pt-BR')}`
-                      : `Próxima cobrança: ${new Date(subscription.current_period_end * 1000).toLocaleDateString('pt-BR')}`
-                    }
+                    Próxima cobrança: {new Date(subscription.current_period_end * 1000).toLocaleDateString('pt-BR')}
                   </p>
-                )}
-                {subscription.subscription_status === 'trialing' && (
-                  <div className="mt-2 p-2 bg-yellow-50 rounded border border-yellow-200">
-                    <p className="text-yellow-800 text-sm font-medium">
-                      🎉 Período de teste ativo! Aproveite 7 dias grátis para explorar todas as funcionalidades.
-                    </p>
-                  </div>
                 )}
               </div>
             ) : (

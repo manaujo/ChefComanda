@@ -10,13 +10,11 @@ import { useState, useEffect } from 'react';
 interface PDVStatusBarProps {
   caixaAtual: any;
   onAbrirPDV: () => void;
-  onFecharPDV: () => void;
 }
 
 const PDVStatusBar: React.FC<PDVStatusBarProps> = ({
   caixaAtual,
   onAbrirPDV,
-  onFecharPDV
 }) => {
   const [todosCaixasAbertos, setTodosCaixasAbertos] = useState<any[]>([]);
   const { user, isEmployee } = useAuth();
@@ -167,14 +165,6 @@ const PDVStatusBar: React.FC<PDVStatusBarProps> = ({
             </div>
           </div>
         </div>
-
-        <Button
-          variant="warning"
-          onClick={onFecharPDV}
-          icon={<CreditCard size={16} />}
-        >
-          Fechar PDV
-        </Button>
       </div>
     </div>
   );

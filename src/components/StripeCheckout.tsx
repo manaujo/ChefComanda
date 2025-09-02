@@ -33,9 +33,7 @@ const StripeCheckout: React.FC<StripeCheckoutProps> = ({
       setLoading(true);
       
       // Show loading toast with better messaging
-      const loadingMessage = product.name === 'Plano Trimestral' || product.interval === 'year' 
-        ? `Preparando teste grátis de 7 dias para ${product.name}...`
-        : `Preparando checkout para ${product.name}...`;
+      const loadingMessage = `Preparando checkout para ${product.name}...`;
       
       toast.loading(loadingMessage, { id: 'checkout-loading' });
       
@@ -51,9 +49,7 @@ const StripeCheckout: React.FC<StripeCheckoutProps> = ({
       
       if (url) {
         // Show success message before redirect
-        const successMessage = product.name === 'Plano Trimestral' || product.interval === 'year'
-          ? `Redirecionando para iniciar seu teste grátis...`
-          : `Redirecionando para o pagamento do ${product.name}...`;
+        const successMessage = `Redirecionando para o pagamento do ${product.name}...`;
         
         toast.success(successMessage, { duration: 2000 });
         
@@ -72,7 +68,18 @@ const StripeCheckout: React.FC<StripeCheckoutProps> = ({
       // Dismiss loading toast
       toast.dismiss('checkout-loading');
       
-      const errorMessage = error instanceof Error ? error.message : 'Erro ao processar pagamento';
+      let errorMessage = 'Erro ao processar pagamento';
+      
+      if (error instanceof Error) {
+        if (error.message.includes('User not authenticated')) {
+          errorMessage = 'Você precisa estar logado para fazer uma assinatura';
+        } else if (error.message.includes('Failed to create checkout session')) {
+          errorMessage = 'Erro ao criar sessão de pagamento. Tente novamente.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
       toast.error(errorMessage);
       onError?.(errorMessage);
     } finally {
@@ -94,11 +101,7 @@ const StripeCheckout: React.FC<StripeCheckoutProps> = ({
       >
         {children || (
           <div className="flex items-center justify-center">
-            {(product.name === 'Plano Trimestral' || product.interval === 'year') && !loading && (
-              <Zap className="w-4 h-4 mr-2" />
-            )}
-            {loading ? 'Processando...' : 
-             (product.name === 'Plano Trimestral' || product.interval === 'year') ? 'Teste Grátis 7 Dias' : 'Assinar Agora'}
+            {loading ? 'Processando...' : 'Assinar Agora'}
           </div>
         )}
       </Button>

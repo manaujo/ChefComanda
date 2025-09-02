@@ -41,7 +41,6 @@ const DashboardLayout: React.FC = () => {
       { name: 'Caixa', path: '/dashboard/caixa', icon: <CreditCard size={20} />, permission: 'caixa' },
       { name: 'Cardápio', path: '/dashboard/cardapio', icon: <ShoppingBag size={20} />, permission: 'produtos' },
       { name: 'Estoque', path: '/dashboard/estoque', icon: <ShoppingBag size={20} />, permission: 'estoque' },
-      { name: 'Pedidos iFood', path: '/dashboard/ifood', icon: <ShoppingBag size={20} />, permission: 'ifood' },
       { name: 'Relatórios', path: '/dashboard/relatorios', icon: <PieChart size={20} />, permission: 'relatorios' },
       { name: 'CMV', path: '/dashboard/cmv', icon: <Calculator size={20} />, permission: 'cmv' },
       { name: 'Cardápio Online', path: '/dashboard/cardapio-online', icon: <QrCode size={20} />, permission: 'cardapio-online' },
