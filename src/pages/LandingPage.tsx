@@ -389,10 +389,8 @@ const LandingPage: React.FC = () => {
                         index === 1 ? 'bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800' :
                         'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700'
                       } font-semibold`}
-                      icon={product.name === 'Plano Trimestral' || product.interval === 'year' ? <Zap size={18} /> : undefined}
                     >
-                      {product.name === 'Plano Trimestral' || product.interval === 'year' ? 
-                        'Teste Grátis 7 Dias' : 'Começar Agora'}
+                      Começar Agora
                     </Button>
                   </Link>
                 </div>

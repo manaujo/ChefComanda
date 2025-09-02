@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   CreditCard, Check, Star, Crown, AlertTriangle, ExternalLink, 
   Loader2, Calendar, DollarSign, Shield, Headphones, TrendingUp,
-  Gift, Zap, Clock, Award
+  Gift, Clock, Award, X, RefreshCw
 } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import StripeCheckout from '../../components/StripeCheckout';
@@ -27,6 +27,8 @@ const Planos: React.FC = () => {
   const { user, currentPlan, refreshSubscription } = useAuth();
   const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [canceling, setCanceling] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
   const [orders, setOrders] = useState<any[]>([]);
 
   useEffect(() => {
@@ -57,6 +59,40 @@ const Planos: React.FC = () => {
     }
   };
 
+  const handleCancelSubscription = async () => {
+    try {
+      setCanceling(true);
+      
+      // Call edge function to cancel subscription
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-cancel-subscription`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          subscription_id: subscription?.subscription_id
+        })
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Erro ao cancelar assinatura');
+      }
+
+      toast.success('Assinatura cancelada com sucesso. Você terá acesso até o final do período pago.');
+      await loadSubscriptionData();
+      await refreshSubscription();
+      setShowCancelModal(false);
+    } catch (error) {
+      console.error('Error canceling subscription:', error);
+      toast.error(error instanceof Error ? error.message : 'Erro ao cancelar assinatura');
+    } finally {
+      setCanceling(false);
+    }
+  };
+
   const formatDate = (timestamp: number) => {
     return new Date(timestamp * 1000).toLocaleDateString('pt-BR');
   };
@@ -72,8 +108,6 @@ const Planos: React.FC = () => {
     switch (status) {
       case 'active':
         return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
-      case 'trialing':
-        return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
       case 'past_due':
         return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
       case 'canceled':
@@ -87,8 +121,6 @@ const Planos: React.FC = () => {
     switch (status) {
       case 'active':
         return 'Ativo';
-      case 'trialing':
-        return 'Período de Teste';
       case 'past_due':
         return 'Pagamento Pendente';
       case 'canceled':
@@ -135,37 +167,268 @@ const Planos: React.FC = () => {
 
       {/* Current Subscription Status */}
       {subscription && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-8">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <div className="p-3 bg-blue-100 dark:bg-blue-900 rounded-full mr-4">
-                <CreditCard className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden mb-8">
+          <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-6">
+            <div className="flex items-center justify-between text-white">
+              <div className="flex items-center">
+                <div className="p-3 bg-white/20 backdrop-blur-sm rounded-2xl mr-4">
+                  <Crown size={24} />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold">Minha Assinatura</h3>
+                  <p className="text-blue-100">Gerencie seu plano ativo</p>
+                </div>
               </div>
+              <Button
+                variant="ghost"
+                icon={<RefreshCw size={18} />}
+                onClick={loadSubscriptionData}
+                className="bg-white/20 backdrop-blur-sm text-white border-white/30 hover:bg-white/30"
+              >
+                Atualizar
+              </Button>
+            </div>
+          </div>
+          
+          <div className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                  Assinatura Atual
-                </h3>
-                <div className="flex items-center space-x-3 mt-1">
-                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(subscription.subscription_status)}`}>
-                    {getStatusText(subscription.subscription_status)}
-                  </span>
-                  {currentProduct && (
-                    <span className="text-sm text-gray-600 dark:text-gray-400">
-                      {currentProduct.name}
+                <h4 className="font-semibold text-gray-900 dark:text-white mb-4">Detalhes do Plano</h4>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-600 dark:text-gray-400">Plano:</span>
+                    <span className="font-medium text-gray-900 dark:text-white">
+                      {currentProduct?.name || 'Plano Ativo'}
                     </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-600 dark:text-gray-400">Status:</span>
+                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(subscription.subscription_status)}`}>
+                      {getStatusText(subscription.subscription_status)}
+                    </span>
+                  </div>
+                  {subscription.current_period_end && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-600 dark:text-gray-400">Próxima cobrança:</span>
+                      <span className="font-medium text-gray-900 dark:text-white">
+                        {formatDate(subscription.current_period_end)}
+                      </span>
+                    </div>
+                  )}
+                  {subscription.cancel_at_period_end && (
+                    <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
+                      <div className="flex items-center text-yellow-800 dark:text-yellow-200">
+                        <AlertTriangle size={16} className="mr-2" />
+                        <span className="text-sm font-medium">
+                          Cancelamento agendado para {formatDate(subscription.current_period_end!)}
+                        </span>
+                      </div>
+                    </div>
                   )}
                 </div>
               </div>
-            </div>
-            <div className="text-right">
-              {subscription.current_period_end && (
-                <div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Próxima cobrança</p>
-                  <p className="font-semibold text-gray-900 dark:text-white">
-                    {formatDate(subscription.current_period_end)}
-                  </p>
+              
+              <div>
+                <h4 className="font-semibold text-gray-900 dark:text-white mb-4">Ações</h4>
+                <div className="space-y-3">
+                  {!subscription.cancel_at_period_end && subscription.subscription_status === 'active' && (
+                    <Button
+                      variant="warning"
+                      fullWidth
+                      onClick={() => setShowCancelModal(true)}
+                      icon={<X size={18} />}
+                    >
+                      Cancelar Assinatura
+                    </Button>
+                  )}
+                  
+                  <Button
+                    variant="primary"
+                    fullWidth
+                    onClick={() => setShowUpgradeModal(true)}
+                    icon={<TrendingUp size={18} />}
+                  >
+                    Alterar Plano
+                  </Button>
+                  
+                  <div className="text-center">
+                    <a
+                      href="https://wa.me/5562982760471?text=Olá! Preciso de ajuda com minha assinatura do ChefComanda."
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                    >
+                      Precisa de ajuda? Fale conosco
+                    </a>
+                  </div>
                 </div>
-              )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Upgrade Modal */}
+      {showUpgradeModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm">
+          <div className="flex items-center justify-center min-h-screen p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden">
+              <div className="bg-gradient-to-r from-purple-600 to-indigo-700 p-6">
+                <div className="flex justify-between items-center text-white">
+                  <div>
+                    <h3 className="text-2xl font-bold">Alterar Plano</h3>
+                    <p className="text-purple-100">Escolha um novo plano para sua conta</p>
+                  </div>
+                  <button
+                    onClick={() => setShowUpgradeModal(false)}
+                    className="p-2 text-white/70 hover:text-white hover:bg-white/20 rounded-xl transition-colors"
+                  >
+                    <X size={24} />
+                  </button>
+                </div>
+              </div>
+              
+              <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {stripeProducts.map((product, index) => (
+                    <div 
+                      key={product.id}
+                      className={`bg-white dark:bg-gray-700 rounded-2xl shadow-lg overflow-hidden border transition-all duration-300 ${
+                        isCurrentPlan(product)
+                          ? 'border-2 border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                          : 'border border-gray-200 dark:border-gray-600 hover:shadow-xl'
+                      }`}
+                    >
+                      <div className={`px-6 py-4 ${
+                        index === 0 ? 'bg-gradient-to-r from-blue-600 to-blue-700' :
+                        index === 1 ? 'bg-gradient-to-r from-purple-600 to-purple-700' :
+                        'bg-gradient-to-r from-green-500 to-green-600'
+                      }`}>
+                        <div className="text-center text-white">
+                          <h4 className="text-lg font-bold">{product.name}</h4>
+                          <p className="text-sm opacity-90">{product.description}</p>
+                        </div>
+                      </div>
+                      
+                      <div className="p-6">
+                        <div className="text-center mb-4">
+                          <div className="text-2xl font-bold text-gray-900 dark:text-white">
+                            {formatPrice(product.price)}
+                            <span className="text-sm font-normal text-gray-500 dark:text-gray-400">
+                              /{product.interval === 'year' ? 'ano' : 
+                                product.name.includes('Trimestral') ? 'trimestre' : 'mês'}
+                            </span>
+                          </div>
+                        </div>
+                        
+                        {isCurrentPlan(product) ? (
+                          <Button 
+                            variant="ghost" 
+                            fullWidth 
+                            disabled
+                            className="bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300"
+                          >
+                            Plano Atual
+                          </Button>
+                        ) : (
+                          <StripeCheckout
+                            product={product}
+                            onSuccess={() => {
+                              toast.success('Redirecionando para alterar plano...');
+                              loadSubscriptionData();
+                              setShowUpgradeModal(false);
+                            }}
+                            onError={(error) => toast.error(error)}
+                            className="w-full font-semibold py-3 bg-gradient-to-r from-purple-600 to-indigo-700 hover:from-purple-700 hover:to-indigo-800 text-white rounded-xl"
+                          >
+                            Alterar para Este Plano
+                          </StripeCheckout>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cancel Subscription Modal */}
+      {showCancelModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm">
+          <div className="flex items-center justify-center min-h-screen p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl w-full max-w-md mx-auto">
+              <div className="bg-gradient-to-r from-red-500 to-red-600 p-6">
+                <div className="flex justify-between items-center text-white">
+                  <div className="flex items-center">
+                    <div className="p-3 bg-white/20 backdrop-blur-sm rounded-2xl mr-4">
+                      <AlertTriangle size={24} />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold">Cancelar Assinatura</h3>
+                      <p className="text-red-100">Esta ação não pode ser desfeita</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowCancelModal(false)}
+                    className="p-2 text-white/70 hover:text-white hover:bg-white/20 rounded-xl transition-colors"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+              </div>
+              
+              <div className="p-6">
+                <div className="mb-6">
+                  <h4 className="font-bold text-gray-900 dark:text-white mb-3">
+                    Tem certeza que deseja cancelar?
+                  </h4>
+                  <div className="space-y-3 text-sm text-gray-600 dark:text-gray-400">
+                    <div className="flex items-center">
+                      <CheckCircle className="w-4 h-4 text-green-500 mr-2" />
+                      <span>Você manterá acesso até {subscription.current_period_end ? formatDate(subscription.current_period_end) : 'o final do período'}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <X className="w-4 h-4 text-red-500 mr-2" />
+                      <span>Perderá acesso a todas as funcionalidades após o vencimento</span>
+                    </div>
+                    <div className="flex items-center">
+                      <AlertTriangle className="w-4 h-4 text-yellow-500 mr-2" />
+                      <span>Seus dados serão preservados por 30 dias</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 mb-6">
+                  <div className="flex items-start">
+                    <AlertTriangle className="w-5 h-5 text-yellow-600 dark:text-yellow-400 mt-0.5 mr-3" />
+                    <div className="text-sm text-yellow-800 dark:text-yellow-200">
+                      <p className="font-medium mb-1">Antes de cancelar:</p>
+                      <p>Entre em contato conosco pelo WhatsApp (62) 98276-0471. Podemos ajudar com dúvidas ou oferecer soluções personalizadas.</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex space-x-4">
+                  <Button
+                    variant="ghost"
+                    fullWidth
+                    onClick={() => setShowCancelModal(false)}
+                  >
+                    Manter Assinatura
+                  </Button>
+                  <Button
+                    variant="danger"
+                    fullWidth
+                    onClick={handleCancelSubscription}
+                    isLoading={canceling}
+                    icon={<X size={18} />}
+                  >
+                    Confirmar Cancelamento
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -222,19 +485,6 @@ const Planos: React.FC = () => {
                       product.name.includes('Trimestral') ? 'trimestre' : 'mês'}
                   </span>
                 </div>
-                {(product.interval === 'year' || product.name === 'Plano Trimestral') && (
-                  <>
-                    <p className="text-gray-600 dark:text-gray-400 mb-2">
-                      Equivalente a {formatPrice(getMonthlyEquivalent(product))}/mês
-                    </p>
-                    {product.discount && (
-                      <div className="inline-block bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-4 py-2 rounded-full text-sm font-medium">
-                        <TrendingUp className="w-4 h-4 inline mr-1" />
-                        Economia de {formatPrice(product.discount.savings)}/ano
-                      </div>
-                    )}
-                  </>
-                )}
               </div>
               
               <ul className="space-y-4 mb-8">
@@ -272,14 +522,7 @@ const Planos: React.FC = () => {
                     'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700'
                   } text-white`}
                 >
-                  {product.name === 'Plano Trimestral' || product.interval === 'year' ? (
-                    <div className="flex items-center justify-center">
-                      <Zap className="w-5 h-5 mr-2" />
-                      Teste Grátis 7 Dias
-                    </div>
-                  ) : (
-                    'Começar Agora'
-                  )}
+                  Assinar Agora
                 </StripeCheckout>
               )}
             </div>

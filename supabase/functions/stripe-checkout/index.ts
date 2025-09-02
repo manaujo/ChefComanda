@@ -61,7 +61,10 @@ Deno.serve(async (req) => {
 
     const authHeader = req.headers.get('Authorization')!;
     const token = authHeader.replace('Bearer ', '');
-    const { payload: user, error: getUserError } = await supabase.auth.admin.verifyJWT(token);
+    const {
+      data: { user },
+      error: getUserError,
+    } = await supabase.auth.getUser(token);
 
     if (getUserError) {
       return corsResponse({ error: 'Failed to authenticate user' }, 401);
@@ -74,7 +77,7 @@ Deno.serve(async (req) => {
     const { data: customer, error: getCustomerError } = await supabase
       .from('stripe_customers')
       .select('customer_id')
-      .eq('user_id', user.sub)
+      .eq('user_id', user.id)
       .is('deleted_at', null)
       .maybeSingle();
 
@@ -93,14 +96,14 @@ Deno.serve(async (req) => {
       const newCustomer = await stripe.customers.create({
         email: user.email,
         metadata: {
-          userId: user.sub,
+          userId: user.id,
         },
       });
 
-      console.log(`Created new Stripe customer ${newCustomer.id} for user ${user.sub}`);
+      console.log(`Created new Stripe customer ${newCustomer.id} for user ${user.id}`);
 
       const { error: createCustomerError } = await supabase.from('stripe_customers').insert({
-        user_id: user.sub,
+        user_id: user.id,
         customer_id: newCustomer.id,
       });
 

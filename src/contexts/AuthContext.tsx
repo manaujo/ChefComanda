@@ -253,12 +253,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           const product = getProductByPriceId(subscription.price_id);
           
           if (product) {
-            // Add status indicator for trial periods
-            if (subscription.subscription_status === 'trialing') {
-              currentPlan = `${product.name} (Teste Grátis)`;
-            } else {
-              currentPlan = product.name;
-            }
+            currentPlan = product.name;
           }
         }
       } catch (error) {
@@ -345,12 +340,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         const product = getProductByPriceId(subscription.price_id);
         
         if (product) {
-          // Add status indicator for trial periods
-          if (subscription.subscription_status === 'trialing') {
-            currentPlan = `${product.name} (Teste Grátis)`;
-          } else {
-            currentPlan = product.name;
-          }
+          currentPlan = product.name;
         }
       }
 
