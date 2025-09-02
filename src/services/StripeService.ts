@@ -73,18 +73,20 @@ class StripeService {
       const { data, error } = await supabase
         .from('stripe_user_subscriptions')
         .select('*')
-        .maybeSingle();
+        .limit(1);
 
       if (error) {
         console.error('Error fetching subscription:', error);
         return null;
       }
 
+      const subscription = data?.[0];
+      
       // Return null if subscription is canceled or incomplete
-      if (data && (data.subscription_status === 'canceled' || data.subscription_status === 'incomplete')) {
+      if (subscription && (subscription.subscription_status === 'canceled' || subscription.subscription_status === 'incomplete')) {
         return null;
       }
-      return data;
+      return subscription || null;
     } catch (error) {
       console.error('Error fetching user subscription:', error);
       return null;
