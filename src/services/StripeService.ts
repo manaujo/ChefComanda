@@ -73,18 +73,20 @@ class StripeService {
       const { data, error } = await supabase
         .from('stripe_user_subscriptions')
         .select('*')
-        .maybeSingle();
+        .limit(1);
 
       if (error) {
         console.error('Error fetching subscription:', error);
         return null;
       }
 
-      // Return null if subscription is canceled, incomplete, or expired trial
-      if (data && (data.subscription_status === 'canceled' || data.subscription_status === 'incomplete' || data.subscription_status === 'incomplete_expired')) {
+      const subscription = data?.[0];
+      
+      // Return null if subscription is canceled or incomplete
+      if (subscription && (subscription.subscription_status === 'canceled' || subscription.subscription_status === 'incomplete')) {
         return null;
       }
-      return data;
+      return subscription || null;
     } catch (error) {
       console.error('Error fetching user subscription:', error);
       return null;
@@ -110,37 +112,6 @@ class StripeService {
     }
   }
 
-  async cancelSubscription(subscriptionId: string): Promise<void> {
-    try {
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      
-      if (sessionError || !session?.access_token) {
-        throw new Error('User not authenticated');
-      }
-
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/cancel-subscription`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
-          subscription_id: subscriptionId
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to cancel subscription');
-      }
-
-      const result = await response.json();
-      return result;
-    } catch (error) {
-      console.error('Error canceling subscription:', error);
-      throw error;
-    }
-  }
   async redirectToCheckout(sessionId: string): Promise<void> {
     // For now, we'll redirect to the Stripe checkout URL
     // In a production app, you might want to use Stripe.js for a better UX

@@ -41,7 +41,6 @@ import { ThemeProvider } from './contexts/ThemeContext';
 
 // Components
 import PrivateRoute from './components/PrivateRoute';
-import SubscriptionGuard from './components/SubscriptionGuard';
 
 // Componente para gerenciar navegação sem recarregar
 const NavigationManager: React.FC = () => {
@@ -79,9 +78,7 @@ function App() {
               {/* Protected Routes */}
               <Route path="/dashboard" element={
                 <PrivateRoute>
-                  <SubscriptionGuard>
-                    <DashboardLayout />
-                  </SubscriptionGuard>
+                  <DashboardLayout />
                 </PrivateRoute>
               }>
                 <Route index element={<Dashboard />} />

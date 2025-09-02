@@ -109,11 +109,22 @@ const Success: React.FC = () => {
                 )}
                 <p className="text-blue-600 text-sm">
                   Status: {subscription.subscription_status === 'active' ? 'Ativo' : 'Processando'}
+                           subscription.subscription_status === 'trialing' ? 'Teste Grátis' :
                 </p>
                 {subscription.current_period_end && (
                   <p className="text-blue-600 text-sm">
-                    Próxima cobrança: {new Date(subscription.current_period_end * 1000).toLocaleDateString('pt-BR')}
+                    {subscription.subscription_status === 'trialing' 
+                      ? `Teste grátis até: ${new Date(subscription.current_period_end * 1000).toLocaleDateString('pt-BR')}`
+                      : `Próxima cobrança: ${new Date(subscription.current_period_end * 1000).toLocaleDateString('pt-BR')}`
+                    }
                   </p>
+                )}
+                {subscription.subscription_status === 'trialing' && (
+                  <div className="mt-2 p-2 bg-yellow-50 rounded border border-yellow-200">
+                    <p className="text-yellow-800 text-sm font-medium">
+                      🎉 Período de teste ativo! Aproveite 7 dias grátis para explorar todas as funcionalidades.
+                    </p>
+                  </div>
                 )}
               </div>
             ) : (
