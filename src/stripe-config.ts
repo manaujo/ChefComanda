@@ -124,7 +124,8 @@ export const hasActiveSubscription = (subscription: any): boolean => {
   if (!subscription) return false;
   
   const activeStatuses = ['active', 'trialing'];
-  return activeStatuses.includes(subscription.subscription_status);
+  const status = subscription.subscription_status || subscription.status;
+  return activeStatuses.includes(status);
 };
 
 export const isSubscriptionExpired = (subscription: any): boolean => {
@@ -164,7 +165,9 @@ export const getSubscriptionStatus = (subscription: any): {
     ? Math.ceil((subscription.current_period_end - now) / (24 * 60 * 60))
     : 0;
 
-  switch (subscription.subscription_status) {
+  const status = subscription.subscription_status || subscription.status;
+  
+  switch (status) {
     case 'active':
       return {
         isActive: true,
@@ -195,7 +198,7 @@ export const getSubscriptionStatus = (subscription: any): {
     default:
       return {
         isActive: false,
-        status: subscription.subscription_status,
+        status: status,
         statusText: 'Status Desconhecido'
       };
   }

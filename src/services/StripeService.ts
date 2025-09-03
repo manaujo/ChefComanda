@@ -127,22 +127,50 @@ class StripeService {
   async getUserSubscription(): Promise<SubscriptionData | null> {
     try {
       const { data, error } = await supabase
-        .from('stripe_user_subscriptions')
+        .from('stripe_customers')
         .select('*')
-        .limit(1);
+        .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
+        .maybeSingle();
 
       if (error) {
         console.error('Error fetching subscription:', error);
         return null;
       }
 
-      const subscription = data?.[0];
+      if (!data) {
+        return null;
+      }
+
+      // Get subscription data for this customer
+      const { data: subscriptionData, error: subError } = await supabase
+        .from('stripe_subscriptions')
+        .select('*')
+        .eq('customer_id', data.customer_id)
+        .maybeSingle();
+
+      if (subError) {
+        console.error('Error fetching subscription data:', subError);
+        return null;
+      }
+
+      const subscription = subscriptionData;
       
       // Return null if subscription is canceled or incomplete
       if (subscription && (subscription.subscription_status === 'canceled' || subscription.subscription_status === 'incomplete')) {
         return null;
       }
-      return subscription || null;
+      
+      return subscription ? {
+        customer_id: data.customer_id,
+        subscription_id: subscription.subscription_id,
+        subscription_status: subscription.status,
+        price_id: subscription.price_id,
+        current_period_start: subscription.current_period_start,
+        current_period_end: subscription.current_period_end,
+        cancel_at_period_end: subscription.cancel_at_period_end,
+        payment_method_brand: subscription.payment_method_brand,
+        payment_method_last4: subscription.payment_method_last4
+      } : null;
     } catch (error) {
       console.error('Error fetching user subscription:', error);
       return null;

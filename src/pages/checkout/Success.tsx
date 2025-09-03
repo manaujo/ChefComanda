@@ -24,17 +24,15 @@ const Success: React.FC = () => {
   const loadSubscriptionData = async () => {
     try {
       // Wait a moment for webhook to process
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise(resolve => setTimeout(resolve, 3000));
       
       const subscriptionData = await StripeService.getUserSubscription();
       setSubscription(subscriptionData);
       
       // Refresh auth context subscription data
       try {
-        const { refreshSubscription } = await import('../../contexts/AuthContext');
-        if (refreshSubscription) {
-          await refreshSubscription();
-        }
+        // Force a page reload to refresh all contexts
+        window.location.reload();
       } catch (error) {
         console.error('Error refreshing subscription in auth context:', error);
       }

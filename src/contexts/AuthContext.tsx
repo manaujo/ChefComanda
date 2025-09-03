@@ -265,13 +265,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       let currentPlan = null;
       try {
         const subscription = await StripeService.getUserSubscription();
-        if (subscription?.price_id && subscription.subscription_status !== 'canceled') {
+        if (subscription?.price_id && subscription.subscription_status !== 'canceled' && subscription.status !== 'canceled') {
           const { getProductByPriceId } = await import("../stripe-config");
           const product = getProductByPriceId(subscription.price_id);
           
           if (product) {
             // Add status indicator for trial periods
-            if (subscription.subscription_status === 'trialing') {
+            if (subscription.subscription_status === 'trialing' || subscription.status === 'trialing') {
               currentPlan = `${product.name} (Teste Grátis)`;
             } else {
               currentPlan = product.name;
@@ -363,7 +363,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         
         if (product) {
           // Add status indicator for trial periods
-          if (subscription.subscription_status === 'trialing') {
+          if (subscription.subscription_status === 'trialing' || subscription.status === 'trialing') {
             currentPlan = `${product.name} (Teste Grátis)`;
           } else {
             currentPlan = product.name;

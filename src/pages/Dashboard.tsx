@@ -46,7 +46,7 @@ import toast from "react-hot-toast";
 import { supabase } from "../services/supabase";
 import { useAuth } from "../contexts/AuthContext";
 import StripeService from "../services/StripeService";
-import { hasActiveSubscription } from "../stripe-config";
+import { hasActiveSubscription, getProductByPriceId, getSubscriptionStatus } from "../stripe-config";
 
 const Dashboard: React.FC = () => {
   const { user, isEmployee, userRole } = useAuth();
@@ -67,6 +67,7 @@ const Dashboard: React.FC = () => {
   const [dataInitialized, setDataInitialized] = useState(false);
   const [insumosEstoqueBaixo, setInsumosEstoqueBaixo] = useState<any[]>([]);
   const [subscription, setSubscription] = useState<any>(null);
+  const [subscriptionLoading, setSubscriptionLoading] = useState(true);
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
 
   // Redirecionar funcionários para suas páginas específicas
@@ -93,21 +94,26 @@ const Dashboard: React.FC = () => {
     // Só carrega dados uma vez quando o componente monta
     if (!dataInitialized) {
       loadDashboardData();
-      loadSubscriptionStatus();
     }
+    loadSubscriptionStatus();
   }, [dataInitialized]);
 
   const loadSubscriptionStatus = async () => {
     try {
+      setSubscriptionLoading(true);
       const subscriptionData = await StripeService.getUserSubscription();
       setSubscription(subscriptionData);
       
       // Mostrar prompt de upgrade se não tem plano ativo
       if (!hasActiveSubscription(subscriptionData)) {
         setShowUpgradePrompt(true);
+      } else {
+        setShowUpgradePrompt(false);
       }
     } catch (error) {
       console.error('Error loading subscription:', error);
+    } finally {
+      setSubscriptionLoading(false);
     }
   };
 
@@ -321,6 +327,60 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="space-y-6 min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+      {/* Subscription Status Display */}
+      {!subscriptionLoading && (
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <div className="p-3 bg-blue-100 dark:bg-blue-900 rounded-full mr-4">
+                <Crown className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Status da Assinatura
+                </h3>
+                {subscription && hasActiveSubscription(subscription) ? (
+                  <div className="mt-1">
+                    <div className="flex items-center space-x-3">
+                      <span className="text-green-600 dark:text-green-400 font-medium">
+                        Plano ativo: {getProductByPriceId(subscription.price_id)?.name || 'Plano Ativo'}
+                      </span>
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                        subscription.subscription_status === 'active' 
+                          ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                          : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                      }`}>
+                        {getSubscriptionStatus(subscription).statusText}
+                      </span>
+                    </div>
+                    {subscription.current_period_end && (
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                        Renovação: {new Date(subscription.current_period_end * 1000).toLocaleDateString("pt-BR")}
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-red-600 dark:text-red-400 font-medium mt-1">
+                    Você não possui plano ativo
+                  </p>
+                )}
+              </div>
+            </div>
+            {!hasActiveSubscription(subscription) && (
+              <Link to="/dashboard/profile/planos">
+                <Button
+                  variant="primary"
+                  icon={<ArrowRight size={16} />}
+                  className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800"
+                >
+                  Ver Planos
+                </Button>
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Upgrade Prompt for Users Without Active Subscription */}
       {showUpgradePrompt && !hasActiveSubscription(subscription) && (
         <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border-l-4 border-yellow-400 p-6 rounded-lg shadow-lg">
