@@ -32,8 +32,15 @@ const StripeCheckout: React.FC<StripeCheckoutProps> = ({
     try {
       setLoading(true);
       
+      console.log('🛒 Iniciando checkout:', {
+        productName: product.name,
+        priceId: product.priceId,
+        mode: product.mode,
+        price: product.price
+      });
+      
       // Show loading toast with better messaging
-      const loadingMessage = `Preparando checkout para ${product.name}...`;
+      const loadingMessage = `🔄 Preparando checkout para ${product.name}...`;
       
       toast.loading(loadingMessage, { id: 'checkout-loading' });
       
@@ -49,7 +56,7 @@ const StripeCheckout: React.FC<StripeCheckoutProps> = ({
       
       if (url) {
         // Show success message before redirect
-        const successMessage = `Redirecionando para o pagamento do ${product.name}...`;
+        const successMessage = `✅ Redirecting to ${product.name} payment...`;
         
         toast.success(successMessage, { duration: 2000 });
         
@@ -60,19 +67,21 @@ const StripeCheckout: React.FC<StripeCheckoutProps> = ({
         
         onSuccess?.();
       } else {
-        throw new Error('URL de checkout não recebida');
+        throw new Error('Checkout URL not received');
       }
     } catch (error) {
-      console.error('Error creating checkout session:', error);
+      console.error('❌ Checkout error:', error);
       
       // Dismiss loading toast
       toast.dismiss('checkout-loading');
       
-      let errorMessage = 'Erro ao processar pagamento';
+      let errorMessage = 'Payment processing error';
       
       if (error instanceof Error) {
         if (error.message.includes('User not authenticated')) {
-          errorMessage = 'Você precisa estar logado para fazer uma assinatura';
+          errorMessage = 'Você precisa estar logado para assinar';
+        } else if (error.message.includes('No such price') || error.message.includes('Invalid Price ID')) {
+          errorMessage = 'Produto não encontrado no Stripe. Verifique se o produto está ativo.';
         } else if (error.message.includes('Failed to create checkout session')) {
           errorMessage = 'Erro ao criar sessão de pagamento. Tente novamente.';
         } else {

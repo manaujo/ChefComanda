@@ -119,8 +119,8 @@ const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({
                 </div>
                 <div className="bg-green-50 dark:bg-green-900/30 p-4 rounded-lg">
                   <CheckCircle className="w-8 h-8 text-green-600 dark:text-green-400 mx-auto mb-2" />
-                  <h4 className="font-semibold text-green-800 dark:text-green-200">Teste Grátis</h4>
-                  <p className="text-sm text-green-600 dark:text-green-300">7 dias para experimentar</p>
+                  <h4 className="font-semibold text-green-800 dark:text-green-200">Acesso Completo</h4>
+                  <p className="text-sm text-green-600 dark:text-green-300">Todas as funcionalidades incluídas</p>
                 </div>
                 <div className="bg-purple-50 dark:bg-purple-900/30 p-4 rounded-lg">
                   <Zap className="w-8 h-8 text-purple-600 dark:text-purple-400 mx-auto mb-2" />
@@ -150,23 +150,26 @@ const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({
                   )}
                   
                   <div className={`px-6 py-6 ${
-                    index === 0 ? 'bg-gradient-to-r from-blue-600 to-blue-700' :
-                    index === 1 ? 'bg-gradient-to-r from-purple-600 to-purple-700' :
-                    index === 2 ? 'bg-gradient-to-r from-yellow-500 to-orange-500' :
+                    product.id === 'teste' ? 'bg-gradient-to-r from-green-600 to-green-700' :
+                    product.id === 'mensal' ? 'bg-gradient-to-r from-blue-600 to-blue-700' :
+                    product.id === 'trimestral' ? 'bg-gradient-to-r from-purple-600 to-purple-700' :
+                    product.id === 'anual' ? 'bg-gradient-to-r from-orange-500 to-orange-600' :
                     'bg-gradient-to-r from-green-500 to-green-600'
                   }`}>
                     <div className="text-center">
                       <div className="p-3 bg-white/20 rounded-full w-fit mx-auto mb-4">
-                        {index === 0 ? <Calendar className="w-6 h-6 text-white" /> :
-                         index === 1 ? <Star className="w-6 h-6 text-white" /> :
-                         index === 2 ? <Award className="w-6 h-6 text-white" /> :
+                        {product.id === 'teste' ? <Gift className="w-6 h-6 text-white" /> :
+                         product.id === 'mensal' ? <Calendar className="w-6 h-6 text-white" /> :
+                         product.id === 'trimestral' ? <Star className="w-6 h-6 text-white" /> :
+                         product.id === 'anual' ? <Award className="w-6 h-6 text-white" /> :
                          <Zap className="w-6 h-6 text-white" />}
                       </div>
                       <h3 className="text-xl font-bold text-white">{product.name}</h3>
                       <p className={`mt-2 text-sm ${
-                        index === 0 ? 'text-blue-100' :
-                        index === 1 ? 'text-purple-100' :
-                        index === 2 ? 'text-yellow-100' :
+                        product.id === 'teste' ? 'text-green-100' :
+                        product.id === 'mensal' ? 'text-blue-100' :
+                        product.id === 'trimestral' ? 'text-purple-100' :
+                        product.id === 'anual' ? 'text-orange-100' :
                         'text-green-100'
                       }`}>
                         {product.description || 'Acesso completo ao sistema'}
@@ -183,9 +186,11 @@ const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({
                             product.interval === 'quarter' ? 'trimestre' : 'mês'}
                         </span>
                       </div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                        Acesso por {product.accessDuration} {product.accessDuration === 1 ? 'mês' : product.accessDuration === 12 ? 'ano' : 'meses'}
-                      </p>
+                      {product.interval === 'year' && product.id !== 'teste' && (
+                        <p className="text-gray-600 dark:text-gray-400 mb-2">
+                          Equivalente a {formatPrice(getMonthlyEquivalent(product))}/mês
+                        </p>
+                      )}
                       {product.discount && (
                         <div className="inline-block bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-3 py-1 rounded-full text-xs font-medium">
                           Economia de {formatPrice(product.discount.savings)}
@@ -211,13 +216,14 @@ const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({
                       }}
                       onError={(error) => console.error(error)}
                       className={`w-full font-bold py-3 text-sm ${
-                        product.id === 'basico' ? 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800' :
-                        product.id === 'starter-anual' ? 'bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800' :
-                        product.id === 'basico-anual' ? 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700' :
+                        product.id === 'teste' ? 'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800' :
+                        product.id === 'mensal' ? 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800' :
+                        product.id === 'trimestral' ? 'bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800' :
+                        product.id === 'anual' ? 'bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800' :
                         'bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-700 hover:to-gray-800'
                       } text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105`}
                     >
-                      Assinar Agora
+                      {product.id === 'teste' ? 'Teste por R$ 1' : 'Assinar Agora'}
                     </StripeCheckout>
                   </div>
                 </div>

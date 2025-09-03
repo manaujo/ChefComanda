@@ -15,77 +15,96 @@ export interface StripeProduct {
   accessDuration: number; // em meses
 }
 
+// Configuração com seus Price IDs reais da Stripe
 export const stripeProducts: StripeProduct[] = [
   {
-    id: 'basico',
-    name: 'Básico',
-    description: 'Acesso completo às comandas e mesas, gerenciamento para garçons e cozinha, controle de estoque, acesso ao dashboard, relatórios avançados de vendas, exportação de dados (PDF e Excel), suporte padrão, cancelamento a qualquer momento, teste grátis de 7 dias',
-    price: 6090, // R$ 60,90 em centavos
-    priceId: 'price_1RMZAmB4if3rE1yX5xRa4ZnU',
+    id: 'teste',
+    name: 'Teste',
+    description: 'Plano de teste por apenas R$ 1,00 por ano',
+    price: 100, // R$ 1,00 em centavos
+    priceId: 'price_1S2w0KB4if3rE1yX3gGCzDaQ', // Price ID correto fornecido
+    interval: 'year',
+    mode: 'subscription',
+    accessDuration: 12,
+    features: [
+      'Acesso completo por 1 ano',
+      'Todas as funcionalidades incluídas',
+      'Controle de mesas e comandas',
+      'PDV integrado',
+      'Gestão de estoque',
+      'Relatórios avançados',
+      'Cardápio digital com QR Code',
+      'Suporte técnico',
+      'Plano de teste por R$ 1,00'
+    ]
+  },
+  {
+    id: 'mensal',
+    name: 'Plano Mensal',
+    description: 'Acesso completo mensal com todas as funcionalidades',
+    price: 12000, // R$ 120,00 em centavos
+    priceId: 'price_1RucPuB4if3rE1yXh76pGzs7', // Seu Price ID real
     interval: 'month',
     mode: 'subscription',
-    accessDuration: 1, // 1 mês de acesso
+    accessDuration: 1,
     features: [
-      'Acesso completo às comandas e mesas',
-      'Gerenciamento para garçons e cozinha',
-      'Controle de estoque',
-      'Acesso ao dashboard',
-      'Relatórios avançados de vendas',
-      'Exportação de dados (PDF e Excel)',
-      'Suporte padrão',
-      'Cancelamento a qualquer momento',
-      'Teste grátis de 7 dias'
+      'Acesso completo por 1 mês',
+      'Todas as funcionalidades incluídas',
+      'Controle de mesas e comandas',
+      'PDV integrado',
+      'Gestão de estoque',
+      'Relatórios avançados',
+      'Cardápio digital com QR Code',
+      'Suporte técnico',
+      'Flexibilidade mensal'
     ]
   },
   {
-    id: 'starter-anual',
-    name: 'Starter Anual',
-    description: 'Sistema de PDV completo, controle de estoque, dashboard e relatórios, exportação de dados (PDF e Excel), relatórios avançados de vendas, suporte padrão, teste grátis de 7 dias',
-    price: 43080, // R$ 430,80 em centavos
-    priceId: 'price_1RMZ8oB4if3rE1yXA0fqPRvf',
-    interval: 'year',
-    mode: 'subscription',
-    accessDuration: 12, // 12 meses de acesso
-    discount: {
-      savings: 30000, // Economia comparado ao plano mensal (12 * 60.90 - 430.80)
-      percentage: 41
-    },
-    features: [
-      'Sistema de PDV completo',
-      'Controle de estoque',
-      'Dashboard e relatórios',
-      'Exportação de dados (PDF e Excel)',
-      'Relatórios avançados de vendas',
-      'Suporte padrão',
-      'Teste grátis de 7 dias',
-      'Economia de 41% no valor anual'
-    ]
-  },
-  {
-    id: 'basico-anual',
-    name: 'Básico Anual',
-    description: 'Acesso completo às comandas e mesas, gerenciamento para garçons e cozinha, controle de estoque, acesso ao dashboard, relatórios avançados de vendas, exportação de dados (PDF e Excel), suporte padrão, teste grátis de 7 dias',
-    price: 59988, // R$ 599,88 em centavos
-    priceId: 'price_1RMZ7bB4if3rE1yXb6F4Jj0u',
-    interval: 'year',
+    id: 'trimestral',
+    name: 'Plano Trimestral',
+    description: 'Acesso completo trimestral com economia',
+    price: 36000, // R$ 360,00 em centavos
+    priceId: 'price_1RvfteB4if3rE1yXvpuv438F', // Seu Price ID real
+    interval: 'quarter',
     mode: 'subscription',
     popular: true,
-    accessDuration: 12, // 12 meses de acesso
+    accessDuration: 3,
+    features: [
+      'Acesso completo por 3 meses',
+      'Todas as funcionalidades incluídas',
+      'Controle de mesas e comandas',
+      'PDV integrado',
+      'Gestão de estoque',
+      'Relatórios avançados',
+      'Cardápio digital com QR Code',
+      'Suporte técnico',
+      'Economia no pagamento trimestral'
+    ]
+  },
+  {
+    id: 'anual',
+    name: 'Plano Anual',
+    description: 'Acesso completo anual com máxima economia',
+    price: 129600, // R$ 1.296,00 em centavos
+    priceId: 'price_1RucR4B4if3rE1yXEFat9ZXL', // Seu Price ID real
+    interval: 'year',
+    mode: 'subscription',
+    accessDuration: 12,
     discount: {
-      savings: 31092, // Economia comparado ao plano mensal (12 * 60.90 - 599.88)
-      percentage: 18
+      savings: 14400, // Economia de R$ 144,00 comparado ao mensal (12 * 120 - 1296)
+      percentage: 10
     },
     features: [
-      'Acesso completo às comandas e mesas',
-      'Gerenciamento para garçons e cozinha',
-      'Controle de estoque',
-      'Acesso ao dashboard',
-      'Relatórios avançados de vendas',
-      'Exportação de dados (PDF e Excel)',
-      'Suporte padrão',
-      'Cancelamento a qualquer momento',
-      'Teste grátis de 7 dias',
-      'Economia de 18% no valor anual'
+      'Acesso completo por 1 ano',
+      'Todas as funcionalidades incluídas',
+      'Controle de mesas e comandas',
+      'PDV integrado',
+      'Gestão de estoque',
+      'Relatórios avançados',
+      'Cardápio digital com QR Code',
+      'Suporte técnico',
+      'Máxima economia anual',
+      'Economia de 10% vs mensal'
     ]
   }
 ];
@@ -116,6 +135,13 @@ export const hasActiveSubscription = (subscription: any): boolean => {
   
   const activeStatuses = ['active', 'trialing'];
   const status = subscription.subscription_status || subscription.status;
+  
+  // Verificar se não está cancelado e está dentro do período
+  if (subscription.cancel_at_period_end && subscription.current_period_end) {
+    const now = Math.floor(Date.now() / 1000);
+    return activeStatuses.includes(status) && now < subscription.current_period_end;
+  }
+  
   return activeStatuses.includes(status);
 };
 
@@ -193,4 +219,28 @@ export const getSubscriptionStatus = (subscription: any): {
         statusText: 'Status Desconhecido'
       };
   }
+};
+
+// Função para verificar se todos os planos dão o mesmo acesso
+export const hasFullAccess = (subscription: any): boolean => {
+  // Todos os planos (exceto quando não há assinatura) dão acesso completo
+  return hasActiveSubscription(subscription);
+};
+
+// Função para obter o nome do plano baseado no Price ID
+export const getPlanNameByPriceId = (priceId: string): string => {
+  const product = getProductByPriceId(priceId);
+  return product?.name || 'Plano Desconhecido';
+};
+
+// Função para verificar se é plano de teste
+export const isTestPlan = (priceId: string): boolean => {
+  return priceId === 'price_1SzW0KB4if3rE1yX3gGCzDaQ';
+};
+
+// Função para calcular economia anual
+export const getAnnualSavings = (monthlyPrice: number): number => {
+  const annualEquivalent = monthlyPrice * 12;
+  const annualPrice = 129600; // R$ 1.296,00 em centavos
+  return annualEquivalent - annualPrice;
 };

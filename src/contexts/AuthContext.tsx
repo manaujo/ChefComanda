@@ -265,21 +265,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       let currentPlan = null;
       try {
         const subscription = await StripeService.getUserSubscription();
-        if (subscription?.price_id && subscription.subscription_status !== 'canceled' && subscription.status !== 'canceled') {
+        console.log('📋 Loading subscription data in context:', subscription);
+        
+        if (subscription?.price_id && 
+            subscription.subscription_status !== 'canceled' && 
+            subscription.status !== 'canceled' &&
+            ['active', 'trialing'].includes(subscription.subscription_status || subscription.status)) {
           const { getProductByPriceId } = await import("../stripe-config");
           const product = getProductByPriceId(subscription.price_id);
           
           if (product) {
             // Add status indicator for trial periods
             if (subscription.subscription_status === 'trialing' || subscription.status === 'trialing') {
-              currentPlan = `${product.name} (Teste Grátis)`;
+              currentPlan = `${product.name} (Free Trial)`;
             } else {
               currentPlan = product.name;
             }
+            console.log('✅ Plan identified:', currentPlan);
+          } else {
+            console.warn('⚠️ Product not found for Price ID:', subscription.price_id);
           }
         }
       } catch (error) {
-        console.error("Error loading subscription:", error);
+        console.error("❌ Error loading subscription in context:", error);
       }
 
       const userRole = roleData?.role || "admin";
@@ -354,26 +362,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     if (!state.user) return;
 
     try {
+      console.log('🔄 Refreshing subscription in context...');
       const subscription = await StripeService.getUserSubscription();
       let currentPlan = null;
 
-      if (subscription?.price_id && subscription.subscription_status !== 'canceled') {
+      if (subscription?.price_id && 
+          subscription.subscription_status !== 'canceled' &&
+          ['active', 'trialing'].includes(subscription.subscription_status || subscription.status)) {
         const { getProductByPriceId } = await import("../stripe-config");
         const product = getProductByPriceId(subscription.price_id);
         
         if (product) {
           // Add status indicator for trial periods
           if (subscription.subscription_status === 'trialing' || subscription.status === 'trialing') {
-            currentPlan = `${product.name} (Teste Grátis)`;
+            currentPlan = `${product.name} (Free Trial)`;
           } else {
             currentPlan = product.name;
           }
+          console.log('✅ Plan updated:', currentPlan);
         }
       }
 
       setState((prev) => ({ ...prev, currentPlan }));
     } catch (error) {
-      console.error("Error refreshing subscription:", error);
+      console.error("❌ Error refreshing subscription:", error);
     }
   };
 

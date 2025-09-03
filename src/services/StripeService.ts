@@ -73,6 +73,13 @@ class StripeService {
       throw new Error('User not authenticated');
     }
 
+    console.log('🛒 Creating checkout session:', {
+      priceId: request.priceId,
+      mode: request.mode,
+      successUrl: request.successUrl,
+      cancelUrl: request.cancelUrl
+    });
+
     const defaultSuccessUrl = `${window.location.origin}/checkout/success`;
     const defaultCancelUrl = `${window.location.origin}/dashboard/profile/planos`;
 
@@ -90,12 +97,31 @@ class StripeService {
       }),
     });
 
+    const responseText = await response.text();
+    console.log('📥 Edge Function response:', responseText);
+
     if (!response.ok) {
-      const errorData = await response.json();
+      let errorData;
+      try {
+        errorData = JSON.parse(responseText);
+      } catch {
+        errorData = { error: responseText };
+      }
+      console.error('❌ Stripe checkout error:', errorData);
+      
+      // Mensagens de erro mais amigáveis
+      if (errorData.error?.includes('No such price')) {
+        throw new Error('Plan not found. This may be a configuration issue. Please contact support.');
+      } else if (errorData.error?.includes('Price ID não encontrado')) {
+        throw new Error('Produto não encontrado no Stripe. Verifique se o produto está ativo no Stripe Dashboard.');
+      }
+      
       throw new Error(errorData.error || 'Failed to create checkout session');
     }
 
-    return await response.json();
+    const data = JSON.parse(responseText);
+    console.log('✅ Checkout session created successfully:', data);
+    return data;
   }
 
   async cancelSubscription(subscriptionId: string): Promise<any> {
@@ -126,6 +152,8 @@ class StripeService {
 
   async getUserSubscription(): Promise<SubscriptionData | null> {
     try {
+      console.log('🔍 Loading user subscription...');
+      
       const { data, error } = await supabase
         .from('stripe_customers')
         .select('*')
@@ -133,13 +161,16 @@ class StripeService {
         .maybeSingle();
 
       if (error) {
-        console.error('Error fetching subscription:', error);
+        console.error('❌ Error loading customer:', error);
         return null;
       }
 
       if (!data) {
+        console.log('ℹ️ No customer found for user');
         return null;
       }
+
+      console.log('👤 Customer found:', data.customer_id);
 
       // Get subscription data for this customer
       const { data: subscriptionData, error: subError } = await supabase
@@ -149,21 +180,34 @@ class StripeService {
         .maybeSingle();
 
       if (subError) {
-        console.error('Error fetching subscription data:', subError);
+        console.error('❌ Error loading subscription data:', subError);
         return null;
       }
+
+      if (!subscriptionData) {
+        console.log('ℹ️ No subscription found for customer');
+        return null;
+      }
+
+      console.log('📋 Subscription found:', {
+        subscriptionId: subscriptionData.subscription_id,
+        status: subscriptionData.status,
+        priceId: subscriptionData.price_id,
+        currentPeriodEnd: subscriptionData.current_period_end
+      });
 
       const subscription = subscriptionData;
       
       // Return null if subscription is canceled or incomplete
-      if (subscription && (subscription.subscription_status === 'canceled' || subscription.subscription_status === 'incomplete')) {
+      if (subscription && (subscription.status === 'canceled' || subscription.status === 'incomplete')) {
+        console.log('⚠️ Subscription canceled or incomplete');
         return null;
       }
       
       return subscription ? {
         customer_id: data.customer_id,
         subscription_id: subscription.subscription_id,
-        subscription_status: subscription.status,
+        subscription_status: subscription.status || 'unknown',
         price_id: subscription.price_id,
         current_period_start: subscription.current_period_start,
         current_period_end: subscription.current_period_end,
@@ -172,7 +216,7 @@ class StripeService {
         payment_method_last4: subscription.payment_method_last4
       } : null;
     } catch (error) {
-      console.error('Error fetching user subscription:', error);
+      console.error('❌ General error loading subscription:', error);
       return null;
     }
   }
@@ -185,14 +229,46 @@ class StripeService {
         .order('order_date', { ascending: false });
 
       if (error) {
-        console.error('Error fetching orders:', error);
+        console.error('❌ Error loading orders:', error);
         return [];
       }
 
       return data || [];
     } catch (error) {
-      console.error('Error fetching user orders:', error);
+      console.error('❌ General error loading orders:', error);
       return [];
+    }
+  }
+
+  async syncSubscription(): Promise<any> {
+    try {
+      console.log('🔄 Syncing subscription...');
+      
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !session?.access_token) {
+        throw new Error('User not authenticated');
+      }
+
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/sync-subscription`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to sync subscription');
+      }
+
+      const result = await response.json();
+      console.log('✅ Subscription synced:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ Error syncing subscription:', error);
+      throw error;
     }
   }
 

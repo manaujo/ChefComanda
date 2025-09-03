@@ -325,23 +325,26 @@ const LandingPage: React.FC = () => {
                 )}
                 
                 <div className={`px-6 py-6 ${
-                  index === 0 ? 'bg-gradient-to-r from-blue-600 to-blue-700' :
-                  index === 1 ? 'bg-gradient-to-r from-purple-600 to-purple-700' :
-                  index === 2 ? 'bg-gradient-to-r from-yellow-500 to-orange-500' :
+                  product.id === 'teste' ? 'bg-gradient-to-r from-green-600 to-green-700' :
+                  product.id === 'mensal' ? 'bg-gradient-to-r from-blue-600 to-blue-700' :
+                  product.id === 'trimestral' ? 'bg-gradient-to-r from-purple-600 to-purple-700' :
+                  product.id === 'anual' ? 'bg-gradient-to-r from-orange-500 to-orange-600' :
                   'bg-gradient-to-r from-green-500 to-green-600'
                 }`}>
                   <div className="text-center">
                     <div className="p-3 bg-white/20 rounded-full w-fit mx-auto mb-4">
-                      {index === 0 ? <Calendar className="w-6 h-6 text-white" /> :
-                       index === 1 ? <Star className="w-6 h-6 text-white" /> :
-                       index === 2 ? <Award className="w-6 h-6 text-white" /> :
+                      {product.id === 'teste' ? <Gift className="w-6 h-6 text-white" /> :
+                       product.id === 'mensal' ? <Calendar className="w-6 h-6 text-white" /> :
+                       product.id === 'trimestral' ? <Star className="w-6 h-6 text-white" /> :
+                       product.id === 'anual' ? <Award className="w-6 h-6 text-white" /> :
                        <Zap className="w-6 h-6 text-white" />}
                     </div>
                     <h3 className="text-xl font-bold text-white">{product.name}</h3>
                     <p className={`mt-2 text-sm ${
-                      index === 0 ? 'text-blue-100' :
-                      index === 1 ? 'text-purple-100' :
-                      index === 2 ? 'text-yellow-100' :
+                      product.id === 'teste' ? 'text-green-100' :
+                      product.id === 'mensal' ? 'text-blue-100' :
+                      product.id === 'trimestral' ? 'text-purple-100' :
+                      product.id === 'anual' ? 'text-orange-100' :
                       'text-green-100'
                     }`}>
                       {product.description}
@@ -393,10 +396,10 @@ const LandingPage: React.FC = () => {
                         index === 2 ? 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700' :
                         'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800'
                       } font-semibold`}
-                      icon={product.name === 'Plano Trimestral' || product.interval === 'year' || product.name === 'Plano Teste' ? <Zap size={18} /> : undefined}
+                      icon={product.id === 'teste' || product.interval === 'year' ? <Zap size={18} /> : undefined}
                     >
-                      {product.name === 'Plano Trimestral' || product.interval === 'year' || product.name === 'Plano Teste' ? 
-                        'Teste Grátis 7 Dias' : 'Começar Agora'}
+                      {product.id === 'teste' ? 'Teste por R$ 1' : 
+                       product.interval === 'year' ? 'Começar Agora' : 'Começar Agora'}
                     </Button>
                   </Link>
                 </div>
