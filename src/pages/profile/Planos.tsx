@@ -283,26 +283,26 @@ const Planos: React.FC = () => {
             )}
             
             <div className={`px-8 py-6 ${
-              index === 0 ? 'bg-gradient-to-r from-blue-600 to-blue-700' :
-              index === 1 ? 'bg-gradient-to-r from-purple-600 to-purple-700' :
-              index === 2 ? 'bg-gradient-to-r from-yellow-500 to-orange-500' :
-              'bg-gradient-to-r from-green-500 to-green-600'
+              product.id === 'basico' ? 'bg-gradient-to-r from-blue-600 to-blue-700' :
+              product.id === 'starter-anual' ? 'bg-gradient-to-r from-purple-600 to-purple-700' :
+              product.id === 'basico-anual' ? 'bg-gradient-to-r from-green-500 to-green-600' :
+              'bg-gradient-to-r from-gray-500 to-gray-600'
             }`}>
               <div className="text-center">
                 <div className="p-3 bg-white/20 rounded-full w-fit mx-auto mb-4">
-                  {index === 0 ? <Calendar className="w-6 h-6 text-white" /> :
-                   index === 1 ? <Star className="w-6 h-6 text-white" /> :
-                   index === 2 ? <Award className="w-6 h-6 text-white" /> :
+                  {product.id === 'basico' ? <Calendar className="w-6 h-6 text-white" /> :
+                   product.id === 'starter-anual' ? <Star className="w-6 h-6 text-white" /> :
+                   product.id === 'basico-anual' ? <Award className="w-6 h-6 text-white" /> :
                    <Zap className="w-6 h-6 text-white" />}
                 </div>
                 <h3 className="text-2xl font-bold text-white">{product.name}</h3>
                 <p className={`mt-2 text-sm ${
-                  index === 0 ? 'text-blue-100' :
-                  index === 1 ? 'text-purple-100' :
-                  index === 2 ? 'text-yellow-100' :
-                  'text-green-100'
+                  product.id === 'basico' ? 'text-blue-100' :
+                  product.id === 'starter-anual' ? 'text-purple-100' :
+                  product.id === 'basico-anual' ? 'text-green-100' :
+                  'text-gray-100'
                 }`}>
-                  {product.description}
+                  Plano ideal para seu negócio
                 </p>
               </div>
             </div>
@@ -312,11 +312,10 @@ const Planos: React.FC = () => {
                 <div className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
                   {formatPrice(product.price)}
                   <span className="text-lg font-normal text-gray-500 dark:text-gray-400">
-                    /{product.interval === 'year' ? 'ano' : 
-                      product.name.includes('Trimestral') ? 'trimestre' : 'mês'}
+                    /{product.interval === 'year' ? 'ano' : 'mês'}
                   </span>
                 </div>
-                {(product.interval === 'year' || product.name === 'Plano Trimestral') && (
+                {product.interval === 'year' && (
                   <>
                     <p className="text-gray-600 dark:text-gray-400 mb-2">
                       Equivalente a {formatPrice(getMonthlyEquivalent(product))}/mês
@@ -360,10 +359,10 @@ const Planos: React.FC = () => {
                   onClick={() => handleUpgrade(product)}
                   isLoading={upgrading === product.id}
                   className={`font-semibold py-4 text-lg ${
-                    index === 0 ? 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800' :
-                    index === 1 ? 'bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800' :
-                    index === 2 ? 'bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600' :
-                    'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800'
+                    product.id === 'basico' ? 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800' :
+                    product.id === 'starter-anual' ? 'bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800' :
+                    product.id === 'basico-anual' ? 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700' :
+                    'bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800'
                   } text-white`}
                 >
                   {upgrading === product.id ? 'Processando...' : 'Assinar Agora'}

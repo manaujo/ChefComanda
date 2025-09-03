@@ -52,7 +52,7 @@ const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({
         </div>
       </div>
     );
-  }
+  };
 
   const subscriptionStatus = getSubscriptionStatus(subscription);
 
@@ -211,13 +211,13 @@ const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({
                       }}
                       onError={(error) => console.error(error)}
                       className={`w-full font-bold py-3 text-sm ${
-                        index === 0 ? 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800' :
-                        index === 1 ? 'bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800' :
-                        index === 2 ? 'bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600' :
-                        'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700'
+                        product.id === 'basico' ? 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800' :
+                        product.id === 'starter-anual' ? 'bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800' :
+                        product.id === 'basico-anual' ? 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700' :
+                        'bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-700 hover:to-gray-800'
                       } text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105`}
                     >
-                      {product.name === 'Teste' ? 'Começar Teste' : 'Assinar Agora'}
+                      Assinar Agora
                     </StripeCheckout>
                   </div>
                 </div>

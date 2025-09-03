@@ -17,84 +17,75 @@ export interface StripeProduct {
 
 export const stripeProducts: StripeProduct[] = [
   {
-    id: 'teste',
-    name: 'Teste',
-    description: 'teste',
-    price: 100, // R$ 1,00 em centavos
-    priceId: 'price_1S2w0KB4if3rE1yX3gGCzDaQ',
-    interval: 'month',
-    mode: 'subscription',
-    accessDuration: 12, // 1 ano de acesso
-    features: [
-      'Acesso completo por 1 ano',
-      'Todas as funcionalidades disponíveis',
-      'Ideal para testes e desenvolvimento',
-      'Suporte básico incluído'
-    ]
-  },
-  {
-    id: 'plano-mensal',
-    name: 'Plano Mensal',
-    description: 'Todas as funcionalidades, Suporte técnico, incluído Atualizações automáticas e Backup automático',
-    price: 12000, // R$ 120,00 em centavos
-    priceId: 'price_1RucPuB4if3rE1yXh76pGzs7',
+    id: 'basico',
+    name: 'Básico',
+    description: 'Acesso completo às comandas e mesas, gerenciamento para garçons e cozinha, controle de estoque, acesso ao dashboard, relatórios avançados de vendas, exportação de dados (PDF e Excel), suporte padrão, cancelamento a qualquer momento, teste grátis de 7 dias',
+    price: 6090, // R$ 60,90 em centavos
+    priceId: 'price_1RMZAmB4if3rE1yX5xRa4ZnU',
     interval: 'month',
     mode: 'subscription',
     accessDuration: 1, // 1 mês de acesso
     features: [
-      'Controle completo de mesas e comandas',
-      'PDV integrado com múltiplas formas de pagamento',
-      'Gestão de estoque e insumos',
-      'Cardápio digital com QR Code',
-      'Relatórios de vendas em tempo real',
-      'Sistema de funcionários com permissões',
-      'Suporte técnico via WhatsApp',
-      'Atualizações automáticas',
-      'Backup automático dos dados'
+      'Acesso completo às comandas e mesas',
+      'Gerenciamento para garçons e cozinha',
+      'Controle de estoque',
+      'Acesso ao dashboard',
+      'Relatórios avançados de vendas',
+      'Exportação de dados (PDF e Excel)',
+      'Suporte padrão',
+      'Cancelamento a qualquer momento',
+      'Teste grátis de 7 dias'
     ]
   },
   {
-    id: 'plano-trimestral',
-    name: 'Plano Trimestral',
-    description: '',
-    price: 36000, // R$ 360,00 em centavos
-    priceId: 'price_1RvfteB4if3rE1yXvpuv438F',
-    interval: 'quarter',
-    mode: 'subscription',
-    popular: true,
-    accessDuration: 3, // 3 meses de acesso
-    features: [
-      'Todas as funcionalidades do Plano Mensal',
-      'Suporte prioritário',
-      'Consultoria de implementação',
-      'Treinamento da equipe incluído',
-      'Backup automático dos dados',
-      'Relatórios avançados de CMV',
-      'Melhor custo-benefício'
-    ]
-  },
-  {
-    id: 'plano-anual',
-    name: 'Plano Anual',
-    description: 'Todas as funcionalidades, Suporte prioritário, Relatórios avançados e Consultoria gratuita',
-    price: 129600, // R$ 1.296,00 em centavos
-    priceId: 'price_1RucR4B4if3rE1yXEFat9ZXL',
+    id: 'starter-anual',
+    name: 'Starter Anual',
+    description: 'Sistema de PDV completo, controle de estoque, dashboard e relatórios, exportação de dados (PDF e Excel), relatórios avançados de vendas, suporte padrão, teste grátis de 7 dias',
+    price: 43080, // R$ 430,80 em centavos
+    priceId: 'price_1RMZ8oB4if3rE1yXA0fqPRvf',
     interval: 'year',
     mode: 'subscription',
     accessDuration: 12, // 12 meses de acesso
     discount: {
-      savings: 14400, // R$ 144,00 de economia (12 * 120 - 1296)
-      percentage: 10
+      savings: 30000, // Economia comparado ao plano mensal (12 * 60.90 - 430.80)
+      percentage: 41
     },
     features: [
-      'Todas as funcionalidades dos outros planos',
-      'Economia de 10% no valor anual',
-      'Suporte VIP 24/7',
-      'Consultoria mensal incluída',
-      'Customizações exclusivas',
-      'Integração com sistemas externos',
-      'Relatórios personalizados',
-      'Consultoria gratuita'
+      'Sistema de PDV completo',
+      'Controle de estoque',
+      'Dashboard e relatórios',
+      'Exportação de dados (PDF e Excel)',
+      'Relatórios avançados de vendas',
+      'Suporte padrão',
+      'Teste grátis de 7 dias',
+      'Economia de 41% no valor anual'
+    ]
+  },
+  {
+    id: 'basico-anual',
+    name: 'Básico Anual',
+    description: 'Acesso completo às comandas e mesas, gerenciamento para garçons e cozinha, controle de estoque, acesso ao dashboard, relatórios avançados de vendas, exportação de dados (PDF e Excel), suporte padrão, teste grátis de 7 dias',
+    price: 59988, // R$ 599,88 em centavos
+    priceId: 'price_1RMZ7bB4if3rE1yXb6F4Jj0u',
+    interval: 'year',
+    mode: 'subscription',
+    popular: true,
+    accessDuration: 12, // 12 meses de acesso
+    discount: {
+      savings: 31092, // Economia comparado ao plano mensal (12 * 60.90 - 599.88)
+      percentage: 18
+    },
+    features: [
+      'Acesso completo às comandas e mesas',
+      'Gerenciamento para garçons e cozinha',
+      'Controle de estoque',
+      'Acesso ao dashboard',
+      'Relatórios avançados de vendas',
+      'Exportação de dados (PDF e Excel)',
+      'Suporte padrão',
+      'Cancelamento a qualquer momento',
+      'Teste grátis de 7 dias',
+      'Economia de 18% no valor anual'
     ]
   }
 ];
