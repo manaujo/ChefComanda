@@ -7,20 +7,18 @@ Sistema profissional de gerenciamento para restaurantes, bares e lanchonetes.
 O sistema está totalmente integrado com seus produtos reais da Stripe.
 
 ### 📋 Planos Ativos:
-- **Teste**: R$ 1,00/ano
-- **Plano Mensal**: R$ 120,00/mês  
-- **Plano Trimestral**: R$ 360,00/trimestre (Popular)
+- **Plano Mensal**: R$ 149,99/mês
+- **Plano Trimestral**: R$ 389,90/trimestre (Popular)
 - **Plano Anual**: R$ 1.296,00/ano
 
 ### 🔑 Price IDs Configurados:
-- **Teste**: `price_1S2w0KB4if3rE1yX3gGCzDaQ`
-- **Plano Mensal**: `price_1RucPuB4if3rE1yXh76pGzs7`  
-- **Plano Trimestral**: `price_1RvfteB4if3rE1yXvpuv438F`
+- **Plano Mensal**: `price_1S3bgGB4if3rE1yXE7zVojFW`
+- **Plano Trimestral**: `price_1S3blbB4if3rE1yX2UvDOZyI`
 - **Plano Anual**: `price_1RucR4B4if3rE1yXEFat9ZXL`
 
 ### 🔐 Webhook Configurado:
-- **Signing Secret**: `whsec_yuJa1uPPPblLyaCVxg57px3wYGUZWrjQ`
 - **URL**: `https://mgmfxynlgghkuikqqrka.supabase.co/functions/v1/stripe-webhook`
+- **Eventos**: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`
 
 ### ✅ Sistema Totalmente Funcional:
 1. **Checkout Seguro**: Redirecionamento para Stripe Checkout
@@ -48,13 +46,27 @@ O sistema está totalmente integrado com seus produtos reais da Stripe.
 - ✅ Relatórios avançados
 - ✅ Assinaturas Stripe integradas
 
-## 🔧 Webhook Configurado e Ativo
+## 🔧 Produtos Configurados
 
-O webhook está configurado e funcionando:
+### Plano Mensal (R$ 149,99/mês)
+- **Price ID**: `price_1S3bgGB4if3rE1yXE7zVojFW`
+- **Descrição**: Todas as funcionalidades, Suporte técnico, incluído Atualizações automáticas e Backup automático
+- **Duração**: 1 mês
+- **Modo**: Assinatura
 
-- **URL**: `https://mgmfxynlgghkuikqqrka.supabase.co/functions/v1/stripe-webhook`
-- **Secret**: `whsec_yuJa1uPPPblLyaCVxg57px3wYGUZWrjQ`
-- **Eventos**: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`
+### Plano Trimestral (R$ 389,90/trimestre) - POPULAR
+- **Price ID**: `price_1S3blbB4if3rE1yX2UvDOZyI`
+- **Descrição**: Acesso completo por 3 meses. Todas as funcionalidades incluídas. Controle de mesas, comandas e PDV integrado
+- **Duração**: 3 meses
+- **Modo**: Assinatura
+- **Economia**: vs mensal
+
+### Plano Anual (R$ 1.296,00/ano)
+- **Price ID**: `price_1RucR4B4if3rE1yXEFat9ZXL`
+- **Descrição**: Todas as funcionalidades, Suporte prioritário, Relatórios avançados e Consultoria gratuita
+- **Duração**: 12 meses
+- **Modo**: Assinatura
+- **Economia**: 28% vs mensal
 
 ## 🎉 Sistema Pronto!
 
@@ -74,3 +86,17 @@ O ChefComanda está 100% funcional com seus produtos reais da Stripe:
 3. **Complete o pagamento** no Stripe Checkout
 4. **Retorne ao sistema** - acesso será liberado automaticamente
 5. **Verifique o status** na página de planos
+
+## 💰 Preços e Economia
+
+- **Mensal**: R$ 149,99/mês
+- **Trimestral**: R$ 389,90 (equivale a R$ 129,97/mês - economia de 13%)
+- **Anual**: R$ 1.296,00 (equivale a R$ 108,00/mês - economia de 28%)
+
+## 🔐 Segurança
+
+- Pagamentos processados 100% pelo Stripe
+- Dados criptografados e seguros
+- Webhook com assinatura verificada
+- Controle de acesso automático
+- Backup automático dos dados

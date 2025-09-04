@@ -55,15 +55,26 @@ const StripeCheckout: React.FC<StripeCheckoutProps> = ({
       toast.dismiss('checkout-loading');
       
       if (url) {
-        // Show success message before redirect
-        const successMessage = `✅ Redirecting to ${product.name} payment...`;
+        // Try to open in new tab first (better for preview environments)
+        const newWindow = window.open(url, '_blank', 'noopener,noreferrer');
         
-        toast.success(successMessage, { duration: 2000 });
-        
-        // Small delay to show the success message
-        setTimeout(() => {
-          window.location.href = url;
-        }, 1000);
+        if (newWindow) {
+          // Successfully opened in new tab
+          toast.success(`✅ Checkout aberto em nova aba para ${product.name}`, { duration: 4000 });
+          
+          // Show instructions
+          toast('💡 Complete o pagamento na nova aba e retorne aqui', {
+            duration: 8000,
+            icon: '💳'
+          });
+        } else {
+          // Fallback to same window if popup blocked
+          toast.success(`✅ Redirecionando para pagamento do ${product.name}...`, { duration: 2000 });
+          
+          setTimeout(() => {
+            window.location.href = url;
+          }, 1000);
+        }
         
         onSuccess?.();
       } else {

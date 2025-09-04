@@ -18,32 +18,11 @@ export interface StripeProduct {
 // Configuração com seus Price IDs reais da Stripe
 export const stripeProducts: StripeProduct[] = [
   {
-    id: 'teste',
-    name: 'Teste',
-    description: 'Plano de teste por apenas R$ 1,00 por ano',
-    price: 100, // R$ 1,00 em centavos
-    priceId: 'price_1S2w0KB4if3rE1yX3gGCzDaQ', // Price ID correto fornecido
-    interval: 'year',
-    mode: 'subscription',
-    accessDuration: 12,
-    features: [
-      'Acesso completo por 1 ano',
-      'Todas as funcionalidades incluídas',
-      'Controle de mesas e comandas',
-      'PDV integrado',
-      'Gestão de estoque',
-      'Relatórios avançados',
-      'Cardápio digital com QR Code',
-      'Suporte técnico',
-      'Plano de teste por R$ 1,00'
-    ]
-  },
-  {
     id: 'mensal',
     name: 'Plano Mensal',
-    description: 'Acesso completo mensal com todas as funcionalidades',
-    price: 12000, // R$ 120,00 em centavos
-    priceId: 'price_1RucPuB4if3rE1yXh76pGzs7', // Seu Price ID real
+    description: 'Todas as funcionalidades, Suporte técnico, incluído Atualizações automáticas e Backup automático',
+    price: 14999, // R$ 149,99 em centavos
+    priceId: 'price_1S3bgGB4if3rE1yXE7zVojFW',
     interval: 'month',
     mode: 'subscription',
     accessDuration: 1,
@@ -55,16 +34,18 @@ export const stripeProducts: StripeProduct[] = [
       'Gestão de estoque',
       'Relatórios avançados',
       'Cardápio digital com QR Code',
-      'Suporte técnico',
+      'Suporte técnico incluído',
+      'Atualizações automáticas',
+      'Backup automático',
       'Flexibilidade mensal'
     ]
   },
   {
     id: 'trimestral',
     name: 'Plano Trimestral',
-    description: 'Acesso completo trimestral com economia',
-    price: 36000, // R$ 360,00 em centavos
-    priceId: 'price_1RvfteB4if3rE1yXvpuv438F', // Seu Price ID real
+    description: 'Acesso completo por 3 meses. Todas as funcionalidades incluídas. Controle de mesas, comandas e PDV integrado',
+    price: 38990, // R$ 389,90 em centavos
+    priceId: 'price_1S3blbB4if3rE1yX2UvDOZyI',
     interval: 'quarter',
     mode: 'subscription',
     popular: true,
@@ -78,21 +59,23 @@ export const stripeProducts: StripeProduct[] = [
       'Relatórios avançados',
       'Cardápio digital com QR Code',
       'Suporte técnico',
-      'Economia no pagamento trimestral'
+      'Economia no pagamento trimestral',
+      'Atualizações automáticas',
+      'Backup automático'
     ]
   },
   {
     id: 'anual',
     name: 'Plano Anual',
-    description: 'Acesso completo anual com máxima economia',
+    description: 'Todas as funcionalidades, Suporte prioritário, Relatórios avançados e Consultoria gratuita',
     price: 129600, // R$ 1.296,00 em centavos
-    priceId: 'price_1RucR4B4if3rE1yXEFat9ZXL', // Seu Price ID real
+    priceId: 'price_1RucR4B4if3rE1yXEFat9ZXL',
     interval: 'year',
     mode: 'subscription',
     accessDuration: 12,
     discount: {
-      savings: 14400, // Economia de R$ 144,00 comparado ao mensal (12 * 120 - 1296)
-      percentage: 10
+      savings: 67188, // Economia vs mensal (12 * 14999 - 129600)
+      percentage: 28
     },
     features: [
       'Acesso completo por 1 ano',
@@ -102,9 +85,11 @@ export const stripeProducts: StripeProduct[] = [
       'Gestão de estoque',
       'Relatórios avançados',
       'Cardápio digital com QR Code',
-      'Suporte técnico',
+      'Suporte prioritário',
+      'Relatórios avançados',
+      'Consultoria gratuita',
       'Máxima economia anual',
-      'Economia de 10% vs mensal'
+      'Economia de 28% vs mensal'
     ]
   }
 ];
@@ -233,14 +218,16 @@ export const getPlanNameByPriceId = (priceId: string): string => {
   return product?.name || 'Plano Desconhecido';
 };
 
-// Função para verificar se é plano de teste
-export const isTestPlan = (priceId: string): boolean => {
-  return priceId === 'price_1SzW0KB4if3rE1yX3gGCzDaQ';
-};
-
 // Função para calcular economia anual
 export const getAnnualSavings = (monthlyPrice: number): number => {
   const annualEquivalent = monthlyPrice * 12;
   const annualPrice = 129600; // R$ 1.296,00 em centavos
   return annualEquivalent - annualPrice;
+};
+
+// Função para calcular economia trimestral
+export const getQuarterlySavings = (monthlyPrice: number): number => {
+  const quarterlyEquivalent = monthlyPrice * 3;
+  const quarterlyPrice = 38990; // R$ 389,90 em centavos
+  return quarterlyEquivalent - quarterlyPrice;
 };

@@ -7,16 +7,14 @@ O sistema ChefComanda está **100% integrado** com seus produtos reais da Stripe
 ### 🔑 Dados Configurados
 
 **Price IDs Reais:**
-- **Teste**: `price_1SzW0KB4if3rE1yX3gGCzDaQ` (R$ 1,00/ano)
-- **Plano Mensal**: `price_1RucPuB4if3rE1yXh76pGzs7` (R$ 120,00/mês)
-- **Plano Trimestral**: `price_1RvfteB4if3rE1yXvpuv438F` (R$ 360,00/trimestre)
+- **Plano Mensal**: `price_1S3bgGB4if3rE1yXE7zVojFW` (R$ 149,99/mês)
+- **Plano Trimestral**: `price_1S3blbB4if3rE1yX2UvDOZyI` (R$ 389,90/trimestre)
 - **Plano Anual**: `price_1RucR4B4if3rE1yXEFat9ZXL` (R$ 1.296,00/ano)
 
-**Webhook Secret:**
-- `whsec_yuJa1uPPPblLyaCVxg57px3wYGUZWrjQ`
-
-**Chave Stripe:**
-- `sk_live_51•••••zEC` (modo produção)
+**Produtos Stripe:**
+- **Plano Mensal**: `prod_SzarCRl6nuRYW2`
+- **Plano Trimestral**: `prod_SzaxqQygY9ByjW`
+- **Plano Anual**: `prod_SqJ322JET3gPo4`
 
 ### 🚀 Funcionalidades Ativas
 
@@ -52,6 +50,17 @@ O sistema ChefComanda está **100% integrado** com seus produtos reais da Stripe
 4. **Pagamento aprovado** → Webhook atualiza banco automaticamente
 5. **Acesso liberado** → Usuário tem acesso completo imediatamente
 
+### 💰 Preços Configurados
+
+- **Plano Mensal**: R$ 149,99/mês
+- **Plano Trimestral**: R$ 389,90/trimestre (equivale a R$ 129,97/mês)
+- **Plano Anual**: R$ 1.296,00/ano (equivale a R$ 108,00/mês)
+
+### 📊 Economia dos Planos
+
+- **Trimestral vs Mensal**: Economia de 13% (R$ 59,97 por trimestre)
+- **Anual vs Mensal**: Economia de 28% (R$ 503,88 por ano)
+
 ### 🔧 Configuração do Webhook no Stripe
 
 Se precisar reconfigurar o webhook:
@@ -63,7 +72,6 @@ Se precisar reconfigurar o webhook:
    - `customer.subscription.updated`
    - `customer.subscription.deleted`
    - `invoice.payment_succeeded`
-4. **Secret**: `whsec_yuJa1uPPPblLyaCVxg57px3wYGUZWrjQ`
 
 ### 🎉 Sistema Pronto para Produção!
 
@@ -76,3 +84,18 @@ O ChefComanda está totalmente funcional com:
 - ✅ Todos os planos funcionais
 
 **Teste agora**: Acesse `/dashboard/profile/planos` e faça uma compra de teste!
+
+### 🎯 Próximos Passos
+
+1. **Configure o webhook secret** nas variáveis de ambiente do Supabase
+2. **Teste cada plano** para verificar o funcionamento
+3. **Configure métodos de pagamento** no Stripe Dashboard
+4. **Ative o modo produção** quando estiver pronto
+
+### 📞 Suporte
+
+- **WhatsApp**: (62) 98276-0471
+- **E-mail**: chefcomandaoficial@gmail.com
+- **Instagram**: @chef_comanda_
+
+O sistema está pronto para receber pagamentos reais!

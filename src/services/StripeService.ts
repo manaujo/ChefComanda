@@ -111,9 +111,13 @@ class StripeService {
       
       // Mensagens de erro mais amigáveis
       if (errorData.error?.includes('No such price')) {
-        throw new Error('Plan not found. This may be a configuration issue. Please contact support.');
+        throw new Error('Produto não encontrado no Stripe. Verifique se o produto está ativo no Stripe Dashboard.');
       } else if (errorData.error?.includes('Price ID não encontrado')) {
         throw new Error('Produto não encontrado no Stripe. Verifique se o produto está ativo no Stripe Dashboard.');
+      } else if (errorData.error?.includes('User not authenticated')) {
+        throw new Error('Sessão expirada. Faça login novamente.');
+      } else if (errorData.error?.includes('Failed to create checkout session')) {
+        throw new Error('Erro ao criar sessão de pagamento. Tente novamente em alguns instantes.');
       }
       
       throw new Error(errorData.error || 'Failed to create checkout session');
@@ -154,10 +158,20 @@ class StripeService {
     try {
       console.log('🔍 Loading user subscription...');
       
+      // Get current user first
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !user) {
+        console.log('ℹ️ No authenticated user found');
+        return null;
+      }
+      
+      console.log('👤 Loading subscription for user:', user.id);
+      
       const { data, error } = await supabase
         .from('stripe_customers')
         .select('*')
-        .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
+        .eq('user_id', user.id)
         .maybeSingle();
 
       if (error) {
@@ -223,9 +237,25 @@ class StripeService {
 
   async getUserOrders() {
     try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !user) {
+        console.log('ℹ️ No authenticated user found for orders');
+        return [];
+      }
+      
+      console.log('📋 Loading orders for user:', user.id);
+      
       const { data, error } = await supabase
-        .from('stripe_user_orders')
+        .from('stripe_orders')
         .select('*')
+        .eq('customer_id', (
+          await supabase
+            .from('stripe_customers')
+            .select('customer_id')
+            .eq('user_id', user.id)
+            .single()
+        ).data?.customer_id || '')
         .order('order_date', { ascending: false });
 
       if (error) {
@@ -233,6 +263,7 @@ class StripeService {
         return [];
       }
 
+      console.log('📋 Orders loaded:', data?.length || 0);
       return data || [];
     } catch (error) {
       console.error('❌ General error loading orders:', error);

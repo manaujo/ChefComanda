@@ -60,38 +60,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   });
 
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     // Check active sessions and subscribe to auth changes
-    // Only check session if user explicitly logged in (not on page load)
-    const hasExplicitLogin = sessionStorage.getItem('explicit_login') === 'true';
-    
-    if (hasExplicitLogin) {
-      supabase.auth.getSession()
-        .then(({ data: { session } }) => {
-          if (session?.user) {
-            loadUserData(session.user);
-          } else {
-            setState({
-              user: null,
-              userRole: null,
-              loading: false,
-              displayName: null,
-              isEmployee: false,
-              employeeData: null,
-              restaurantId: null,
-              currentPlan: null
-            });
-          }
-        })
-        .catch(async (error) => {
-          console.error("Error getting session:", error);
-          // Clear any invalid tokens
-          try {
-            await supabase.auth.signOut();
-          } catch (signOutError) {
-            console.error("Error signing out:", signOutError);
-          }
+    supabase.auth.getSession()
+      .then(({ data: { session } }) => {
+        if (session?.user) {
+          loadUserData(session.user);
+        } else {
           setState({
             user: null,
             userRole: null,
@@ -102,20 +79,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
             restaurantId: null,
             currentPlan: null
           });
+        }
+      })
+      .catch(async (error) => {
+        console.error("Error getting session:", error);
+        // Clear any invalid tokens
+        try {
+          await supabase.auth.signOut();
+        } catch (signOutError) {
+          console.error("Error signing out:", signOutError);
+        }
+        setState({
+          user: null,
+          userRole: null,
+          loading: false,
+          displayName: null,
+          isEmployee: false,
+          employeeData: null,
+          restaurantId: null,
+          currentPlan: null
         });
-    } else {
-      // No explicit login, set loading to false immediately
-      setState({
-        user: null,
-        userRole: null,
-        loading: false,
-        displayName: null,
-        isEmployee: false,
-        employeeData: null,
-        restaurantId: null,
-        currentPlan: null
       });
-    }
 
     const {
       data: { subscription }
@@ -517,9 +501,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const signIn = async (email: string, password: string) => {
     try {
       console.log("Starting signin process for:", email);
-      
-      // Mark that user explicitly logged in
-      sessionStorage.setItem('explicit_login', 'true');
 
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
