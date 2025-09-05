@@ -24,18 +24,23 @@ const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({
 }) => {
   const { user, currentPlan } = useAuth();
   const [subscription, setSubscription] = useState<any>(null);
+  const [effectiveSubscription, setEffectiveSubscription] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (user) {
-      loadSubscription();
+      loadSubscriptionAndInheritance();
     }
   }, [user]);
 
-  const loadSubscription = async () => {
+  const loadSubscriptionAndInheritance = async () => {
     try {
+      // Load regular subscription
       const subscriptionData = await StripeService.getUserSubscription();
       setSubscription(subscriptionData);
+      
+      // The subscription data already includes inheritance info
+      setEffectiveSubscription(subscriptionData);
     } catch (error) {
       console.error('Error loading subscription:', error);
     } finally {
@@ -54,16 +59,99 @@ const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({
     );
   };
 
-  const subscriptionStatus = getSubscriptionStatus(subscription);
+  // Use effective subscription if available (for employees), otherwise use regular subscription
+  const activeSubscription = effectiveSubscription || subscription;
+  const subscriptionStatus = getSubscriptionStatus(activeSubscription);
 
   // Se não requer assinatura ativa (Dashboard e Profile), permitir acesso
   if (!requireActiveSubscription) {
     return <>{children}</>;
   }
 
-  // Se tem plano ativo, permitir acesso
-  if (subscriptionStatus.isActive) {
+  // Se tem plano ativo (próprio ou herdado), permitir acesso
+  if (subscriptionStatus.isActive || (effectiveSubscription && effectiveSubscription.is_active)) {
     return <>{children}</>;
+  }
+
+  // Se é funcionário com plano herdado ativo, mostrar interface especial
+  if (effectiveSubscription?.is_inherited && effectiveSubscription?.is_active) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50/30 to-teal-50/30 dark:from-gray-900 dark:via-gray-800 dark:to-gray-700 flex items-center justify-center p-4">
+        <div className="max-w-2xl w-full">
+          <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-3xl shadow-2xl border border-white/20 dark:border-gray-700/50 overflow-hidden">
+            <div className="bg-gradient-to-r from-green-600 via-green-700 to-emerald-700 p-8 text-center">
+              <div className="flex justify-center mb-6">
+                <div className="relative">
+                  <div className="p-6 bg-white/20 backdrop-blur-sm rounded-3xl">
+                    <CheckCircle size={48} className="text-white" />
+                  </div>
+                  <div className="absolute -top-2 -right-2 w-8 h-8 bg-green-400 rounded-full flex items-center justify-center animate-pulse">
+                    <Crown size={16} className="text-white" />
+                  </div>
+                </div>
+              </div>
+              <h1 className="text-4xl font-bold text-white mb-4">
+                Acesso Herdado Ativo
+              </h1>
+              <p className="text-xl text-green-100 mb-6">
+                Você tem acesso completo ao ChefComanda através do plano ativo da conta principal
+              </p>
+            </div>
+            
+            <div className="p-8">
+              <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-2xl p-6 border border-green-200/50 dark:border-green-700/50 mb-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center">
+                    <div className="p-3 bg-green-100 dark:bg-green-900/50 rounded-2xl mr-4">
+                      <Crown className="w-6 h-6 text-green-600 dark:text-green-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-green-800 dark:text-green-200">
+                        Plano Ativo: {effectiveSubscription.plan_name || 'Plano Ativo'}
+                      </h3>
+                      <p className="text-green-600 dark:text-green-400">
+                        Administrador: {effectiveSubscription.owner_name || 'Conta Principal'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className="inline-flex items-center px-4 py-2 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-full text-sm font-bold">
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      Acesso Completo
+                    </span>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="text-center p-4 bg-white/50 dark:bg-gray-800/50 rounded-xl">
+                    <Shield className="w-6 h-6 text-green-600 dark:text-green-400 mx-auto mb-2" />
+                    <p className="text-sm font-semibold text-green-800 dark:text-green-200">Todas as Funcionalidades</p>
+                  </div>
+                  <div className="text-center p-4 bg-white/50 dark:bg-gray-800/50 rounded-xl">
+                    <Zap className="w-6 h-6 text-green-600 dark:text-green-400 mx-auto mb-2" />
+                    <p className="text-sm font-semibold text-green-800 dark:text-green-200">Acesso em Tempo Real</p>
+                  </div>
+                  <div className="text-center p-4 bg-white/50 dark:bg-gray-800/50 rounded-xl">
+                    <Crown className="w-6 h-6 text-green-600 dark:text-green-400 mx-auto mb-2" />
+                    <p className="text-sm font-semibold text-green-800 dark:text-green-200">Plano Compartilhado</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="text-center">
+                <Button
+                  onClick={() => window.location.href = '/dashboard'}
+                  className="bg-gradient-to-r from-green-600 to-emerald-700 hover:from-green-700 hover:to-emerald-800 text-white px-8 py-4 rounded-2xl font-bold text-lg shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105"
+                  icon={<ArrowRight size={20} />}
+                >
+                  Acessar Sistema
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   // Caso contrário, mostrar tela de upgrade

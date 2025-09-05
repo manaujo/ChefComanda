@@ -33,6 +33,8 @@ interface SubscriptionData {
 const Planos: React.FC = () => {
   const { user, currentPlan, refreshSubscription } = useAuth();
   const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
+  const [effectiveSubscription, setEffectiveSubscription] = useState<any>(null);
+  const [isEmployee, setIsEmployee] = useState(false);
   const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState<any[]>([]);
   const [canceling, setCanceling] = useState(false);
@@ -44,8 +46,37 @@ const Planos: React.FC = () => {
     if (user) {
       loadSubscriptionData();
       loadOrderHistory();
+      checkEmployeeStatus();
     }
   }, [user]);
+
+  const checkEmployeeStatus = async () => {
+    if (!user) return;
+    
+    try {
+      const { data: employeeData, error } = await supabase
+        .from('employees')
+        .select('auth_user_id, name, role')
+        .eq('auth_user_id', user.id)
+        .eq('active', true)
+        .maybeSingle();
+      
+      if (!error && employeeData) {
+        setIsEmployee(true);
+        
+        // Load effective subscription for employee
+        const { data: effectiveData, error: effectiveError } = await supabase
+          .rpc('get_effective_subscription_details', { p_user_id: user.id });
+        
+        if (!effectiveError && effectiveData && effectiveData.length > 0) {
+          setEffectiveSubscription(effectiveData[0]);
+          console.log('📋 Effective subscription for employee:', effectiveData[0]);
+        }
+      }
+    } catch (error) {
+      console.error('Error checking employee status:', error);
+    }
+  };
 
   const loadSubscriptionData = async () => {
     if (!user) {
@@ -404,35 +435,64 @@ const Planos: React.FC = () => {
       </div>
 
       {/* Current Subscription Status */}
-      {subscription && (
+      {(subscription || effectiveSubscription) && (
         <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-3xl shadow-2xl border border-white/20 dark:border-gray-700/50 overflow-hidden mb-12">
           {/* Header da Assinatura */}
-          <div className="bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 p-8">
+          <div className={`p-8 ${
+            effectiveSubscription && effectiveSubscription.is_inherited
+              ? 'bg-gradient-to-r from-green-600 via-green-700 to-emerald-700'
+              : 'bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700'
+          }`}>
             <div className="flex items-center justify-between">
               <div className="flex items-center">
                 <div className="p-4 bg-white/20 backdrop-blur-sm rounded-2xl mr-6">
-                  <Crown className="w-8 h-8 text-white" />
+                  {effectiveSubscription && effectiveSubscription.is_inherited ? (
+                    <Users className="w-8 h-8 text-white" />
+                  ) : (
+                    <Crown className="w-8 h-8 text-white" />
+                  )}
                 </div>
                 <div className="text-white">
                   <h2 className="text-3xl font-bold mb-2">
-                    {currentProduct ? currentProduct.name : 'Sua Assinatura'}
+                    {effectiveSubscription && effectiveSubscription.is_inherited 
+                      ? `${effectiveSubscription.plan_name} (Herdado)`
+                      : currentProduct ? currentProduct.name : 'Sua Assinatura'
+                    }
                   </h2>
                   <div className="flex items-center space-x-4">
                     <div className="flex items-center">
-                      {getStatusIcon(subscription.subscription_status)}
+                      {getStatusIcon((effectiveSubscription || subscription).subscription_status || (effectiveSubscription || subscription).status)}
                       <span className="ml-2 text-lg font-semibold">
-                        {getStatusText(subscription.subscription_status)}
+                        {getStatusText((effectiveSubscription || subscription).subscription_status || (effectiveSubscription || subscription).status)}
                       </span>
                     </div>
-                    {currentProduct && (
+                    {(currentProduct || effectiveSubscription) && (
                       <div className="bg-white/20 backdrop-blur-sm px-4 py-2 rounded-xl">
                         <span className="text-white font-semibold">
-                          {formatPrice(currentProduct.price)}/{currentProduct.interval === 'year' ? 'ano' : 
-                           currentProduct.interval === 'quarter' ? 'trimestre' : 'mês'}
+                          {effectiveSubscription && effectiveSubscription.is_inherited
+                            ? 'Plano Compartilhado'
+                            : currentProduct 
+                              ? `${formatPrice(currentProduct.price)}/${currentProduct.interval === 'year' ? 'ano' : 
+                                 currentProduct.interval === 'quarter' ? 'trimestre' : 'mês'}`
+                              : 'Plano Ativo'
+                          }
                         </span>
                       </div>
                     )}
                   </div>
+                  {effectiveSubscription && effectiveSubscription.is_inherited && (
+                    <div className="mt-4 bg-white/20 backdrop-blur-sm rounded-2xl p-4">
+                      <div className="flex items-center">
+                        <Info className="w-5 h-5 text-white mr-3" />
+                        <div className="text-white">
+                          <p className="font-semibold">Acesso Herdado</p>
+                          <p className="text-sm opacity-90">
+                            Administrador: {effectiveSubscription.owner_name || 'Conta Principal'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
               <Button
@@ -450,8 +510,26 @@ const Planos: React.FC = () => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               {/* Informações da Assinatura */}
               <div className="lg:col-span-2 space-y-6">
+                {/* Aviso para Funcionários */}
+                {effectiveSubscription && effectiveSubscription.is_inherited && (
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-2xl p-6 border border-blue-200/50 dark:border-blue-700/50">
+                    <div className="flex items-center">
+                      <Info className="w-6 h-6 text-blue-600 dark:text-blue-400 mr-3" />
+                      <div>
+                        <h3 className="text-lg font-bold text-blue-800 dark:text-blue-200">
+                          Funcionário com Acesso Herdado
+                        </h3>
+                        <p className="text-blue-600 dark:text-blue-400">
+                          Você tem acesso completo através do plano da conta principal. 
+                          Para alterar o plano, entre em contato com o administrador.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
                 {/* Próxima Cobrança */}
-                {subscription.current_period_end && (
+                {(effectiveSubscription || subscription)?.current_period_end && !effectiveSubscription?.is_inherited && (
                   <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-2xl p-6 border border-blue-200/50 dark:border-blue-700/50">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center">
@@ -461,16 +539,16 @@ const Planos: React.FC = () => {
                             Próxima Cobrança
                           </h3>
                           <p className="text-blue-600 dark:text-blue-400">
-                            {subscription.cancel_at_period_end ? 'Assinatura expira em' : 'Renovação automática em'}
+                            {(effectiveSubscription || subscription).cancel_at_period_end ? 'Assinatura expira em' : 'Renovação automática em'}
                           </p>
                         </div>
                       </div>
                       <div className="text-right">
                         <p className="text-2xl font-bold text-blue-800 dark:text-blue-200">
-                          {formatDate(subscription.current_period_end)}
+                          {formatDate((effectiveSubscription || subscription).current_period_end)}
                         </p>
                         <p className="text-sm text-blue-600 dark:text-blue-400">
-                          {Math.ceil((subscription.current_period_end * 1000 - Date.now()) / (1000 * 60 * 60 * 24))} dias
+                          {Math.ceil(((effectiveSubscription || subscription).current_period_end * 1000 - Date.now()) / (1000 * 60 * 60 * 24))} dias
                         </p>
                       </div>
                     </div>
@@ -478,7 +556,7 @@ const Planos: React.FC = () => {
                 )}
 
                 {/* Método de Pagamento */}
-                {subscription.payment_method_brand && subscription.payment_method_last4 && (
+                {(effectiveSubscription || subscription)?.payment_method_brand && (effectiveSubscription || subscription)?.payment_method_last4 && !effectiveSubscription?.is_inherited && (
                   <div className="bg-gradient-to-r from-purple-50 to-violet-50 dark:from-purple-900/20 dark:to-violet-900/20 rounded-2xl p-6 border border-purple-200/50 dark:border-purple-700/50">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center">
@@ -488,7 +566,7 @@ const Planos: React.FC = () => {
                             Método de Pagamento
                           </h3>
                           <p className="text-purple-600 dark:text-purple-400">
-                            {getPaymentMethodIcon(subscription.payment_method_brand)} •••• {subscription.payment_method_last4}
+                            {getPaymentMethodIcon((effectiveSubscription || subscription).payment_method_brand)} •••• {(effectiveSubscription || subscription).payment_method_last4}
                           </p>
                         </div>
                       </div>
@@ -505,12 +583,13 @@ const Planos: React.FC = () => {
                 )}
 
                 {/* Ações da Assinatura */}
+                {!effectiveSubscription?.is_inherited && (
                 <div className="bg-gradient-to-r from-gray-50 to-slate-50 dark:from-gray-700/20 dark:to-slate-700/20 rounded-2xl p-6 border border-gray-200/50 dark:border-gray-600/50">
                   <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200 mb-4">
                     Gerenciar Assinatura
                   </h3>
                   <div className="flex flex-wrap gap-4">
-                    {subscription.subscription_status === 'active' && !subscription.cancel_at_period_end && (
+                    {(effectiveSubscription || subscription)?.subscription_status === 'active' && !(effectiveSubscription || subscription)?.cancel_at_period_end && (
                       <Button
                         variant="warning"
                         onClick={() => setShowCancelModal(true)}
@@ -521,10 +600,10 @@ const Planos: React.FC = () => {
                       </Button>
                     )}
                     
-                    {subscription.cancel_at_period_end && (
+                    {(effectiveSubscription || subscription)?.cancel_at_period_end && (
                       <div className="flex items-center space-x-4">
                         <div className="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 px-4 py-2 rounded-xl font-semibold">
-                          ⚠️ Assinatura será cancelada em {formatDate(subscription.current_period_end!)}
+                          ⚠️ Assinatura será cancelada em {formatDate((effectiveSubscription || subscription).current_period_end!)}
                         </div>
                         <a 
                           href="https://wa.me/5562982760471?text=Olá! Gostaria de reativar minha assinatura do ChefComanda."
@@ -556,6 +635,7 @@ const Planos: React.FC = () => {
                     </a>
                   </div>
                 </div>
+                )}
               </div>
 
               {/* Resumo da Assinatura */}
@@ -568,28 +648,44 @@ const Planos: React.FC = () => {
                     <div className="flex justify-between items-center">
                       <span className="text-gray-600 dark:text-gray-400">Plano Atual</span>
                       <span className="font-semibold text-gray-900 dark:text-white">
-                        {currentProduct?.name || 'N/A'}
+                        {effectiveSubscription && effectiveSubscription.is_inherited
+                          ? `${effectiveSubscription.plan_name} (Herdado)`
+                          : currentProduct?.name || 'N/A'
+                        }
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-gray-600 dark:text-gray-400">Status</span>
-                      <span className={`px-3 py-1 rounded-full text-sm font-semibold ${getStatusColor(subscription.subscription_status)}`}>
-                        {getStatusText(subscription.subscription_status)}
+                      <span className={`px-3 py-1 rounded-full text-sm font-semibold ${getStatusColor((effectiveSubscription || subscription)?.subscription_status || (effectiveSubscription || subscription)?.status)}`}>
+                        {getStatusText((effectiveSubscription || subscription)?.subscription_status || (effectiveSubscription || subscription)?.status)}
                       </span>
                     </div>
-                    {subscription.current_period_start && (
+                    {(effectiveSubscription || subscription)?.current_period_start && (
                       <div className="flex justify-between items-center">
                         <span className="text-gray-600 dark:text-gray-400">Início do Período</span>
                         <span className="font-semibold text-gray-900 dark:text-white">
-                          {formatDate(subscription.current_period_start)}
+                          {formatDate((effectiveSubscription || subscription).current_period_start)}
                         </span>
                       </div>
                     )}
-                    {currentProduct && (
+                    {(currentProduct || effectiveSubscription) && (
                       <div className="flex justify-between items-center">
                         <span className="text-gray-600 dark:text-gray-400">Valor</span>
                         <span className="font-semibold text-gray-900 dark:text-white">
-                          {formatPrice(currentProduct.price)}
+                          {effectiveSubscription && effectiveSubscription.is_inherited
+                            ? 'Incluído no plano principal'
+                            : currentProduct 
+                              ? formatPrice(currentProduct.price)
+                              : 'N/A'
+                          }
+                        </span>
+                      </div>
+                    )}
+                    {effectiveSubscription && effectiveSubscription.is_inherited && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-600 dark:text-gray-400">Administrador</span>
+                        <span className="font-semibold text-gray-900 dark:text-white">
+                          {effectiveSubscription.owner_name || 'Conta Principal'}
                         </span>
                       </div>
                     )}
@@ -597,13 +693,20 @@ const Planos: React.FC = () => {
                 </div>
 
                 {/* Benefícios do Plano Atual */}
-                {currentProduct && (
+                {(currentProduct || effectiveSubscription) && (
                   <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-2xl p-6 border border-green-200/50 dark:border-green-700/50">
                     <h3 className="text-lg font-bold text-green-800 dark:text-green-200 mb-4">
-                      ✨ Seu Acesso Inclui
+                      ✨ {effectiveSubscription && effectiveSubscription.is_inherited ? 'Acesso Herdado Inclui' : 'Seu Acesso Inclui'}
                     </h3>
                     <ul className="space-y-2">
-                      {currentProduct.features.slice(0, 6).map((feature, index) => (
+                      {(currentProduct?.features || [
+                        'Acesso completo ao sistema',
+                        'Controle de mesas e comandas',
+                        'PDV integrado',
+                        'Gestão de estoque',
+                        'Relatórios avançados',
+                        'Cardápio digital com QR Code'
+                      ]).slice(0, 6).map((feature, index) => (
                         <li key={index} className="flex items-center text-sm">
                           <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400 mr-2 flex-shrink-0" />
                           <span className="text-green-700 dark:text-green-300">{feature}</span>
@@ -619,6 +722,7 @@ const Planos: React.FC = () => {
       )}
 
       {/* Plans Grid */}
+      {!isEmployee && (
       <div className="mb-16">
         <div className="text-center mb-12">
           <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
@@ -763,6 +867,31 @@ const Planos: React.FC = () => {
           ))}
         </div>
       </div>
+      )}
+      
+      {/* Mensagem para Funcionários */}
+      {isEmployee && (
+        <div className="mb-16">
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-3xl p-8 border border-blue-200/50 dark:border-blue-700/50 text-center">
+            <div className="flex justify-center mb-6">
+              <div className="p-4 bg-blue-100 dark:bg-blue-900/50 rounded-2xl">
+                <Users className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+              </div>
+            </div>
+            <h2 className="text-3xl font-bold text-blue-800 dark:text-blue-200 mb-4">
+              Conta de Funcionário
+            </h2>
+            <p className="text-xl text-blue-600 dark:text-blue-400 mb-6">
+              Você tem acesso completo ao ChefComanda através do plano ativo da conta principal.
+              Para alterar planos ou gerenciar assinaturas, entre em contato com o administrador.
+            </p>
+            <div className="inline-flex items-center px-6 py-3 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 rounded-2xl font-semibold">
+              <CheckCircle className="w-5 h-5 mr-2" />
+              Acesso Completo Ativo
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Funcionalidades Completas */}
       <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-3xl shadow-2xl border border-white/20 dark:border-gray-700/50 overflow-hidden mb-12">

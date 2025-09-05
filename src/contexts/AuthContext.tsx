@@ -261,9 +261,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           if (product) {
             // Add status indicator for trial periods
             if (subscription.subscription_status === 'trialing' || subscription.status === 'trialing') {
-              currentPlan = `${product.name} (Free Trial)`;
+              currentPlan = subscription.is_inherited 
+                ? `${product.name} (Herdado - Trial)` 
+                : `${product.name} (Free Trial)`;
             } else {
-              currentPlan = product.name;
+              currentPlan = subscription.is_inherited 
+                ? `${product.name} (Herdado)` 
+                : product.name;
             }
             console.log('✅ Plan identified:', currentPlan);
           } else {

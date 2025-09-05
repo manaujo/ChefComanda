@@ -168,49 +168,30 @@ class StripeService {
       
       console.log('👤 Loading subscription for user:', user.id);
       
-      const { data, error } = await supabase
-        .from('stripe_customers')
-        .select('*')
-        .eq('user_id', user.id)
-        .maybeSingle();
+      // Use the new RPC function to get effective subscription details
+      const { data: effectiveSubscription, error: rpcError } = await supabase
+        .rpc('get_effective_subscription_details', { p_user_id: user.id });
 
-      if (error) {
-        console.error('❌ Error loading customer:', error);
+      if (rpcError) {
+        console.error('❌ Error loading effective subscription:', rpcError);
         return null;
       }
 
-      if (!data) {
-        console.log('ℹ️ No customer found for user');
+      if (!effectiveSubscription || effectiveSubscription.length === 0) {
+        console.log('ℹ️ No effective subscription found');
         return null;
       }
 
-      console.log('👤 Customer found:', data.customer_id);
-
-      // Get subscription data for this customer
-      const { data: subscriptionData, error: subError } = await supabase
-        .from('stripe_subscriptions')
-        .select('*')
-        .eq('customer_id', data.customer_id)
-        .maybeSingle();
-
-      if (subError) {
-        console.error('❌ Error loading subscription data:', subError);
-        return null;
-      }
-
-      if (!subscriptionData) {
-        console.log('ℹ️ No subscription found for customer');
-        return null;
-      }
-
-      console.log('📋 Subscription found:', {
-        subscriptionId: subscriptionData.subscription_id,
-        status: subscriptionData.status,
-        priceId: subscriptionData.price_id,
-        currentPeriodEnd: subscriptionData.current_period_end
+      const subscription = effectiveSubscription[0];
+      
+      console.log('📋 Effective subscription found:', {
+        subscriptionId: subscription.subscription_id,
+        status: subscription.status,
+        priceId: subscription.price_id,
+        currentPeriodEnd: subscription.current_period_end,
+        isInherited: subscription.is_inherited,
+        ownerName: subscription.owner_name
       });
-
-      const subscription = subscriptionData;
       
       // Return null if subscription is canceled or incomplete
       if (subscription && (subscription.status === 'canceled' || subscription.status === 'incomplete')) {
@@ -218,17 +199,28 @@ class StripeService {
         return null;
       }
       
-      return subscription ? {
-        customer_id: data.customer_id,
+      // Add inheritance info for employees
+      const result = {
+        customer_id: subscription.customer_id,
         subscription_id: subscription.subscription_id,
-        subscription_status: subscription.status || 'unknown',
+        subscription_status: subscription.status,
         price_id: subscription.price_id,
         current_period_start: subscription.current_period_start,
         current_period_end: subscription.current_period_end,
         cancel_at_period_end: subscription.cancel_at_period_end,
         payment_method_brand: subscription.payment_method_brand,
-        payment_method_last4: subscription.payment_method_last4
-      } : null;
+        payment_method_last4: subscription.payment_method_last4,
+        is_inherited: subscription.is_inherited,
+        owner_name: subscription.owner_name
+      };
+      
+      if (subscription.is_inherited) {
+        console.log('✅ Returning inherited subscription for employee');
+      } else {
+        console.log('✅ Returning direct subscription for admin');
+      }
+      
+      return subscription ? result : null;
     } catch (error) {
       console.error('❌ General error loading subscription:', error);
       return null;
