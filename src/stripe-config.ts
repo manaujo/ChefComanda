@@ -15,7 +15,7 @@ export interface StripeProduct {
   accessDuration: number; // em meses
 }
 
-// Configuração com seus Price IDs reais da Stripe
+// Configuração com seus produtos reais da Stripe
 export const stripeProducts: StripeProduct[] = [
   {
     id: 'mensal',
@@ -27,17 +27,16 @@ export const stripeProducts: StripeProduct[] = [
     mode: 'subscription',
     accessDuration: 1,
     features: [
-      'Acesso completo por 1 mês',
-      'Todas as funcionalidades incluídas',
+      'Todas as funcionalidades',
+      'Suporte técnico incluído',
+      'Atualizações automáticas',
+      'Backup automático',
       'Controle de mesas e comandas',
       'PDV integrado',
       'Gestão de estoque',
       'Relatórios avançados',
       'Cardápio digital com QR Code',
-      'Suporte técnico incluído',
-      'Atualizações automáticas',
-      'Backup automático',
-      'Flexibilidade mensal'
+      'Sistema de funcionários'
     ]
   },
   {
@@ -48,18 +47,21 @@ export const stripeProducts: StripeProduct[] = [
     priceId: 'price_1S3blbB4if3rE1yX2UvDOZyI',
     interval: 'quarter',
     mode: 'subscription',
-    popular: true,
     accessDuration: 3,
+    popular: true,
+    discount: {
+      savings: 5997, // R$ 59,97 de economia vs mensal
+      percentage: 13
+    },
     features: [
       'Acesso completo por 3 meses',
       'Todas as funcionalidades incluídas',
-      'Controle de mesas e comandas',
-      'PDV integrado',
-      'Gestão de estoque',
+      'Controle de mesas, comandas e PDV integrado',
+      'Gestão de estoque completa',
       'Relatórios avançados',
       'Cardápio digital com QR Code',
-      'Suporte técnico',
-      'Economia no pagamento trimestral',
+      'Sistema de funcionários',
+      'Suporte técnico incluído',
       'Atualizações automáticas',
       'Backup automático'
     ]
@@ -74,22 +76,22 @@ export const stripeProducts: StripeProduct[] = [
     mode: 'subscription',
     accessDuration: 12,
     discount: {
-      savings: 67188, // Economia vs mensal (12 * 14999 - 129600)
+      savings: 50388, // R$ 503,88 de economia vs mensal
       percentage: 28
     },
     features: [
-      'Acesso completo por 1 ano',
-      'Todas as funcionalidades incluídas',
-      'Controle de mesas e comandas',
-      'PDV integrado',
-      'Gestão de estoque',
-      'Relatórios avançados',
-      'Cardápio digital com QR Code',
+      'Todas as funcionalidades',
       'Suporte prioritário',
       'Relatórios avançados',
       'Consultoria gratuita',
-      'Máxima economia anual',
-      'Economia de 28% vs mensal'
+      'Controle completo de mesas e comandas',
+      'PDV integrado',
+      'Gestão de estoque avançada',
+      'CMV (Custo da Mercadoria Vendida)',
+      'Cardápio digital com QR Code',
+      'Sistema de funcionários completo',
+      'Atualizações automáticas',
+      'Backup automático'
     ]
   }
 ];
@@ -206,9 +208,9 @@ export const getSubscriptionStatus = (subscription: any): {
   }
 };
 
-// Função para verificar se todos os planos dão o mesmo acesso
+// Função para verificar se tem acesso completo
 export const hasFullAccess = (subscription: any): boolean => {
-  // Todos os planos (exceto quando não há assinatura) dão acesso completo
+  // Todos os planos dão acesso completo
   return hasActiveSubscription(subscription);
 };
 
@@ -216,18 +218,4 @@ export const hasFullAccess = (subscription: any): boolean => {
 export const getPlanNameByPriceId = (priceId: string): string => {
   const product = getProductByPriceId(priceId);
   return product?.name || 'Plano Desconhecido';
-};
-
-// Função para calcular economia anual
-export const getAnnualSavings = (monthlyPrice: number): number => {
-  const annualEquivalent = monthlyPrice * 12;
-  const annualPrice = 129600; // R$ 1.296,00 em centavos
-  return annualEquivalent - annualPrice;
-};
-
-// Função para calcular economia trimestral
-export const getQuarterlySavings = (monthlyPrice: number): number => {
-  const quarterlyEquivalent = monthlyPrice * 3;
-  const quarterlyPrice = 38990; // R$ 389,90 em centavos
-  return quarterlyEquivalent - quarterlyPrice;
 };
