@@ -1,11 +1,19 @@
-import React, { useState, useEffect } from 'react';
-import { X, CreditCard, QrCode, Wallet, Percent, Music, Receipt } from 'lucide-react';
-import Button from '../ui/Button';
-import { useRestaurante } from '../../contexts/RestauranteContext';
-import { formatarDinheiro } from '../../utils/formatters';
-import toast from 'react-hot-toast';
-import { supabase } from '../../services/supabase';
-import { useAuth } from '../../contexts/AuthContext';
+import React, { useState, useEffect } from "react";
+import {
+  X,
+  CreditCard,
+  QrCode,
+  Wallet,
+  Percent,
+  Music,
+  Receipt
+} from "lucide-react";
+import Button from "../ui/Button";
+import { useRestaurante } from "../../contexts/RestauranteContext";
+import { formatarDinheiro } from "../../utils/formatters";
+import toast from "react-hot-toast";
+import { supabase } from "../../services/supabase";
+import { useAuth } from "../../contexts/AuthContext";
 
 interface PagamentoModalProps {
   isOpen: boolean;
@@ -13,28 +21,39 @@ interface PagamentoModalProps {
   mesa: Mesa;
 }
 
-const PagamentoModal: React.FC<PagamentoModalProps> = ({ isOpen, onClose, mesa }) => {
-  const [formaPagamento, setFormaPagamento] = useState<'pix' | 'dinheiro' | 'cartao' | null>(null);
+const PagamentoModal: React.FC<PagamentoModalProps> = ({
+  isOpen,
+  onClose,
+  mesa
+}) => {
+  const [formaPagamento, setFormaPagamento] = useState<
+    "pix" | "dinheiro" | "cartao" | null
+  >(null);
   const [loading, setLoading] = useState(false);
   const [taxaServico, setTaxaServico] = useState(false);
   const [couvertArtistico, setCouvertArtistico] = useState(false);
   const [desconto, setDesconto] = useState({
-    tipo: 'percentual' as 'percentual' | 'valor',
+    tipo: "percentual" as "percentual" | "valor",
     valor: 0
   });
   const [itensComanda, setItensComanda] = useState<ComandaItemData[]>([]);
-  
-  const { finalizarPagamento, itensComanda: allItensComanda, refreshData } = useRestaurante();
+
+  const {
+    finalizarPagamento,
+    itensComanda: allItensComanda,
+    refreshData
+  } = useRestaurante();
   const { user } = useAuth();
 
   useEffect(() => {
     if (isOpen && mesa) {
       // Filtrar itens da comanda para esta mesa
       // Filtrar apenas itens ativos (não entregues ou cancelados)
-      const itensMesa = allItensComanda.filter(item => 
-        item.mesa_id === mesa.id && 
-        item.status !== 'entregue' && 
-        item.status !== 'cancelado'
+      const itensMesa = allItensComanda.filter(
+        (item) =>
+          item.mesa_id === mesa.id &&
+          item.status !== "entregue" &&
+          item.status !== "cancelado"
       );
       setItensComanda(itensMesa);
     }
@@ -42,111 +61,35 @@ const PagamentoModal: React.FC<PagamentoModalProps> = ({ isOpen, onClose, mesa }
 
   // Calcular valor total dos itens
   const valorTotalItens = itensComanda.reduce((total, item) => {
-    return total + (item.preco_unitario * item.quantidade);
+    return total + item.preco_unitario * item.quantidade;
   }, 0);
 
   const valorTaxaServico = taxaServico ? valorTotalItens * 0.1 : 0;
   const valorCouvert = couvertArtistico ? 15 * (mesa.capacidade || 1) : 0;
-  
+
   const calcularDesconto = () => {
-    if (desconto.tipo === 'percentual') {
-      return (valorTotalItens + valorTaxaServico + valorCouvert) * (desconto.valor / 100);
+    if (desconto.tipo === "percentual") {
+      return (
+        (valorTotalItens + valorTaxaServico + valorCouvert) *
+        (desconto.valor / 100)
+      );
     }
     return desconto.valor;
   };
 
   const valorDesconto = calcularDesconto();
-  const valorTotal = valorTotalItens + valorTaxaServico + valorCouvert - valorDesconto;
-
-  const registrarMovimentacaoCaixa = async (valor: number, formaPagamento: string, mesaNumero: number) => {
-    try {
-      // PRIORIDADE 1: Buscar caixa aberto do operador atual (funcionário ou usuário principal)
-      const { data: caixaAberto, error: caixaError } = await supabase
-        .from('caixas_operadores')
-        .select('*')
-        .eq('operador_id', user?.id)
-        .eq('status', 'aberto')
-        .maybeSingle();
-
-      if (caixaError) {
-        console.error('Error finding cash register:', caixaError);
-        // Não retornar aqui, tentar buscar qualquer caixa aberto
-      }
-
-      if (!caixaAberto) {
-        // PRIORIDADE 2: Se não encontrou caixa do operador atual, buscar qualquer caixa aberto do restaurante
-        const { data: qualquerCaixa, error: qualquerCaixaError } = await supabase
-          .from('caixas_operadores')
-          .select('*')
-          .eq('restaurante_id', restaurante?.id)
-          .eq('status', 'aberto')
-          .order('data_abertura', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        if (qualquerCaixaError || !qualquerCaixa) {
-          console.warn('No open cash register found for restaurant');
-          return;
-        }
-
-        // Usar o caixa encontrado
-        const { error: movError } = await supabase
-          .from('movimentacoes_caixa')
-          .insert({
-            caixa_operador_id: qualquerCaixa.id,
-            tipo: 'entrada',
-            valor: valor,
-            motivo: `Pagamento Mesa ${mesaNumero}`,
-            observacao: `${formaPagamento.toUpperCase()} - ${itensComanda.length} ${itensComanda.length === 1 ? 'item' : 'itens'}${taxaServico ? ' + Taxa 10%' : ''}${couvertArtistico ? ` + Couvert` : ''}${valorDesconto > 0 ? ` - Desconto` : ''} - Finalizado por funcionário`,
-            forma_pagamento: formaPagamento,
-            usuario_id: user?.id || ''
-          });
-
-        if (movError) {
-          console.error('Error registering cash movement:', movError);
-          throw movError;
-        }
-
-        console.log(`Movimentação registrada no caixa ${qualquerCaixa.id} (fallback) - Operador: ${qualquerCaixa.operador_nome} - Valor: ${valor}`);
-        return;
-      }
-
-      // Registrar movimentação
-      const { error: movError } = await supabase
-        .from('movimentacoes_caixa')
-        .insert({
-          caixa_operador_id: caixaAberto.id,
-          tipo: 'entrada',
-          valor: valor,
-          motivo: `Pagamento Mesa ${mesaNumero}`,
-          observacao: `${formaPagamento.toUpperCase()} - ${itensComanda.length} ${itensComanda.length === 1 ? 'item' : 'itens'}${taxaServico ? ' + Taxa 10%' : ''}${couvertArtistico ? ` + Couvert` : ''}${valorDesconto > 0 ? ` - Desconto` : ''} - Operador: ${caixaAberto.operador_nome}`,
-          forma_pagamento: formaPagamento,
-          usuario_id: user?.id || ''
-        });
-
-      if (movError) {
-        console.error('Error registering cash movement:', movError);
-        throw movError;
-      }
-
-      console.log(`Movimentação registrada no caixa ${caixaAberto.id} - Operador: ${caixaAberto.operador_nome} - Valor: ${valor}`);
-    } catch (error) {
-      console.error('Error in registrarMovimentacaoCaixa:', error);
-      // Don't throw error to avoid breaking payment flow
-    }
-  };
+  const valorTotal =
+    valorTotalItens + valorTaxaServico + valorCouvert - valorDesconto;
 
   const handlePagamento = async () => {
     if (!formaPagamento) {
-      toast.error('Selecione uma forma de pagamento');
+      toast.error("Selecione uma forma de pagamento");
       return;
     }
 
     setLoading(true);
     try {
-      // Registrar movimentação no caixa se houver caixa aberto
-      await registrarMovimentacaoCaixa(valorTotal, formaPagamento, mesa.numero);
-
+      // A função finalizarPagamento já registra a movimentação automaticamente
       await finalizarPagamento(mesa.id, formaPagamento);
       await refreshData(); // Refresh data to update UI
       onClose();
@@ -166,14 +109,19 @@ const PagamentoModal: React.FC<PagamentoModalProps> = ({ isOpen, onClose, mesa }
           <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
         </div>
 
-        <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+        <span
+          className="hidden sm:inline-block sm:align-middle sm:h-screen"
+          aria-hidden="true"
+        >
+          &#8203;
+        </span>
 
         <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
           <div className="flex justify-between items-center bg-gray-100 px-6 py-3 border-b">
             <h2 className="text-lg font-medium text-gray-900">
               Pagamento - Mesa {mesa.numero}
             </h2>
-            <button 
+            <button
               onClick={onClose}
               className="text-gray-400 hover:text-gray-500"
             >
@@ -190,10 +138,19 @@ const PagamentoModal: React.FC<PagamentoModalProps> = ({ isOpen, onClose, mesa }
               <div className="max-h-40 overflow-y-auto border rounded-md p-2">
                 {itensComanda.length > 0 ? (
                   <div className="space-y-2">
-                    {itensComanda.map(item => (
-                      <div key={item.id} className="flex justify-between text-sm">
-                        <span>{item.quantidade}x {item.nome}</span>
-                        <span>{formatarDinheiro(item.preco_unitario * item.quantidade)}</span>
+                    {itensComanda.map((item) => (
+                      <div
+                        key={item.id}
+                        className="flex justify-between text-sm"
+                      >
+                        <span>
+                          {item.quantidade}x {item.nome}
+                        </span>
+                        <span>
+                          {formatarDinheiro(
+                            item.preco_unitario * item.quantidade
+                          )}
+                        </span>
                       </div>
                     ))}
                   </div>
@@ -226,7 +183,10 @@ const PagamentoModal: React.FC<PagamentoModalProps> = ({ isOpen, onClose, mesa }
                     onChange={(e) => setTaxaServico(e.target.checked)}
                     className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                   />
-                  <label htmlFor="taxaServico" className="ml-2 text-sm text-gray-700">
+                  <label
+                    htmlFor="taxaServico"
+                    className="ml-2 text-sm text-gray-700"
+                  >
                     Taxa de Serviço (10%)
                   </label>
                 </div>
@@ -244,7 +204,10 @@ const PagamentoModal: React.FC<PagamentoModalProps> = ({ isOpen, onClose, mesa }
                     onChange={(e) => setCouvertArtistico(e.target.checked)}
                     className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                   />
-                  <label htmlFor="couvert" className="ml-2 text-sm text-gray-700">
+                  <label
+                    htmlFor="couvert"
+                    className="ml-2 text-sm text-gray-700"
+                  >
                     Couvert Artístico (R$ 15,00 p/ pessoa)
                   </label>
                 </div>
@@ -254,36 +217,53 @@ const PagamentoModal: React.FC<PagamentoModalProps> = ({ isOpen, onClose, mesa }
               </div>
 
               <div className="border-t pt-4">
-                <h4 className="text-sm font-medium text-gray-700 mb-2">Desconto</h4>
+                <h4 className="text-sm font-medium text-gray-700 mb-2">
+                  Desconto
+                </h4>
                 <div className="flex space-x-4 mb-2">
                   <label className="flex items-center">
                     <input
                       type="radio"
-                      checked={desconto.tipo === 'percentual'}
-                      onChange={() => setDesconto({ ...desconto, tipo: 'percentual' })}
+                      checked={desconto.tipo === "percentual"}
+                      onChange={() =>
+                        setDesconto({ ...desconto, tipo: "percentual" })
+                      }
                       className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
                     />
-                    <span className="ml-2 text-sm text-gray-700">Percentual (%)</span>
+                    <span className="ml-2 text-sm text-gray-700">
+                      Percentual (%)
+                    </span>
                   </label>
                   <label className="flex items-center">
                     <input
                       type="radio"
-                      checked={desconto.tipo === 'valor'}
-                      onChange={() => setDesconto({ ...desconto, tipo: 'valor' })}
+                      checked={desconto.tipo === "valor"}
+                      onChange={() =>
+                        setDesconto({ ...desconto, tipo: "valor" })
+                      }
                       className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
                     />
-                    <span className="ml-2 text-sm text-gray-700">Valor (R$)</span>
+                    <span className="ml-2 text-sm text-gray-700">
+                      Valor (R$)
+                    </span>
                   </label>
                 </div>
                 <div className="flex items-center">
                   <input
                     type="number"
                     value={desconto.valor}
-                    onChange={(e) => setDesconto({ ...desconto, valor: parseFloat(e.target.value) || 0 })}
+                    onChange={(e) =>
+                      setDesconto({
+                        ...desconto,
+                        valor: parseFloat(e.target.value) || 0
+                      })
+                    }
                     min="0"
-                    step={desconto.tipo === 'percentual' ? '1' : '0.01'}
+                    step={desconto.tipo === "percentual" ? "1" : "0.01"}
                     className="block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                    placeholder={desconto.tipo === 'percentual' ? "0%" : "R$ 0,00"}
+                    placeholder={
+                      desconto.tipo === "percentual" ? "0%" : "R$ 0,00"
+                    }
                   />
                 </div>
                 {valorDesconto > 0 && (
@@ -307,11 +287,11 @@ const PagamentoModal: React.FC<PagamentoModalProps> = ({ isOpen, onClose, mesa }
             {/* Formas de Pagamento */}
             <div className="space-y-4">
               <button
-                onClick={() => setFormaPagamento('pix')}
+                onClick={() => setFormaPagamento("pix")}
                 className={`w-full p-4 rounded-lg border-2 transition-colors ${
-                  formaPagamento === 'pix'
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-gray-200 hover:border-blue-200'
+                  formaPagamento === "pix"
+                    ? "border-blue-500 bg-blue-50"
+                    : "border-gray-200 hover:border-blue-200"
                 }`}
               >
                 <div className="flex items-center">
@@ -321,11 +301,11 @@ const PagamentoModal: React.FC<PagamentoModalProps> = ({ isOpen, onClose, mesa }
               </button>
 
               <button
-                onClick={() => setFormaPagamento('cartao')}
+                onClick={() => setFormaPagamento("cartao")}
                 className={`w-full p-4 rounded-lg border-2 transition-colors ${
-                  formaPagamento === 'cartao'
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-gray-200 hover:border-blue-200'
+                  formaPagamento === "cartao"
+                    ? "border-blue-500 bg-blue-50"
+                    : "border-gray-200 hover:border-blue-200"
                 }`}
               >
                 <div className="flex items-center">
@@ -335,11 +315,11 @@ const PagamentoModal: React.FC<PagamentoModalProps> = ({ isOpen, onClose, mesa }
               </button>
 
               <button
-                onClick={() => setFormaPagamento('dinheiro')}
+                onClick={() => setFormaPagamento("dinheiro")}
                 className={`w-full p-4 rounded-lg border-2 transition-colors ${
-                  formaPagamento === 'dinheiro'
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-gray-200 hover:border-blue-200'
+                  formaPagamento === "dinheiro"
+                    ? "border-blue-500 bg-blue-50"
+                    : "border-gray-200 hover:border-blue-200"
                 }`}
               >
                 <div className="flex items-center">
@@ -351,10 +331,7 @@ const PagamentoModal: React.FC<PagamentoModalProps> = ({ isOpen, onClose, mesa }
           </div>
 
           <div className="bg-gray-50 px-6 py-3 flex justify-end space-x-3">
-            <Button
-              variant="ghost"
-              onClick={onClose}
-            >
+            <Button variant="ghost" onClick={onClose}>
               Cancelar
             </Button>
             <Button
