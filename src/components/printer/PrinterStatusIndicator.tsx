@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Printer, CheckCircle, XCircle, AlertTriangle, Settings } from 'lucide-react';
+import { Printer, CheckCircle, XCircle, AlertTriangle, Settings, Cog } from 'lucide-react';
 import ThermalPrinterService from '../../services/ThermalPrinterService';
+import { useNavigate } from 'react-router-dom';
 
 interface PrinterStatusIndicatorProps {
   onOpenConfig: () => void;
 }
 
 const PrinterStatusIndicator: React.FC<PrinterStatusIndicatorProps> = ({ onOpenConfig }) => {
+  const navigate = useNavigate();
   const [printerStatus, setPrinterStatus] = useState({
     cozinha: { configured: false, connected: false, name: '' },
     pagamento: { configured: false, connected: false, name: '' }
@@ -97,9 +99,14 @@ const PrinterStatusIndicator: React.FC<PrinterStatusIndicatorProps> = ({ onOpenC
     }
   };
 
+  const handleConfigClick = () => {
+    // Navegar para a página de configurações na aba de impressoras
+    navigate('/dashboard/profile/settings?tab=printers');
+  };
+
   return (
     <button
-      onClick={onOpenConfig}
+      onClick={handleConfigClick}
       className={`flex items-center space-x-3 px-4 py-3 rounded-2xl border-2 transition-all duration-300 hover:shadow-lg ${getStatusColor()}`}
       title="Configurar Impressoras Térmicas"
     >
@@ -119,7 +126,7 @@ const PrinterStatusIndicator: React.FC<PrinterStatusIndicatorProps> = ({ onOpenC
           )}
         </div>
       </div>
-      <Settings className="w-4 h-4 opacity-60" />
+      <Cog className="w-4 h-4 opacity-60" />
     </button>
   );
 };
