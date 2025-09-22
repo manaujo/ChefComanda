@@ -1,9 +1,18 @@
-import React, { useState, useEffect } from 'react';
-import Button from '../../components/ui/Button';
-import { useTheme } from '../../contexts/ThemeContext';
-import { useAuth } from '../../contexts/AuthContext';
-import { supabase } from '../../services/supabase';
-import toast from 'react-hot-toast';
+import React, { useState, useEffect } from "react";
+import {
+  Settings as SettingsIcon,
+  Moon,
+  Sun,
+  Globe,
+  Bell,
+  Shield,
+  Lock
+} from "lucide-react";
+import Button from "../../components/ui/Button";
+import { useTheme } from "../../contexts/ThemeContext";
+import { useAuth } from "../../contexts/AuthContext";
+import { supabase } from "../../services/supabase";
+import toast from "react-hot-toast";
 
 interface PasswordData {
   currentPassword: string;
@@ -17,19 +26,19 @@ const Settings: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [passwordData, setPasswordData] = useState<PasswordData>({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: ''
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: ""
   });
   const [settings, setSettings] = useState({
-    language: 'pt-BR',
+    language: "pt-BR",
     notifications: {
       email: true,
       push: true,
       sound: true
     },
     printer: {
-      name: 'Impressora Térmica - Cozinha',
+      name: "Impressora Térmica - Cozinha",
       enabled: true,
       autoprint: true
     },
@@ -45,21 +54,21 @@ const Settings: React.FC = () => {
 
     try {
       if (passwordData.newPassword !== passwordData.confirmPassword) {
-        throw new Error('As senhas não conferem');
+        throw new Error("As senhas não conferem");
       }
 
       if (passwordData.newPassword.length < 6) {
-        throw new Error('A senha deve ter no mínimo 6 caracteres');
+        throw new Error("A senha deve ter no mínimo 6 caracteres");
       }
 
       // Verify current password
       const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: user?.email || '',
+        email: user?.email || "",
         password: passwordData.currentPassword
       });
 
       if (signInError) {
-        throw new Error('Senha atual incorreta');
+        throw new Error("Senha atual incorreta");
       }
 
       // Update password
@@ -69,23 +78,25 @@ const Settings: React.FC = () => {
 
       if (updateError) throw updateError;
 
-      toast.success('Senha alterada com sucesso!');
+      toast.success("Senha alterada com sucesso!");
       setShowPasswordModal(false);
       setPasswordData({
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: ''
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: ""
       });
     } catch (error) {
-      console.error('Error changing password:', error);
-      toast.error(error instanceof Error ? error.message : 'Erro ao alterar senha');
+      console.error("Error changing password:", error);
+      toast.error(
+        error instanceof Error ? error.message : "Erro ao alterar senha"
+      );
     } finally {
       setLoading(false);
     }
   };
 
   const handleSave = () => {
-    toast.success('Configurações salvas com sucesso!');
+    toast.success("Configurações salvas com sucesso!");
   };
 
   return (
@@ -114,19 +125,22 @@ const Settings: React.FC = () => {
               </h3>
               <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
                 <div className="flex items-center">
-                  {theme === 'dark' ? (
-                    <Moon size={20} className="text-gray-500 dark:text-gray-400" />
+                  {theme === "dark" ? (
+                    <Moon
+                      size={20}
+                      className="text-gray-500 dark:text-gray-400"
+                    />
                   ) : (
-                    <Sun size={20} className="text-gray-500 dark:text-gray-400" />
+                    <Sun
+                      size={20}
+                      className="text-gray-500 dark:text-gray-400"
+                    />
                   )}
                   <span className="ml-3 text-sm text-gray-700 dark:text-gray-300">
-                    Tema {theme === 'dark' ? 'Escuro' : 'Claro'}
+                    Tema {theme === "dark" ? "Escuro" : "Claro"}
                   </span>
                 </div>
-                <Button
-                  variant="ghost"
-                  onClick={toggleTheme}
-                >
+                <Button variant="ghost" onClick={toggleTheme}>
                   Alterar
                 </Button>
               </div>
@@ -141,7 +155,9 @@ const Settings: React.FC = () => {
                 <Globe size={20} className="text-gray-500 dark:text-gray-400" />
                 <select
                   value={settings.language}
-                  onChange={(e) => setSettings({ ...settings, language: e.target.value })}
+                  onChange={(e) =>
+                    setSettings({ ...settings, language: e.target.value })
+                  }
                   className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                 >
                   <option value="pt-BR">Português (Brasil)</option>
@@ -159,7 +175,10 @@ const Settings: React.FC = () => {
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
-                    <Bell size={20} className="text-gray-500 dark:text-gray-400" />
+                    <Bell
+                      size={20}
+                      className="text-gray-500 dark:text-gray-400"
+                    />
                     <span className="ml-3 text-sm text-gray-700 dark:text-gray-300">
                       Notificações por E-mail
                     </span>
@@ -168,13 +187,15 @@ const Settings: React.FC = () => {
                     <input
                       type="checkbox"
                       checked={settings.notifications.email}
-                      onChange={(e) => setSettings({
-                        ...settings,
-                        notifications: {
-                          ...settings.notifications,
-                          email: e.target.checked
-                        }
-                      })}
+                      onChange={(e) =>
+                        setSettings({
+                          ...settings,
+                          notifications: {
+                            ...settings.notifications,
+                            email: e.target.checked
+                          }
+                        })
+                      }
                       className="sr-only peer"
                     />
                     <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
@@ -183,7 +204,10 @@ const Settings: React.FC = () => {
 
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
-                    <Bell size={20} className="text-gray-500 dark:text-gray-400" />
+                    <Bell
+                      size={20}
+                      className="text-gray-500 dark:text-gray-400"
+                    />
                     <span className="ml-3 text-sm text-gray-700 dark:text-gray-300">
                       Notificações Push
                     </span>
@@ -192,13 +216,15 @@ const Settings: React.FC = () => {
                     <input
                       type="checkbox"
                       checked={settings.notifications.push}
-                      onChange={(e) => setSettings({
-                        ...settings,
-                        notifications: {
-                          ...settings.notifications,
-                          push: e.target.checked
-                        }
-                      })}
+                      onChange={(e) =>
+                        setSettings({
+                          ...settings,
+                          notifications: {
+                            ...settings.notifications,
+                            push: e.target.checked
+                          }
+                        })
+                      }
                       className="sr-only peer"
                     />
                     <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
@@ -207,7 +233,10 @@ const Settings: React.FC = () => {
 
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
-                    <Bell size={20} className="text-gray-500 dark:text-gray-400" />
+                    <Bell
+                      size={20}
+                      className="text-gray-500 dark:text-gray-400"
+                    />
                     <span className="ml-3 text-sm text-gray-700 dark:text-gray-300">
                       Som de Notificações
                     </span>
@@ -216,13 +245,15 @@ const Settings: React.FC = () => {
                     <input
                       type="checkbox"
                       checked={settings.notifications.sound}
-                      onChange={(e) => setSettings({
-                        ...settings,
-                        notifications: {
-                          ...settings.notifications,
-                          sound: e.target.checked
-                        }
-                      })}
+                      onChange={(e) =>
+                        setSettings({
+                          ...settings,
+                          notifications: {
+                            ...settings.notifications,
+                            sound: e.target.checked
+                          }
+                        })
+                      }
                       className="sr-only peer"
                     />
                     <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
@@ -239,7 +270,10 @@ const Settings: React.FC = () => {
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
-                    <Shield size={20} className="text-gray-500 dark:text-gray-400" />
+                    <Shield
+                      size={20}
+                      className="text-gray-500 dark:text-gray-400"
+                    />
                     <span className="ml-3 text-sm text-gray-700 dark:text-gray-300">
                       Autenticação em Dois Fatores
                     </span>
@@ -248,13 +282,15 @@ const Settings: React.FC = () => {
                     <input
                       type="checkbox"
                       checked={settings.security.twoFactor}
-                      onChange={(e) => setSettings({
-                        ...settings,
-                        security: {
-                          ...settings.security,
-                          twoFactor: e.target.checked
-                        }
-                      })}
+                      onChange={(e) =>
+                        setSettings({
+                          ...settings,
+                          security: {
+                            ...settings.security,
+                            twoFactor: e.target.checked
+                          }
+                        })
+                      }
                       className="sr-only peer"
                     />
                     <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
@@ -275,11 +311,7 @@ const Settings: React.FC = () => {
 
             <div className="pt-5">
               <div className="flex justify-end">
-                <Button
-                  variant="primary"
-                  onClick={handleSave}
-                >
-                  
+                <Button variant="primary" onClick={handleSave}>
                   Salvar Configurações
                 </Button>
               </div>
@@ -292,7 +324,10 @@ const Settings: React.FC = () => {
       {showPasswordModal && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 transition-opacity" aria-hidden="true">
+            <div
+              className="fixed inset-0 transition-opacity"
+              aria-hidden="true"
+            >
               <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
             </div>
 
@@ -311,7 +346,12 @@ const Settings: React.FC = () => {
                       <input
                         type="password"
                         value={passwordData.currentPassword}
-                        onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
+                        onChange={(e) =>
+                          setPasswordData({
+                            ...passwordData,
+                            currentPassword: e.target.value
+                          })
+                        }
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
                         required
                       />
@@ -324,7 +364,12 @@ const Settings: React.FC = () => {
                       <input
                         type="password"
                         value={passwordData.newPassword}
-                        onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+                        onChange={(e) =>
+                          setPasswordData({
+                            ...passwordData,
+                            newPassword: e.target.value
+                          })
+                        }
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
                         required
                         minLength={6}
@@ -338,7 +383,12 @@ const Settings: React.FC = () => {
                       <input
                         type="password"
                         value={passwordData.confirmPassword}
-                        onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+                        onChange={(e) =>
+                          setPasswordData({
+                            ...passwordData,
+                            confirmPassword: e.target.value
+                          })
+                        }
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
                         required
                         minLength={6}
