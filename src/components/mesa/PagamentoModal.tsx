@@ -14,6 +14,7 @@ import { formatarDinheiro } from "../../utils/formatters";
 import toast from "react-hot-toast";
 import { supabase } from "../../services/supabase";
 import { useAuth } from "../../contexts/AuthContext";
+import ThermalPrinterService from "../../services/ThermalPrinterService";
 
 interface PagamentoModalProps {
   isOpen: boolean;
@@ -91,6 +92,27 @@ const PagamentoModal: React.FC<PagamentoModalProps> = ({
     try {
       // A função finalizarPagamento já registra a movimentação automaticamente
       await finalizarPagamento(mesa.id, formaPagamento);
+      
+      // Impressão automática da notinha de pagamento
+      try {
+        await ThermalPrinterService.printPaymentReceipt(
+          'ChefComanda', // Nome do restaurante - você pode pegar do contexto
+          mesa.numero,
+          itensComanda.map(item => ({
+            nome: item.nome,
+            quantidade: item.quantidade,
+            preco: item.preco_unitario,
+            observacao: item.observacao
+          })),
+          valorTotal,
+          formaPagamento
+        );
+        console.log('✅ Notinha de pagamento enviada para impressão');
+      } catch (printError) {
+        console.warn('⚠️ Erro na impressão automática:', printError);
+        // Não falhar o pagamento por causa da impressão
+      }
+      
       await refreshData(); // Refresh data to update UI
       onClose();
     } catch (error) {

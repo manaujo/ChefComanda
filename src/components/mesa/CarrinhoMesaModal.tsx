@@ -5,6 +5,7 @@ import { useRestaurante } from '../../contexts/RestauranteContext';
 import { formatarDinheiro } from '../../utils/formatters';
 import toast from 'react-hot-toast';
 import { Database } from '../../types/database';
+import ThermalPrinterService from '../../services/ThermalPrinterService';
 
 type Produto = Database['public']['Tables']['produtos']['Row'];
 
@@ -140,6 +141,24 @@ const CarrinhoMesaModal: React.FC<CarrinhoMesaModalProps> = ({ isOpen, onClose, 
           quantidade: item.quantidade,
           observacao: item.observacao || undefined,
         });
+      }
+      
+      // Impressão automática da comanda na cozinha
+      try {
+        await ThermalPrinterService.printKitchenOrder(
+          'ChefComanda', // Nome do restaurante - você pode pegar do contexto
+          mesa?.numero || 0,
+          carrinho.map(item => ({
+            nome: item.produto.nome,
+            quantidade: item.quantidade,
+            observacao: item.observacao
+          })),
+          'Pedido enviado via sistema' // Observações gerais
+        );
+        console.log('✅ Comanda enviada para impressão na cozinha');
+      } catch (printError) {
+        console.warn('⚠️ Erro na impressão automática da cozinha:', printError);
+        // Não falhar o envio por causa da impressão
       }
       
       // Refresh data to update UI

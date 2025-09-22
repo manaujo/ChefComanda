@@ -3,7 +3,7 @@ import { Link, useLocation, Outlet, useNavigate } from 'react-router-dom';
 import {
   Menu, ChefHat, LayoutDashboard, Users, ShoppingBag,
   ClipboardList, PieChart, Settings, Coffee, QrCode,
-  CreditCard, Moon, Sun, Globe, PenSquare, Calculator, Zap,
+  CreditCard, Moon, Sun, Globe, PenSquare, Calculator, Zap, Printer,
   HelpCircle, Headphones
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -12,10 +12,13 @@ import { usePermissions } from '../hooks/useEmployeeAuth';
 import ProfileDropdown from '../components/profile/ProfileDropdown';
 import NotificationDropdown from '../components/NotificationDropdown';
 import EmployeeDebugPanel from '../components/debug/EmployeeDebugPanel';
+import PrinterStatusIndicator from '../components/printer/PrinterStatusIndicator';
+import PrinterConfigModal from '../components/printer/PrinterConfigModal';
 
 const DashboardLayout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarHover, setSidebarHover] = useState(false);
+  const [showPrinterModal, setShowPrinterModal] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
@@ -143,6 +146,18 @@ const DashboardLayout: React.FC = () => {
 
         <main className="pt-16 min-h-screen">
           <Outlet />
+          
+          {/* Modal de Configuração de Impressoras */}
+            
+            {/* Modal de Configuração de Impressoras */}
+            <PrinterConfigModal
+              isOpen={showPrinterModal}
+              onClose={() => setShowPrinterModal(false)}
+            />
+          <PrinterConfigModal
+            isOpen={showPrinterModal}
+            onClose={() => setShowPrinterModal(false)}
+          />
         </main>
       </div>
     );
@@ -174,6 +189,10 @@ const DashboardLayout: React.FC = () => {
             >
               {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
             </button>
+
+            {!isEmployee && (
+              <PrinterStatusIndicator onOpenConfig={() => setShowPrinterModal(true)} />
+            )}
 
             {!isEmployee && <NotificationDropdown />}
             <ProfileDropdown />

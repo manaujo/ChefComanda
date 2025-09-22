@@ -1,6 +1,10 @@
+// Legacy PrinterService - Migrated to ThermalPrinterService
+// This file is kept for backward compatibility
+
+import ThermalPrinterService from './ThermalPrinterService';
+
 export class PrinterService {
   private static instance: PrinterService;
-  private printerName: string = 'Impressora Térmica - Cozinha';
 
   private constructor() {}
 
@@ -12,32 +16,45 @@ export class PrinterService {
   }
 
   setPrinter(printerName: string) {
-    this.printerName = printerName;
+    console.log('Legacy setPrinter called, use ThermalPrinterService instead');
   }
 
   async printComanda(mesaId: number, itens: any[]) {
-    // Simulação de impressão
-    console.log(`Imprimindo comanda da mesa ${mesaId} na impressora ${this.printerName}`);
-    console.log('Itens:', itens);
+    console.log('Legacy printComanda called, use ThermalPrinterService.printKitchenOrder instead');
     
-    return new Promise(resolve => {
-      setTimeout(() => {
-        resolve(true);
-      }, 1000);
-    });
+    try {
+      await ThermalPrinterService.printKitchenOrder(
+        'ChefComanda',
+        mesaId,
+        itens.map(item => ({
+          nome: item.nome || item.produto_nome,
+          quantidade: item.quantidade,
+          observacao: item.observacao
+        }))
+      );
+      return true;
+    } catch (error) {
+      console.error('Error in legacy printComanda:', error);
+      return false;
+    }
   }
 
   async printRecibo(mesaId: number, total: number, formaPagamento: string) {
-    // Simulação de impressão de recibo
-    console.log(`Imprimindo recibo da mesa ${mesaId}`);
-    console.log(`Total: R$ ${total}`);
-    console.log(`Forma de pagamento: ${formaPagamento}`);
+    console.log('Legacy printRecibo called, use ThermalPrinterService.printPaymentReceipt instead');
     
-    return new Promise(resolve => {
-      setTimeout(() => {
-        resolve(true);
-      }, 1000);
-    });
+    try {
+      await ThermalPrinterService.printPaymentReceipt(
+        'ChefComanda',
+        mesaId,
+        [],
+        total,
+        formaPagamento
+      );
+      return true;
+    } catch (error) {
+      console.error('Error in legacy printRecibo:', error);
+      return false;
+    }
   }
 }
 

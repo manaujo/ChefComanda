@@ -1,5 +1,4 @@
-import React, { useState } from 'react';
-import { Settings as SettingsIcon, Bell, Moon, Sun, Globe, Shield, Printer, Lock } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
 import Button from '../../components/ui/Button';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';

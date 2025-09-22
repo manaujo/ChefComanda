@@ -45,7 +45,83 @@ O sistema está totalmente integrado com seus produtos reais da Stripe.
 - ✅ Sistema de funcionários
 - ✅ Relatórios avançados
 - ✅ Assinaturas Stripe integradas
+- ✅ Sistema de impressão térmica automática
 
+## 🖨️ Sistema de Impressão Térmica
+
+### Funcionalidades Completas:
+- ✅ **Detecção Automática**: WebUSB e WebSerial para detectar impressoras
+- ✅ **Configuração Separada**: Impressora para cozinha e outra para pagamentos
+- ✅ **Impressão Automática**: Comandas e notinhas impressas automaticamente
+- ✅ **Múltiplas Cópias**: Configure quantas cópias imprimir
+- ✅ **Status em Tempo Real**: Indicadores visuais de conexão
+- ✅ **Suporte ESC/POS**: Compatível com Epson, Citizen, Custom, Rongta
+
+### Como Configurar:
+1. **Acesse**: Dashboard → Configurações → Impressoras Térmicas
+2. **Conecte**: Clique em "Conectar USB" ou "Conectar Serial"
+3. **Configure**: Defina impressora para cozinha e pagamento
+4. **Teste**: Use o botão "Testar" para verificar funcionamento
+5. **Ative**: Marque "Impressão Automática" para funcionamento automático
+
+### Navegadores Suportados:
+- ✅ Google Chrome (61+)
+- ✅ Microsoft Edge (79+)
+- ✅ Opera (48+)
+- ❌ Firefox (ainda não suporta WebUSB/WebSerial)
+- ❌ Safari (ainda não suporta WebUSB/WebSerial)
+
+### Impressoras Compatíveis:
+- ✅ Epson TM-T20, TM-T88, TM-T81
+- ✅ Citizen CT-S310, CT-S4000
+- ✅ Custom VKP80
+- ✅ Rongta RP58, RP80
+- ✅ Qualquer impressora térmica ESC/POS
+
+### Layout das Notinhas:
+
+**Notinha de Pagamento:**
+```
+        CHEFCOMANDA
+
+Data: 15/01/2025
+Hora: 14:30:25
+
+Mesa: 5
+
+--------------------------------
+1x Picanha Grelhada    R$ 159,90
+2x Refrigerante Lata   R$  15,80
+--------------------------------
+
+TOTAL:                 R$ 175,70
+Pagamento: PIX
+
+    Obrigado pela preferencia!
+```
+
+**Comanda da Cozinha:**
+```
+        CHEFCOMANDA
+
+Data: 15/01/2025
+Hora: 14:30:25
+
+Mesa: 5
+
+    PEDIDO PARA COZINHA
+
+--------------------------------
+2x Picanha Grelhada
+OBS: Ao ponto
+
+1x Refrigerante Lata
+OBS: Bem gelado
+
+OBSERVACOES GERAIS:
+Cliente com pressa
+--------------------------------
+```
 ## 🔧 Produtos Configurados
 
 ### Plano Mensal (R$ 149,99/mês)

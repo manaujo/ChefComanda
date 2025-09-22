@@ -15,6 +15,7 @@ import { useRestaurante } from '../contexts/RestauranteContext';
 import { usePermissions } from '../hooks/useEmployeeAuth';
 import { supabase } from '../services/supabase';
 import CaixaService from '../services/CaixaService';
+import ThermalPrinterService from '../services/ThermalPrinterService';
 import toast from 'react-hot-toast';
 
 interface PedidoAvulso {
@@ -248,6 +249,24 @@ const PDV: React.FC = () => {
         .insert(itensParaInserir);
 
       if (itensError) throw itensError;
+
+      // Impressão automática da comanda na cozinha (apenas para novos itens)
+      try {
+        await ThermalPrinterService.printKitchenOrder(
+          restaurante?.nome || 'ChefComanda',
+          0, // Pedido avulso, não é mesa
+          carrinho.map(item => ({
+            nome: item.produto.nome,
+            quantidade: item.quantidade,
+            observacao: item.observacao
+          })),
+          `Pedido Avulso #${pedido.numero} - ${pedido.cliente_nome}`
+        );
+        console.log('✅ Pedido enviado para impressão na cozinha');
+      } catch (printError) {
+        console.warn('⚠️ Erro na impressão automática da cozinha:', printError);
+        // Não falhar o envio por causa da impressão
+      }
 
       toast.success(`Pedido #${pedido.numero} criado com sucesso!`);
       
