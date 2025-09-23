@@ -53,7 +53,15 @@ const CardapioOnlineEditor: React.FC = () => {
     tempo_entrega: '',
     whatsapp: '',
     endereco: '',
-    horario_funcionamento: ''
+    horario_funcionamento: '',
+    pedidos_whatsapp_ativo: true,
+    tema_cores: {
+      primaria: '#DC2626',
+      secundaria: '#EF4444',
+      fundo: '#FFFFFF',
+      texto: '#1F2937',
+      card: '#F9FAFB'
+    }
   });
 
   useEffect(() => {
@@ -89,7 +97,15 @@ const CardapioOnlineEditor: React.FC = () => {
         tempo_entrega: config.tempo_entrega || '30-45 min',
         whatsapp: config.whatsapp || restaurante.telefone || '',
         endereco: config.endereco || '',
-        horario_funcionamento: config.horario_funcionamento || 'Segunda a Domingo: 11h às 23h'
+        horario_funcionamento: config.horario_funcionamento || 'Segunda a Domingo: 11h às 23h',
+        pedidos_whatsapp_ativo: config.pedidos_whatsapp_ativo !== false,
+        tema_cores: config.tema_cores || {
+          primaria: '#DC2626',
+          secundaria: '#EF4444',
+          fundo: '#FFFFFF',
+          texto: '#1F2937',
+          card: '#F9FAFB'
+        }
       });
     } catch (error) {
       console.error('Error loading restaurant config:', error);
@@ -767,6 +783,273 @@ const CardapioOnlineEditor: React.FC = () => {
                 />
               </div>
 
+              {/* Configurações de Pedidos */}
+              <div className="border-t border-gray-200 pt-6">
+                <h4 className="text-lg font-semibold text-gray-900 mb-4">
+                  Configurações de Pedidos
+                </h4>
+                
+                <div className="space-y-4">
+                  <label className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={restaurantConfig.pedidos_whatsapp_ativo}
+                      onChange={(e) => setRestaurantConfig({ 
+                        ...restaurantConfig, 
+                        pedidos_whatsapp_ativo: e.target.checked 
+                      })}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    <span className="ml-2 text-sm font-medium text-gray-900">
+                      Permitir pedidos via WhatsApp
+                    </span>
+                  </label>
+                  <p className="text-xs text-gray-500 ml-6">
+                    Quando desativado, os clientes não poderão fazer pedidos pelo cardápio online
+                  </p>
+                </div>
+              </div>
+
+              {/* Configurações de Tema */}
+              <div className="border-t border-gray-200 pt-6">
+                <h4 className="text-lg font-semibold text-gray-900 mb-4">
+                  Personalização Visual
+                </h4>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Cor Primária
+                    </label>
+                    <div className="flex items-center space-x-3">
+                      <input
+                        type="color"
+                        value={restaurantConfig.tema_cores.primaria}
+                        onChange={(e) => setRestaurantConfig({
+                          ...restaurantConfig,
+                          tema_cores: { ...restaurantConfig.tema_cores, primaria: e.target.value }
+                        })}
+                        className="w-12 h-10 border border-gray-300 rounded-lg cursor-pointer"
+                      />
+                      <input
+                        type="text"
+                        value={restaurantConfig.tema_cores.primaria}
+                        onChange={(e) => setRestaurantConfig({
+                          ...restaurantConfig,
+                          tema_cores: { ...restaurantConfig.tema_cores, primaria: e.target.value }
+                        })}
+                        className="flex-1 rounded-lg border border-gray-300 py-2 px-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="#DC2626"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Cor Secundária
+                    </label>
+                    <div className="flex items-center space-x-3">
+                      <input
+                        type="color"
+                        value={restaurantConfig.tema_cores.secundaria}
+                        onChange={(e) => setRestaurantConfig({
+                          ...restaurantConfig,
+                          tema_cores: { ...restaurantConfig.tema_cores, secundaria: e.target.value }
+                        })}
+                        className="w-12 h-10 border border-gray-300 rounded-lg cursor-pointer"
+                      />
+                      <input
+                        type="text"
+                        value={restaurantConfig.tema_cores.secundaria}
+                        onChange={(e) => setRestaurantConfig({
+                          ...restaurantConfig,
+                          tema_cores: { ...restaurantConfig.tema_cores, secundaria: e.target.value }
+                        })}
+                        className="flex-1 rounded-lg border border-gray-300 py-2 px-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="#EF4444"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Cor de Fundo
+                    </label>
+                    <div className="flex items-center space-x-3">
+                      <input
+                        type="color"
+                        value={restaurantConfig.tema_cores.fundo}
+                        onChange={(e) => setRestaurantConfig({
+                          ...restaurantConfig,
+                          tema_cores: { ...restaurantConfig.tema_cores, fundo: e.target.value }
+                        })}
+                        className="w-12 h-10 border border-gray-300 rounded-lg cursor-pointer"
+                      />
+                      <input
+                        type="text"
+                        value={restaurantConfig.tema_cores.fundo}
+                        onChange={(e) => setRestaurantConfig({
+                          ...restaurantConfig,
+                          tema_cores: { ...restaurantConfig.tema_cores, fundo: e.target.value }
+                        })}
+                        className="flex-1 rounded-lg border border-gray-300 py-2 px-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="#FFFFFF"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Cor do Texto
+                    </label>
+                    <div className="flex items-center space-x-3">
+                      <input
+                        type="color"
+                        value={restaurantConfig.tema_cores.texto}
+                        onChange={(e) => setRestaurantConfig({
+                          ...restaurantConfig,
+                          tema_cores: { ...restaurantConfig.tema_cores, texto: e.target.value }
+                        })}
+                        className="w-12 h-10 border border-gray-300 rounded-lg cursor-pointer"
+                      />
+                      <input
+                        type="text"
+                        value={restaurantConfig.tema_cores.texto}
+                        onChange={(e) => setRestaurantConfig({
+                          ...restaurantConfig,
+                          tema_cores: { ...restaurantConfig.tema_cores, texto: e.target.value }
+                        })}
+                        className="flex-1 rounded-lg border border-gray-300 py-2 px-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="#1F2937"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Cor dos Cards
+                    </label>
+                    <div className="flex items-center space-x-3">
+                      <input
+                        type="color"
+                        value={restaurantConfig.tema_cores.card}
+                        onChange={(e) => setRestaurantConfig({
+                          ...restaurantConfig,
+                          tema_cores: { ...restaurantConfig.tema_cores, card: e.target.value }
+                        })}
+                        className="w-12 h-10 border border-gray-300 rounded-lg cursor-pointer"
+                      />
+                      <input
+                        type="text"
+                        value={restaurantConfig.tema_cores.card}
+                        onChange={(e) => setRestaurantConfig({
+                          ...restaurantConfig,
+                          tema_cores: { ...restaurantConfig.tema_cores, card: e.target.value }
+                        })}
+                        className="flex-1 rounded-lg border border-gray-300 py-2 px-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="#F9FAFB"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Temas Predefinidos */}
+                <div className="mt-6">
+                  <h5 className="text-sm font-medium text-gray-700 mb-3">
+                    Temas Predefinidos
+                  </h5>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setRestaurantConfig({
+                        ...restaurantConfig,
+                        tema_cores: {
+                          primaria: '#DC2626',
+                          secundaria: '#EF4444',
+                          fundo: '#FFFFFF',
+                          texto: '#1F2937',
+                          card: '#F9FAFB'
+                        }
+                      })}
+                      className="p-3 rounded-lg border border-gray-300 hover:border-red-500 transition-colors"
+                    >
+                      <div className="flex space-x-1 mb-2">
+                        <div className="w-4 h-4 bg-red-600 rounded"></div>
+                        <div className="w-4 h-4 bg-red-500 rounded"></div>
+                        <div className="w-4 h-4 bg-white border rounded"></div>
+                      </div>
+                      <span className="text-xs font-medium">Clássico</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setRestaurantConfig({
+                        ...restaurantConfig,
+                        tema_cores: {
+                          primaria: '#059669',
+                          secundaria: '#10B981',
+                          fundo: '#F0FDF4',
+                          texto: '#1F2937',
+                          card: '#FFFFFF'
+                        }
+                      })}
+                      className="p-3 rounded-lg border border-gray-300 hover:border-green-500 transition-colors"
+                    >
+                      <div className="flex space-x-1 mb-2">
+                        <div className="w-4 h-4 bg-green-600 rounded"></div>
+                        <div className="w-4 h-4 bg-green-500 rounded"></div>
+                        <div className="w-4 h-4 bg-green-50 border rounded"></div>
+                      </div>
+                      <span className="text-xs font-medium">Natural</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setRestaurantConfig({
+                        ...restaurantConfig,
+                        tema_cores: {
+                          primaria: '#7C3AED',
+                          secundaria: '#8B5CF6',
+                          fundo: '#FAF5FF',
+                          texto: '#1F2937',
+                          card: '#FFFFFF'
+                        }
+                      })}
+                      className="p-3 rounded-lg border border-gray-300 hover:border-purple-500 transition-colors"
+                    >
+                      <div className="flex space-x-1 mb-2">
+                        <div className="w-4 h-4 bg-purple-600 rounded"></div>
+                        <div className="w-4 h-4 bg-purple-500 rounded"></div>
+                        <div className="w-4 h-4 bg-purple-50 border rounded"></div>
+                      </div>
+                      <span className="text-xs font-medium">Elegante</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setRestaurantConfig({
+                        ...restaurantConfig,
+                        tema_cores: {
+                          primaria: '#1F2937',
+                          secundaria: '#374151',
+                          fundo: '#F9FAFB',
+                          texto: '#1F2937',
+                          card: '#FFFFFF'
+                        }
+                      })}
+                      className="p-3 rounded-lg border border-gray-300 hover:border-gray-500 transition-colors"
+                    >
+                      <div className="flex space-x-1 mb-2">
+                        <div className="w-4 h-4 bg-gray-800 rounded"></div>
+                        <div className="w-4 h-4 bg-gray-600 rounded"></div>
+                        <div className="w-4 h-4 bg-gray-100 border rounded"></div>
+                      </div>
+                      <span className="text-xs font-medium">Minimalista</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
               <Button
                 variant="primary"
                 onClick={handleSaveConfig}
@@ -785,12 +1068,17 @@ const CardapioOnlineEditor: React.FC = () => {
               
               <div className="bg-white rounded-lg shadow-sm overflow-hidden">
                 {/* Header Preview */}
-                <div className="bg-gradient-to-r from-red-600 to-red-700 text-white p-6">
+                <div 
+                  className="text-white p-6"
+                  style={{ 
+                    background: `linear-gradient(to right, ${restaurantConfig.tema_cores.primaria}, ${restaurantConfig.tema_cores.secundaria})` 
+                  }}
+                >
                   <h2 className="text-2xl font-bold mb-2">
                     {restaurantConfig.nome_exibicao || 'Nome do Restaurante'}
                   </h2>
-                  <p className="text-red-100 mb-4">Cardápio Digital</p>
-                  <div className="flex items-center space-x-4 text-red-100 text-sm">
+                  <p className="opacity-90 mb-4">Cardápio Digital</p>
+                  <div className="flex items-center space-x-4 opacity-90 text-sm">
                     <div className="flex items-center">
                       <Clock size={16} className="mr-1" />
                       <span>{restaurantConfig.tempo_entrega || 'Tempo de entrega'}</span>
@@ -803,7 +1091,7 @@ const CardapioOnlineEditor: React.FC = () => {
                 </div>
 
                 {/* Content Preview */}
-                <div className="p-6">
+                <div className="p-6" style={{ backgroundColor: restaurantConfig.tema_cores.fundo }}>
                   <div className="text-center text-gray-500">
                     <p className="text-sm">
                       Aqui aparecerão os itens do seu cardápio
@@ -834,6 +1122,20 @@ const CardapioOnlineEditor: React.FC = () => {
                     </div>
                   </div>
                 </div>
+
+                {/* Status de Pedidos */}
+                <div className={`p-4 text-center ${
+                  restaurantConfig.pedidos_whatsapp_ativo 
+                    ? 'bg-green-50 text-green-800' 
+                    : 'bg-red-50 text-red-800'
+                }`}>
+                  <p className="text-sm font-medium">
+                    {restaurantConfig.pedidos_whatsapp_ativo 
+                      ? '✅ Pedidos via WhatsApp: ATIVADOS' 
+                      : '❌ Pedidos via WhatsApp: DESATIVADOS'
+                    }
+                  </p>
+                </div>
               </div>
 
               <div className="mt-4 p-4 bg-blue-50 rounded-lg">
@@ -845,6 +1147,8 @@ const CardapioOnlineEditor: React.FC = () => {
                       <li>• O número do WhatsApp será usado para receber os pedidos dos clientes</li>
                       <li>• Certifique-se de que o número está correto e ativo</li>
                       <li>• O tempo de entrega ajuda os clientes a terem expectativas realistas</li>
+                      <li>• As cores personalizadas serão aplicadas ao cardápio público</li>
+                      <li>• Você pode desativar pedidos temporariamente sem remover o WhatsApp</li>
                     </ul>
                   </div>
                 </div>
