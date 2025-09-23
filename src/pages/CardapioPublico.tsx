@@ -17,7 +17,8 @@ import {
   Coffee,
   Cake,
   Wine,
-  Soup
+  Soup,
+  AlertTriangle
 } from "lucide-react";
 import { supabase } from "../services/supabase";
 import { formatarDinheiro } from "../utils/formatters";
