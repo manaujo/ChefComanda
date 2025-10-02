@@ -745,16 +745,18 @@ const LandingPage: React.FC = () => {
           <p className="text-xl text-red-100 mb-8 max-w-2xl mx-auto">
             Junte-se a centenas de estabelecimentos que já transformaram sua gestão com o ChefComanda
           </p>
-          <Link to="/signup">
-            <Button 
-              variant="primary" 
-              size="lg"
-              className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white font-semibold px-12 py-4 text-xl shadow-xl transform hover:scale-105 transition-all duration-200"
-              icon={<ArrowRight size={24} />}
-            >
-              Começar Gratuitamente
-            </Button>
-          </Link>
+          <div className="flex justify-center">
+            <Link to="/signup">
+              <Button
+                variant="primary"
+                size="lg"
+                className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white font-semibold px-12 py-4 text-xl shadow-xl transform hover:scale-105 transition-all duration-200"
+                icon={<ArrowRight size={24} />}
+              >
+                Começar Gratuitamente
+              </Button>
+            </Link>
+          </div>
         </div>
       </section>
 

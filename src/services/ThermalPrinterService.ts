@@ -48,10 +48,13 @@ class ThermalPrinterService {
   private printerConfigs: Map<string, PrinterConfig> = new Map();
   private isWebUSBSupported = false;
   private isWebSerialSupported = false;
+  private reconnectAttempts: Map<string, number> = new Map();
+  private maxReconnectAttempts = 3;
 
   private constructor() {
     this.checkBrowserSupport();
     this.loadConfigurations();
+    this.setupEventListeners();
   }
 
   static getInstance(): ThermalPrinterService {
@@ -64,11 +67,55 @@ class ThermalPrinterService {
   private checkBrowserSupport() {
     this.isWebUSBSupported = 'usb' in navigator;
     this.isWebSerialSupported = 'serial' in navigator;
-    
+
     console.log('🖨️ Printer Support Check:', {
       webUSB: this.isWebUSBSupported,
-      webSerial: this.isWebSerialSupported
+      webSerial: this.isWebSerialSupported,
+      userAgent: navigator.userAgent
     });
+
+    if (!this.isWebUSBSupported && !this.isWebSerialSupported) {
+      console.warn('⚠️ Nenhuma API de impressora suportada. Use Chrome, Edge ou Opera.');
+    }
+  }
+
+  private setupEventListeners() {
+    if (this.isWebUSBSupported && navigator.usb) {
+      navigator.usb.addEventListener('disconnect', (event: any) => {
+        console.log('🔌 Dispositivo USB desconectado:', event.device);
+        const deviceId = `usb_${event.device.vendorId}_${event.device.productId}`;
+        this.handleDeviceDisconnect(deviceId);
+      });
+
+      navigator.usb.addEventListener('connect', (event: any) => {
+        console.log('🔌 Dispositivo USB conectado:', event.device);
+        const deviceId = `usb_${event.device.vendorId}_${event.device.productId}`;
+        this.reconnectAttempts.set(deviceId, 0);
+      });
+    }
+
+    if (this.isWebSerialSupported && navigator.serial) {
+      navigator.serial.addEventListener('disconnect', (event: any) => {
+        console.log('🔌 Porta serial desconectada:', event.port);
+        const info = event.port.getInfo();
+        const deviceId = `serial_${info.usbVendorId || 'unknown'}_${info.usbProductId || 'unknown'}`;
+        this.handleDeviceDisconnect(deviceId);
+      });
+    }
+  }
+
+  private handleDeviceDisconnect(deviceId: string) {
+    const device = this.connectedDevices.get(deviceId);
+    if (device) {
+      this.connectedDevices.delete(deviceId);
+      console.warn(`⚠️ Impressora desconectada: ${deviceId}`);
+
+      const attempts = this.reconnectAttempts.get(deviceId) || 0;
+      if (attempts < this.maxReconnectAttempts) {
+        this.reconnectAttempts.set(deviceId, attempts + 1);
+        console.log(`🔄 Tentativa de reconexão ${attempts + 1}/${this.maxReconnectAttempts}`);
+      }
+    }
   }
 
   private async loadConfigurations() {
@@ -104,15 +151,26 @@ class ThermalPrinterService {
       const devices = await (navigator as any).usb.getDevices();
       const printers: PrinterDevice[] = [];
 
-      // Filtros para impressoras térmicas conhecidas
+      // Filtros para impressoras térmicas conhecidas (mais completo)
       const printerFilters = [
         { vendorId: 0x04b8 }, // Epson
-        { vendorId: 0x0dd4 }, // Custom
+        { vendorId: 0x0dd4 }, // Custom Engineering
         { vendorId: 0x0519 }, // Citizen
-        { vendorId: 0x0fe6 }, // ICS Advent
-        { vendorId: 0x154f }, // Rongta
+        { vendorId: 0x0fe6 }, // ICS Advent/Contour Design
+        { vendorId: 0x154f }, // Rongta Technology
         { vendorId: 0x0483 }, // STMicroelectronics
         { vendorId: 0x1fc9 }, // NXP Semiconductors
+        { vendorId: 0x0926 }, // Zjiang
+        { vendorId: 0x6868 }, // Xprinter
+        { vendorId: 0x1504 }, // Bixolon
+        { vendorId: 0x0416 }, // Winbond Electronics
+        { vendorId: 0x20d1 }, // Xiamen Hanin
+        { vendorId: 0x1fc9 }, // NXP/Freescale
+        { vendorId: 0x0525 }, // Netchip Technology
+        { vendorId: 0x0fe6 }, // Contour Design
+        { vendorId: 0x1CBE }, // Elgin
+        { vendorId: 0x14ad }, // CTX
+        { vendorId: 0x0FE6 }, // ICS Advent DBA Contour Design
       ];
 
       for (const device of devices) {
@@ -120,15 +178,30 @@ class ThermalPrinterService {
           filter => filter.vendorId === device.vendorId
         );
 
-        if (isKnownPrinter || device.productName?.toLowerCase().includes('printer')) {
+        const productName = device.productName?.toLowerCase() || '';
+        const manufacturerName = device.manufacturerName?.toLowerCase() || '';
+        const isPrinterByName =
+          productName.includes('printer') ||
+          productName.includes('pos') ||
+          productName.includes('thermal') ||
+          manufacturerName.includes('printer') ||
+          manufacturerName.includes('pos');
+
+        if (isKnownPrinter || isPrinterByName) {
+          const displayName = device.productName ||
+            device.manufacturerName ||
+            `USB Printer (${device.vendorId.toString(16).toUpperCase()}:${device.productId.toString(16).toUpperCase()})`;
+
           printers.push({
             id: `usb_${device.vendorId}_${device.productId}`,
-            name: device.productName || `USB Printer (${device.vendorId}:${device.productId})`,
+            name: displayName,
             type: 'usb',
             vendorId: device.vendorId,
             productId: device.productId,
             connected: device.opened
           });
+
+          console.log(`✅ Impressora detectada: ${displayName}`);
         }
       }
 
@@ -146,28 +219,53 @@ class ThermalPrinterService {
     }
 
     try {
+      // Solicitar dispositivo com filtros completos
       const device = await (navigator as any).usb.requestDevice({
         filters: [
           { vendorId: 0x04b8 }, // Epson
-          { vendorId: 0x0dd4 }, // Custom
+          { vendorId: 0x0dd4 }, // Custom Engineering
           { vendorId: 0x0519 }, // Citizen
-          { vendorId: 0x0fe6 }, // ICS Advent
-          { vendorId: 0x154f }, // Rongta
+          { vendorId: 0x0fe6 }, // ICS Advent/Contour Design
+          { vendorId: 0x154f }, // Rongta Technology
           { vendorId: 0x0483 }, // STMicroelectronics
           { vendorId: 0x1fc9 }, // NXP Semiconductors
+          { vendorId: 0x0926 }, // Zjiang
+          { vendorId: 0x6868 }, // Xprinter
+          { vendorId: 0x1504 }, // Bixolon
+          { vendorId: 0x0416 }, // Winbond Electronics
+          { vendorId: 0x20d1 }, // Xiamen Hanin
+          { vendorId: 0x0525 }, // Netchip Technology
+          { vendorId: 0x1CBE }, // Elgin
+          { vendorId: 0x14ad }, // CTX
         ]
       });
 
-      await device.open();
-      await device.selectConfiguration(1);
+      // Abrir e configurar dispositivo
+      if (!device.opened) {
+        await device.open();
+      }
+
+      // Selecionar configuração (normalmente 1)
+      if (device.configuration === null) {
+        await device.selectConfiguration(1);
+      }
+
+      // Reivindicar interface (normalmente 0)
       await device.claimInterface(0);
 
       const printerId = `usb_${device.vendorId}_${device.productId}`;
       this.connectedDevices.set(printerId, device);
+      this.reconnectAttempts.set(printerId, 0);
+
+      const displayName = device.productName ||
+        device.manufacturerName ||
+        `USB Printer (${device.vendorId.toString(16).toUpperCase()}:${device.productId.toString(16).toUpperCase()})`;
+
+      console.log(`✅ Impressora USB conectada: ${displayName}`);
 
       return {
         id: printerId,
-        name: device.productName || `USB Printer (${device.vendorId}:${device.productId})`,
+        name: displayName,
         type: 'usb',
         vendorId: device.vendorId,
         productId: device.productId,
@@ -215,7 +313,15 @@ class ThermalPrinterService {
 
     try {
       const port = await (navigator as any).serial.requestPort();
-      await port.open({ baudRate: 9600 });
+
+      // Configuração padrão para impressoras térmicas seriais
+      await port.open({
+        baudRate: 9600,
+        dataBits: 8,
+        stopBits: 1,
+        parity: 'none',
+        flowControl: 'none'
+      });
 
       const info = port.getInfo();
       const printerId = `serial_${info.usbVendorId || 'unknown'}_${info.usbProductId || 'unknown'}`;
@@ -472,26 +578,60 @@ class ThermalPrinterService {
   private async printUSB(deviceId: string, data: Uint8Array): Promise<void> {
     const device = this.connectedDevices.get(deviceId);
     if (!device) {
-      throw new Error('Impressora USB não conectada');
+      throw new Error('Impressora USB não conectada. Conecte a impressora primeiro.');
     }
 
     try {
+      // Verificar se o dispositivo está aberto
+      if (!device.opened) {
+        console.warn('⚠️ Dispositivo não está aberto, tentando abrir...');
+        await device.open();
+        if (device.configuration === null) {
+          await device.selectConfiguration(1);
+        }
+        await device.claimInterface(0);
+      }
+
       // Encontrar endpoint de saída
       const interface_ = device.configuration.interfaces[0];
       const endpoint = interface_.alternate.endpoints.find(
-        (ep: any) => ep.direction === 'out'
+        (ep: any) => ep.direction === 'out' && ep.type === 'bulk'
       );
 
       if (!endpoint) {
-        throw new Error('Endpoint de saída não encontrado');
+        console.error('❌ Endpoints disponíveis:', interface_.alternate.endpoints);
+        throw new Error('Endpoint de saída não encontrado. Verifique a impressora.');
       }
 
-      // Enviar dados
-      await device.transferOut(endpoint.endpointNumber, data);
+      console.log(`📤 Enviando ${data.length} bytes para endpoint ${endpoint.endpointNumber}`);
+
+      // Enviar dados em chunks se for muito grande
+      const chunkSize = endpoint.packetSize || 64;
+      let offset = 0;
+
+      while (offset < data.length) {
+        const chunk = data.slice(offset, Math.min(offset + chunkSize, data.length));
+        const result = await device.transferOut(endpoint.endpointNumber, chunk);
+
+        if (result.status !== 'ok') {
+          throw new Error(`Erro na transferência USB: ${result.status}`);
+        }
+
+        offset += chunk.length;
+      }
+
       console.log('✅ Impressão USB enviada com sucesso');
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Erro na impressão USB:', error);
-      throw error;
+
+      // Tentar reconectar se o dispositivo foi desconectado
+      if (error.message?.includes('disconnected') || error.message?.includes('device')) {
+        this.connectedDevices.delete(deviceId);
+        console.log('🔄 Tentando reconectar dispositivo...');
+        await this.attemptReconnect(deviceId);
+      }
+
+      throw new Error(`Erro ao imprimir via USB: ${error.message}`);
     }
   }
 
@@ -499,17 +639,43 @@ class ThermalPrinterService {
   private async printSerial(deviceId: string, data: Uint8Array): Promise<void> {
     const port = this.connectedDevices.get(deviceId);
     if (!port) {
-      throw new Error('Porta serial não conectada');
+      throw new Error('Porta serial não conectada. Conecte a impressora primeiro.');
     }
 
     try {
+      // Verificar se a porta está aberta
+      if (!port.readable || !port.writable) {
+        console.warn('⚠️ Porta não está aberta, tentando abrir...');
+        await port.open({
+          baudRate: 9600,
+          dataBits: 8,
+          stopBits: 1,
+          parity: 'none'
+        });
+      }
+
+      if (!port.writable) {
+        throw new Error('Porta serial não está disponível para escrita');
+      }
+
+      console.log(`📤 Enviando ${data.length} bytes para porta serial`);
+
       const writer = port.writable.getWriter();
       await writer.write(data);
       writer.releaseLock();
+
       console.log('✅ Impressão Serial enviada com sucesso');
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Erro na impressão Serial:', error);
-      throw error;
+
+      // Tentar reconectar se a porta foi desconectada
+      if (error.message?.includes('disconnected') || error.message?.includes('port')) {
+        this.connectedDevices.delete(deviceId);
+        console.log('🔄 Tentando reconectar porta serial...');
+        await this.attemptReconnect(deviceId);
+      }
+
+      throw new Error(`Erro ao imprimir via Serial: ${error.message}`);
     }
   }
 
@@ -574,29 +740,87 @@ class ThermalPrinterService {
     await this.print(testData, config.type);
   }
 
-  // Verificar status da impressora
+  // Verificar status da impressora com reconexão automática
   async checkPrinterStatus(deviceId: string): Promise<'connected' | 'disconnected' | 'error'> {
     const device = this.connectedDevices.get(deviceId);
-    
+
     if (!device) {
+      const attempts = this.reconnectAttempts.get(deviceId) || 0;
+      if (attempts < this.maxReconnectAttempts) {
+        console.log(`🔄 Tentando reconectar impressora ${deviceId}...`);
+        await this.attemptReconnect(deviceId);
+      }
       return 'disconnected';
     }
 
     try {
       // Para USB, verificar se ainda está aberto
       if (device.opened !== undefined) {
-        return device.opened ? 'connected' : 'disconnected';
+        if (!device.opened) {
+          console.warn(`⚠️ Impressora USB ${deviceId} não está aberta`);
+          return 'disconnected';
+        }
+        return 'connected';
       }
-      
+
       // Para Serial, verificar se readable está disponível
       if (device.readable !== undefined) {
-        return device.readable ? 'connected' : 'disconnected';
+        if (!device.readable) {
+          console.warn(`⚠️ Porta serial ${deviceId} não está legível`);
+          return 'disconnected';
+        }
+        return 'connected';
       }
-      
+
       return 'connected';
     } catch (error) {
       console.error('Error checking printer status:', error);
       return 'error';
+    }
+  }
+
+  // Tentar reconectar dispositivo
+  private async attemptReconnect(deviceId: string): Promise<void> {
+    try {
+      const [type, vendorId, productId] = deviceId.split('_');
+
+      if (type === 'usb' && this.isWebUSBSupported) {
+        const devices = await (navigator as any).usb.getDevices();
+        const device = devices.find(
+          (d: any) => `usb_${d.vendorId}_${d.productId}` === deviceId
+        );
+
+        if (device && !device.opened) {
+          await device.open();
+          if (device.configuration === null) {
+            await device.selectConfiguration(1);
+          }
+          await device.claimInterface(0);
+          this.connectedDevices.set(deviceId, device);
+          console.log(`✅ Impressora reconectada: ${deviceId}`);
+        }
+      } else if (type === 'serial' && this.isWebSerialSupported) {
+        const ports = await (navigator as any).serial.getPorts();
+        const port = ports.find((p: any) => {
+          const info = p.getInfo();
+          return `serial_${info.usbVendorId || 'unknown'}_${info.usbProductId || 'unknown'}` === deviceId;
+        });
+
+        if (port && !port.readable) {
+          await port.open({
+            baudRate: 9600,
+            dataBits: 8,
+            stopBits: 1,
+            parity: 'none'
+          });
+          this.connectedDevices.set(deviceId, port);
+          console.log(`✅ Porta serial reconectada: ${deviceId}`);
+        }
+      }
+    } catch (error) {
+      console.error(`❌ Erro ao reconectar ${deviceId}:`, error);
+      const attempts = this.reconnectAttempts.get(deviceId) || 0;
+      this.reconnectAttempts.set(deviceId, attempts + 1);
     }
   }
 
