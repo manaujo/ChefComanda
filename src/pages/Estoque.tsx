@@ -1,11 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Package, Plus, Search, Filter, AlertTriangle, TrendingUp, 
-  Edit, Trash2, ArrowUp, ArrowDown, Calendar, Download,
-  FileSpreadsheet, RefreshCw, Eye, Clock, User, Zap,
-  CheckCircle, XCircle, Activity, BarChart3, X, Sparkles,
-  Box, Layers, Target, Gauge
-} from 'lucide-react';
+import { Package, Plus, Search, Filter, AlertTriangle, TrendingUp, CreditCard as Edit, Trash2, ArrowUp, ArrowDown, Calendar, Download, FileSpreadsheet, RefreshCw, Eye, Clock, User, Zap, CheckCircle, XCircle, Activity, BarChart3, X, Sparkles, Box, Layers, Target, Gauge } from 'lucide-react';
 import Button from '../components/ui/Button';
 import { formatarDinheiro } from '../utils/formatters';
 import { useAuth } from '../contexts/AuthContext';
@@ -83,24 +77,31 @@ const Estoque: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     try {
       if (!restaurante?.id) {
         throw new Error('Restaurante não encontrado no contexto');
       }
 
-      // Converter valores para números sem multiplicação
+      // Converter valores para números
       const quantidade = parseFloat(formData.quantidade);
       const quantidadeMinima = parseFloat(formData.quantidade_minima);
       const precoUnitario = formData.preco_unitario ? parseFloat(formData.preco_unitario) : null;
-      
+
       // Validar valores
       if (isNaN(quantidade) || quantidade < 0) {
         throw new Error('Quantidade atual inválida');
       }
-      
+
       if (isNaN(quantidadeMinima) || quantidadeMinima < 0) {
         throw new Error('Quantidade mínima inválida');
+      }
+
+      // Data de validade - usar valor direto do input
+      let dataValidade = null;
+      if (formData.data_validade) {
+        // Input date já retorna no formato YYYY-MM-DD correto
+        dataValidade = formData.data_validade;
       }
 
       const insumoData = {
@@ -110,7 +111,7 @@ const Estoque: React.FC = () => {
         unidade_medida: formData.unidade_medida,
         quantidade: quantidade,
         quantidade_minima: quantidadeMinima,
-        data_validade: formData.data_validade || null,
+        data_validade: dataValidade,
         preco_unitario: precoUnitario,
         ativo: true
       };
@@ -564,17 +565,17 @@ const Estoque: React.FC = () => {
                       <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Quantidade atual</span>
                     </div>
                     <span className="font-bold text-lg text-gray-900 dark:text-white">
-                      {insumo.quantidade.toFixed(3)} {insumo.unidade_medida}
+                      {insumo.quantidade.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 3 })} {insumo.unidade_medida}
                     </span>
                   </div>
-                  
+
                   <div className="flex justify-between items-center p-3 bg-gradient-to-r from-gray-50/50 to-slate-50/50 dark:from-gray-700/20 dark:to-slate-700/20 rounded-xl">
                     <div className="flex items-center">
                       <Target className="w-4 h-4 text-gray-600 dark:text-gray-400 mr-2" />
                       <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Mínimo</span>
                     </div>
                     <span className="font-semibold text-gray-900 dark:text-white">
-                      {insumo.quantidade_minima.toFixed(3)} {insumo.unidade_medida}
+                      {insumo.quantidade_minima.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 3 })} {insumo.unidade_medida}
                     </span>
                   </div>
                   
@@ -597,7 +598,7 @@ const Estoque: React.FC = () => {
                         <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Validade</span>
                       </div>
                       <span className="font-semibold text-purple-700 dark:text-purple-300">
-                        {new Date(insumo.data_validade).toLocaleDateString('pt-BR')}
+                        {insumo.data_validade.split('-').reverse().join('/')}
                       </span>
                     </div>
                   )}
@@ -759,13 +760,13 @@ const Estoque: React.FC = () => {
                     </label>
                     <input
                       type="number"
-                      step="0.001"
+                      step="any"
                       min="0"
                       required
                       value={formData.quantidade}
                       onChange={(e) => setFormData({ ...formData, quantidade: e.target.value })}
                       className="w-full px-4 py-4 bg-gray-50/50 dark:bg-gray-700/50 border border-gray-200/50 dark:border-gray-600/50 rounded-2xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-200 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
-                      placeholder="0.000"
+                      placeholder="Ex: 100"
                     />
                   </div>
 
@@ -775,13 +776,13 @@ const Estoque: React.FC = () => {
                     </label>
                     <input
                       type="number"
-                      step="0.001"
+                      step="any"
                       min="0"
                       required
                       value={formData.quantidade_minima}
                       onChange={(e) => setFormData({ ...formData, quantidade_minima: e.target.value })}
                       className="w-full px-4 py-4 bg-gray-50/50 dark:bg-gray-700/50 border border-gray-200/50 dark:border-gray-600/50 rounded-2xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-200 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
-                      placeholder="0.000"
+                      placeholder="Ex: 10"
                     />
                   </div>
 
@@ -791,12 +792,12 @@ const Estoque: React.FC = () => {
                     </label>
                     <input
                       type="number"
-                      step="0.01"
+                      step="any"
                       min="0"
                       value={formData.preco_unitario}
                       onChange={(e) => setFormData({ ...formData, preco_unitario: e.target.value })}
                       className="w-full px-4 py-4 bg-gray-50/50 dark:bg-gray-700/50 border border-gray-200/50 dark:border-gray-600/50 rounded-2xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-200 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
-                      placeholder="0.00"
+                      placeholder="Ex: 15.50"
                     />
                   </div>
 
