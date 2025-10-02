@@ -50,7 +50,7 @@ const CardapioOnline: React.FC = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300 py-8">
+    <div className="w-full px-4 min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300 py-8">
       <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 dark:border-gray-700/50 overflow-hidden">
         <div className="p-6">
           <div className="flex items-center mb-6">

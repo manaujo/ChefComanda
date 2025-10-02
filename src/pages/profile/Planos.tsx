@@ -1,16 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  CreditCard, Check, Star, Crown, AlertTriangle, ExternalLink, 
-  Loader2, Calendar, DollarSign, Shield, Headphones, TrendingUp,
-  Gift, Zap, Clock, Award, X, Edit, Coffee, ClipboardList,
-  Package, BarChart3, QrCode, PenSquare, Calculator, Users,
-  Utensils, Globe, FileText, ChefHat, Smartphone, Wifi,
-  Database, Lock, Bell, Settings, RefreshCw, Eye, Activity,
-  Truck, Building, Phone, Mail, MapPin, Camera, Download,
-  Upload, Printer, Receipt, Target, Gauge, Layers, Box,
-  Archive, Clipboard, PieChart, LineChart, TrendingDown,
-  ArrowRight, CheckCircle, XCircle, AlertCircle, Info
-} from 'lucide-react';
+import { CreditCard, Check, Star, Crown, AlertTriangle, ExternalLink, Loader2, Calendar, DollarSign, Shield, Headphones, TrendingUp, Gift, Zap, Clock, Award, X, CreditCard as Edit, Coffee, ClipboardList, Package, BarChart3, QrCode, SquarePen as PenSquare, Calculator, Users, Utensils, Globe, FileText, ChefHat, Smartphone, Wifi, Database, Lock, Bell, Settings, RefreshCw, Eye, Activity, Truck, Building, Phone, Mail, MapPin, Camera, Download, Upload, Printer, Receipt, Target, Gauge, Layers, Box, Archive, Clipboard, PieChart, LineChart, TrendingDown, ArrowRight, CheckCircle, XCircle, AlertCircle, Info } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import StripeCheckout from '../../components/StripeCheckout';
 import { stripeProducts, getProductByPriceId, formatPrice, getMonthlyEquivalent } from '../../stripe-config';
@@ -406,7 +395,7 @@ const Planos: React.FC = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="w-full px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
       <div className="text-center mb-12">
         <div className="flex justify-center mb-6">
@@ -428,7 +417,7 @@ const Planos: React.FC = () => {
             Pagamentos 100% seguros via Stripe
           </div>
         </div>
-        <p className="text-2xl text-gray-600 dark:text-gray-400 max-w-4xl mx-auto leading-relaxed">
+        <p className="text-2xl text-gray-600 dark:text-gray-400 max-w-5xl mx-auto leading-relaxed">
           Sistema completo de gestão para restaurantes, bares e lanchonetes. 
           Transforme a gestão do seu estabelecimento com tecnologia de ponta.
         </p>
@@ -737,7 +726,7 @@ const Planos: React.FC = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 w-full max-w-screen-xl mx-auto">
           {stripeProducts.map((product, index) => (
             <div 
               key={product.id}

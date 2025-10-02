@@ -151,7 +151,7 @@ const UserProfile: React.FC = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="w-full max-w-6xl mx-auto">
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
         <div className="p-6">
           <div className="flex items-center mb-6">

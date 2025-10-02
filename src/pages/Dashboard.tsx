@@ -301,7 +301,7 @@ const Dashboard: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6 min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+    <div className="space-y-6 min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300 w-full">
       {/* Header */}
       <div className="flex justify-between items-start">
         <div>

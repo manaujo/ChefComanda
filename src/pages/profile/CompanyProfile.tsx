@@ -160,7 +160,7 @@ const CompanyProfile: React.FC = () => {
   };
 
   return (
-    <div className="max-w-5xl mx-auto p-6">
+    <div className="w-full max-w-6xl mx-auto p-6">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
           Dados da Empresa

@@ -106,7 +106,7 @@ const LandingPage: React.FC = () => {
     <div className="min-h-screen bg-white">
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="w-full max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-3">
               <div className="p-2 bg-gradient-to-br from-red-600 to-red-700 rounded-lg">
@@ -210,8 +210,8 @@ const LandingPage: React.FC = () => {
           <div className="absolute inset-0 bg-gradient-to-r from-red-900/80 via-red-800/70 to-orange-600/60"></div>
         </div>
         
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="max-w-4xl mx-auto">
+        <div className="relative z-10 w-full max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <div className="max-w-6xl mx-auto">
             <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 leading-tight">
               Chef<span className="text-yellow-400">Comanda</span>
             </h1>
@@ -257,7 +257,7 @@ const LandingPage: React.FC = () => {
 
       {/* Metrics Section */}
       <section className="py-16 bg-gradient-to-r from-red-50 to-orange-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="w-full max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {metrics.map((metric, index) => (
               <div key={index} className="text-center">
@@ -276,7 +276,7 @@ const LandingPage: React.FC = () => {
 
       {/* Features Section */}
       <section id="funcionalidades" className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="w-full max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold text-gray-900 mb-4">
               Funcionalidades do ChefComanda
@@ -311,7 +311,7 @@ const LandingPage: React.FC = () => {
 
       {/* Plans Section */}
       <section id="planos" className="py-24 bg-gradient-to-br from-red-50 via-orange-50 to-yellow-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="w-full max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-5xl font-bold text-gray-900 mb-6">
               Planos ChefComanda
@@ -325,7 +325,7 @@ const LandingPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-5xl mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
             {stripeProducts.map((product, index) => (
               <div 
                 key={product.id}
@@ -738,7 +738,7 @@ const LandingPage: React.FC = () => {
 
       {/* CTA Section */}
       <section className="py-20 bg-gradient-to-r from-red-600 via-red-700 to-red-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        <div className="w-full max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-4xl font-bold text-white mb-6">
             Pronto para revolucionar seu restaurante?
           </h2>
@@ -760,8 +760,8 @@ const LandingPage: React.FC = () => {
 
       {/* WhatsApp Contact Section */}
       <section className="py-20 bg-gradient-to-br from-green-50 via-green-100 to-emerald-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-4xl mx-auto text-center">
+        <div className="w-full max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="max-w-6xl mx-auto text-center">
             <div className="mb-8">
               <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-green-500 to-green-600 rounded-full mb-6 shadow-lg">
                 <svg className="w-10 h-10 text-white" fill="currentColor" viewBox="0 0 24 24">
@@ -871,7 +871,7 @@ const LandingPage: React.FC = () => {
       </section>
       {/* Footer */}
       <footer id="contato" className="bg-gray-900 text-white py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="w-full max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div className="md:col-span-2">
               <div className="flex items-center space-x-3 mb-6">

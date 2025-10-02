@@ -1,11 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, Outlet, useNavigate } from 'react-router-dom';
-import {
-  Menu, ChefHat, LayoutDashboard, Users, ShoppingBag,
-  ClipboardList, PieChart, Settings, Coffee, QrCode,
-  CreditCard, Moon, Sun, Globe, PenSquare, Calculator, Zap, Printer,
-  HelpCircle, Headphones
-} from 'lucide-react';
+import { Menu, ChefHat, LayoutDashboard, Users, ShoppingBag, ClipboardList, PieChart, Settings, Coffee, QrCode, CreditCard, Moon, Sun, Globe, SquarePen as PenSquare, Calculator, Zap, Printer, HelpCircle, Headphones } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { usePermissions } from '../hooks/useEmployeeAuth';
@@ -236,7 +231,7 @@ const DashboardLayout: React.FC = () => {
       )}
 
       <main className="pt-16 min-h-screen">
-        <div className="p-4 sm:p-6 lg:p-8">
+        <div className="p-4 sm:p-6 lg:p-8 w-full">
           <Outlet />
           <EmployeeDebugPanel />
         </div>

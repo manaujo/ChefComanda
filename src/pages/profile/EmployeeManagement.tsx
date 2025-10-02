@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Search, Plus, Edit, Trash2, Eye, EyeOff, Users, UserPlus, Shield, Mail, Phone, Car as IdCard, Briefcase, CheckCircle, XCircle, AlertTriangle, Filter, RefreshCw, Settings, Crown, Star, Award, Zap, Clock, Activity, User } from "lucide-react";
+import { Search, Plus, CreditCard as Edit, Trash2, Eye, EyeOff, Users, UserPlus, Shield, Mail, Phone, Car as IdCard, Briefcase, CheckCircle, XCircle, AlertTriangle, Filter, RefreshCw, Settings, Crown, Star, Award, Zap, Clock, Activity, User } from "lucide-react";
 import Button from "../../components/ui/Button";
 import { useAuth } from "../../contexts/AuthContext";
 import EmployeeAuthService from "../../services/EmployeeAuthService";
@@ -237,7 +237,7 @@ const EmployeeManagement: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-indigo-50/30 dark:from-gray-900 dark:via-gray-800 dark:to-gray-700">
-      <div className="p-6 max-w-7xl mx-auto">
+      <div className="p-6 w-full">
         {/* Header Moderno */}
         <div className="mb-8">
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center">

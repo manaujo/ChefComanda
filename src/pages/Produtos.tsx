@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Edit, Trash2, Package, DollarSign, Tag, Image, Upload, X, Loader2, FolderPlus } from 'lucide-react';
+import { Plus, Search, CreditCard as Edit, Trash2, Package, DollarSign, Tag, Image, Upload, X, Loader2, FolderPlus } from 'lucide-react';
 import Button from '../components/ui/Button';
 import { CRUDService } from '../services/CRUDService';
 import { useAuth } from '../contexts/AuthContext';
@@ -296,7 +296,7 @@ export default function Produtos() {
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+    <div className="p-6 w-full min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
       <div className="flex justify-between items-center mb-8">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">

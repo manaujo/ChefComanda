@@ -1,35 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import {
-  Settings as SettingsIcon,
-  Moon,
-  Sun,
-  Globe,
-  Bell,
-  Shield,
-  Lock,
-  Printer,
-  Monitor,
-  Wifi,
-  Usb,
-  Cable,
-  CheckCircle,
-  XCircle,
-  AlertTriangle,
-  Plus,
-  Edit,
-  Trash2,
-  TestTube,
-  Save,
-  RefreshCw,
-  Zap,
-  Power,
-  Volume2,
-  Settings as SettingsGear,
-  Sparkles,
-  Crown,
-  Star
-} from "lucide-react";
+import { Settings as SettingsIcon, Moon, Sun, Globe, Bell, Shield, Lock, Printer, Monitor, Wifi, Usb, Cable, CheckCircle, XCircle, AlertTriangle, Plus, CreditCard as Edit, Trash2, TestTube, Save, RefreshCw, Zap, Power, Volume2, Settings as SettingsGear, Sparkles, Crown, Star } from "lucide-react";
 import Button from "../../components/ui/Button";
 import { useTheme } from "../../contexts/ThemeContext";
 import { useAuth } from "../../contexts/AuthContext";
@@ -341,7 +312,7 @@ const Settings: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-indigo-50/30 dark:from-gray-900 dark:via-gray-800 dark:to-gray-700">
-      <div className="max-w-6xl mx-auto p-6">
+      <div className="w-full max-w-6xl mx-auto p-6">
         {/* Header Moderno */}
         <div className="mb-8">
           <div className="flex items-center mb-6">
