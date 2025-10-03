@@ -15,6 +15,8 @@ import AuthLayout from './layouts/AuthLayout';
 import Login from './pages/Login';
 import SignUp from './pages/auth/SignUp';
 import VerifyEmail from './pages/auth/VerifyEmail';
+import ForgotPassword from './pages/auth/ForgotPassword';
+import ResetPassword from './pages/auth/ResetPassword';
 import Dashboard from './pages/Dashboard';
 import Mesas from './pages/Mesas';
 import Comandas from './pages/Comandas';
@@ -68,6 +70,8 @@ function App() {
               <Route path="/login" element={<AuthLayout><Login /></AuthLayout>} />
               <Route path="/signup" element={<AuthLayout><SignUp /></AuthLayout>} />
               <Route path="/auth/verify-email" element={<AuthLayout><VerifyEmail /></AuthLayout>} />
+              <Route path="/auth/forgot-password" element={<AuthLayout><ForgotPassword /></AuthLayout>} />
+              <Route path="/auth/reset-password" element={<AuthLayout><ResetPassword /></AuthLayout>} />
               
               {/* Checkout Routes */}
               <Route path="/checkout/success" element={<Success />} />

@@ -23,6 +23,8 @@ interface AuthContextData extends AuthState {
   signOut: () => Promise<void>;
   updateProfile: (data: UpdateProfileData) => Promise<void>;
   refreshSubscription: () => Promise<void>;
+  forgotPassword: (email: string) => Promise<void>;
+  resetPassword: (newPassword: string) => Promise<void>;
 }
 
 interface SignUpData {
@@ -716,6 +718,50 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
+  const forgotPassword = async (email: string) => {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/reset-password`,
+      });
+
+      if (error) throw error;
+
+      toast.success("E-mail de recuperação enviado! Verifique sua caixa de entrada.");
+    } catch (error) {
+      console.error("Error sending password reset email:", error);
+      if (error instanceof Error && error.message.includes("Failed to fetch")) {
+        toast.error(
+          "Erro de conexão. Verifique sua internet e tente novamente."
+        );
+      } else {
+        toast.error("Erro ao enviar e-mail de recuperação");
+      }
+      throw error;
+    }
+  };
+
+  const resetPassword = async (newPassword: string) => {
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+
+      if (error) throw error;
+
+      toast.success("Senha redefinida com sucesso!");
+    } catch (error) {
+      console.error("Error resetting password:", error);
+      if (error instanceof Error && error.message.includes("Failed to fetch")) {
+        toast.error(
+          "Erro de conexão. Verifique sua internet e tente novamente."
+        );
+      } else {
+        toast.error("Erro ao redefinir senha");
+      }
+      throw error;
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -724,7 +770,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         signIn,
         signOut,
         updateProfile,
-        refreshSubscription
+        refreshSubscription,
+        forgotPassword,
+        resetPassword
       }}
     >
       {children}
