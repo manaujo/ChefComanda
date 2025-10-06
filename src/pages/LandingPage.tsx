@@ -937,13 +937,13 @@ const LandingPage: React.FC = () => {
                 </li>
                 <li className="text-gray-400">
                   <strong className="text-white">Instagram:</strong><br />
-                  <a 
-                    href="https://www.instagram.com/chef_comanda_/" 
-                    target="_blank" 
+                  <a
+                    href="https://www.instagram.com/chefcomanda/"
+                    target="_blank"
                     rel="noopener noreferrer"
                     className="text-purple-400 hover:text-purple-300 transition-colors"
                   >
-                    @chef_comanda_
+                    @chefcomanda
                   </a>
                 </li>
                 <li className="text-gray-400">

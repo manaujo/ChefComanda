@@ -268,13 +268,13 @@ const HelpCenter: React.FC = () => {
                   Suporte por E-mail
                 </a>
                 <a
-                  href="https://www.instagram.com/chef_comanda_/"
+                  href="https://www.instagram.com/chefcomanda/"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center text-sm text-blue-600 hover:text-blue-500"
                 >
                   <ExternalLink size={16} className="mr-2" />
-                  Instagram @chef_comanda_
+                  Instagram @chefcomanda
                 </a>
                 <a
                   href="https://wa.me/5562982760471"

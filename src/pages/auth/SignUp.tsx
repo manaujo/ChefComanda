@@ -20,9 +20,20 @@ const SignUp: React.FC = () => {
   const { signUp } = useAuth();
   const navigate = useNavigate();
 
+  const formatCPF = (value: string) => {
+    const numbers = value.replace(/\D/g, '');
+    if (numbers.length <= 11) {
+      return numbers
+        .replace(/(\d{3})(\d)/, '$1.$2')
+        .replace(/(\d{3})(\d)/, '$1.$2')
+        .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+    }
+    return value;
+  };
+
   const validateCPF = (cpf: string) => {
-    const cpfRegex = /^\d{3}\.\d{3}\.\d{3}-\d{2}$/;
-    return cpfRegex.test(cpf);
+    const numbers = cpf.replace(/\D/g, '');
+    return numbers.length === 11;
   };
 
   const validateEmail = (email: string) => {
@@ -55,7 +66,7 @@ const SignUp: React.FC = () => {
     }
 
     if (!validateCPF(formData.cpf)) {
-      setError("Digite um CPF válido (000.000.000-00)");
+      setError("Digite um CPF válido com 11 dígitos");
       return;
     }
 
@@ -205,10 +216,11 @@ const SignUp: React.FC = () => {
               type="text"
               value={formData.cpf}
               onChange={(e) =>
-                setFormData({ ...formData, cpf: e.target.value })
+                setFormData({ ...formData, cpf: formatCPF(e.target.value) })
               }
               className="pl-10 block w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-red-500 dark:focus:ring-red-400 focus:border-red-500 dark:focus:border-red-400 transition-colors dark:text-white"
               placeholder="000.000.000-00"
+              maxLength={14}
             />
           </div>
         </div>

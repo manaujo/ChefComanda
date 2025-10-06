@@ -96,6 +96,6 @@ O ChefComanda está totalmente funcional com:
 
 - **WhatsApp**: (62) 98276-0471
 - **E-mail**: chefcomandaoficial@gmail.com
-- **Instagram**: @chef_comanda_
+- **Instagram**: @chefcomanda
 
 O sistema está pronto para receber pagamentos reais!

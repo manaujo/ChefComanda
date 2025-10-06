@@ -56,7 +56,7 @@ const Suporte: React.FC = () => {
   };
 
   const openInstagram = () => {
-    window.open('https://www.instagram.com/chef_comanda_/', '_blank');
+    window.open('https://www.instagram.com/chefcomanda/', '_blank');
   };
 
   const sendEmail = () => {
@@ -206,7 +206,7 @@ const Suporte: React.FC = () => {
                   </p>
                   <div className="mb-4">
                     <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                      @chef_comanda_
+                      @chefcomanda
                     </p>
                   </div>
                   <Button
