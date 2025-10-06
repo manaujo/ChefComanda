@@ -27,10 +27,10 @@ const ProfileDropdown: React.FC = () => {
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center space-x-3 focus:outline-none"
+        className="flex items-center space-x-1 sm:space-x-3 focus:outline-none"
       >
-        <div className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center text-white">
-          <User size={16} />
+        <div className="h-7 w-7 sm:h-8 sm:w-8 rounded-full bg-blue-500 flex items-center justify-center text-white">
+          <User className="w-4 h-4 sm:w-4 sm:h-4" />
         </div>
         <div className="hidden md:block text-left">
           <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -53,11 +53,11 @@ const ProfileDropdown: React.FC = () => {
             )}
           </div>
         </div>
-        <ChevronDown size={16} className="text-gray-500 dark:text-gray-400" />
+        <ChevronDown className="w-4 h-4 sm:w-4 sm:h-4 hidden sm:block text-gray-500 dark:text-gray-400" />
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg z-50">
+        <div className="absolute right-0 mt-2 w-48 sm:w-56 bg-white dark:bg-gray-800 rounded-md shadow-lg z-50 border border-gray-200 dark:border-gray-700">
           {userRole === 'admin' && !isEmployee && (
             <>
               <Link

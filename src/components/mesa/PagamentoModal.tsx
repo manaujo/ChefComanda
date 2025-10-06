@@ -126,49 +126,42 @@ const PagamentoModal: React.FC<PagamentoModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-        <div className="fixed inset-0 transition-opacity" aria-hidden="true">
-          <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
+      <div className="flex items-end sm:items-center justify-center min-h-screen p-0 sm:p-4">
+        <div className="fixed inset-0 transition-opacity" aria-hidden="true" onClick={onClose}>
+          <div className="absolute inset-0 bg-gray-500 dark:bg-gray-900 opacity-75"></div>
         </div>
 
-        <span
-          className="hidden sm:inline-block sm:align-middle sm:h-screen"
-          aria-hidden="true"
-        >
-          &#8203;
-        </span>
-
-        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-          <div className="flex justify-between items-center bg-gray-100 px-6 py-3 border-b">
-            <h2 className="text-lg font-medium text-gray-900">
+        <div className="inline-block align-bottom bg-white dark:bg-gray-800 rounded-t-2xl sm:rounded-lg text-left overflow-hidden shadow-xl transform transition-all w-full sm:my-8 sm:align-middle sm:max-w-lg max-h-[95vh] flex flex-col">
+          <div className="flex justify-between items-center bg-gray-100 dark:bg-gray-700 px-4 sm:px-6 py-3 border-b border-gray-200 dark:border-gray-600">
+            <h2 className="text-base sm:text-lg font-medium text-gray-900 dark:text-white">
               Pagamento - Mesa {mesa.numero}
             </h2>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-500"
+              className="text-gray-400 hover:text-gray-500 dark:text-gray-300 dark:hover:text-gray-200 p-1"
             >
-              <X size={24} />
+              <X className="w-5 h-5" />
             </button>
           </div>
 
-          <div className="px-6 py-4">
+          <div className="px-4 sm:px-6 py-4 overflow-y-auto flex-1">
             {/* Itens da comanda */}
             <div className="mb-4">
-              <h3 className="text-sm font-medium text-gray-700 mb-2">
+              <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Itens consumidos
               </h3>
-              <div className="max-h-40 overflow-y-auto border rounded-md p-2">
+              <div className="max-h-32 sm:max-h-40 overflow-y-auto border border-gray-300 dark:border-gray-600 rounded-md p-2 bg-gray-50 dark:bg-gray-700/50">
                 {itensComanda.length > 0 ? (
                   <div className="space-y-2">
                     {itensComanda.map((item) => (
                       <div
                         key={item.id}
-                        className="flex justify-between text-sm"
+                        className="flex justify-between text-xs sm:text-sm text-gray-900 dark:text-gray-100"
                       >
                         <span>
                           {item.quantidade}x {item.nome}
                         </span>
-                        <span>
+                        <span className="font-medium">
                           {formatarDinheiro(
                             item.preco_unitario * item.quantidade
                           )}
@@ -177,7 +170,7 @@ const PagamentoModal: React.FC<PagamentoModalProps> = ({
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-gray-500 text-center py-2">
+                  <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 text-center py-2">
                     Nenhum item na comanda
                   </p>
                 )}
@@ -185,17 +178,17 @@ const PagamentoModal: React.FC<PagamentoModalProps> = ({
             </div>
 
             {/* Subtotal */}
-            <div className="mb-6">
-              <h3 className="text-sm font-medium text-gray-700 mb-2">
+            <div className="mb-4 sm:mb-6">
+              <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Consumo
               </h3>
-              <p className="text-2xl font-bold text-gray-900">
+              <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
                 {formatarDinheiro(valorTotalItens)}
               </p>
             </div>
 
             {/* Adicionais */}
-            <div className="space-y-4 mb-6">
+            <div className="space-y-3 sm:space-y-4 mb-4 sm:mb-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
                   <input
@@ -207,12 +200,12 @@ const PagamentoModal: React.FC<PagamentoModalProps> = ({
                   />
                   <label
                     htmlFor="taxaServico"
-                    className="ml-2 text-sm text-gray-700"
+                    className="ml-2 text-xs sm:text-sm text-gray-700 dark:text-gray-300"
                   >
                     Taxa de Serviço (10%)
                   </label>
                 </div>
-                <span className="text-sm font-medium">
+                <span className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white">
                   {formatarDinheiro(valorTaxaServico)}
                 </span>
               </div>
@@ -228,18 +221,18 @@ const PagamentoModal: React.FC<PagamentoModalProps> = ({
                   />
                   <label
                     htmlFor="couvert"
-                    className="ml-2 text-sm text-gray-700"
+                    className="ml-2 text-xs sm:text-sm text-gray-700 dark:text-gray-300"
                   >
                     Couvert Artístico (R$ 15,00 p/ pessoa)
                   </label>
                 </div>
-                <span className="text-sm font-medium">
+                <span className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white">
                   {formatarDinheiro(valorCouvert)}
                 </span>
               </div>
 
-              <div className="border-t pt-4">
-                <h4 className="text-sm font-medium text-gray-700 mb-2">
+              <div className="border-t border-gray-200 dark:border-gray-600 pt-3 sm:pt-4">
+                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Desconto
                 </h4>
                 <div className="flex space-x-4 mb-2">
@@ -252,7 +245,7 @@ const PagamentoModal: React.FC<PagamentoModalProps> = ({
                       }
                       className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
                     />
-                    <span className="ml-2 text-sm text-gray-700">
+                    <span className="ml-2 text-xs sm:text-sm text-gray-700 dark:text-gray-300">
                       Percentual (%)
                     </span>
                   </label>
@@ -265,7 +258,7 @@ const PagamentoModal: React.FC<PagamentoModalProps> = ({
                       }
                       className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
                     />
-                    <span className="ml-2 text-sm text-gray-700">
+                    <span className="ml-2 text-xs sm:text-sm text-gray-700 dark:text-gray-300">
                       Valor (R$)
                     </span>
                   </label>
@@ -282,14 +275,14 @@ const PagamentoModal: React.FC<PagamentoModalProps> = ({
                     }
                     min="0"
                     step={desconto.tipo === "percentual" ? "1" : "0.01"}
-                    className="block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    className="block w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm p-2"
                     placeholder={
                       desconto.tipo === "percentual" ? "0%" : "R$ 0,00"
                     }
                   />
                 </div>
                 {valorDesconto > 0 && (
-                  <p className="text-sm text-gray-500 mt-1">
+                  <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
                     Desconto aplicado: {formatarDinheiro(valorDesconto)}
                   </p>
                 )}
@@ -297,63 +290,68 @@ const PagamentoModal: React.FC<PagamentoModalProps> = ({
             </div>
 
             {/* Total */}
-            <div className="border-t border-gray-200 pt-4 mb-6">
+            <div className="border-t border-gray-200 dark:border-gray-600 pt-4 mb-4 sm:mb-6">
               <div className="flex justify-between items-center">
-                <span className="text-lg font-medium text-gray-900">Total</span>
-                <span className="text-2xl font-bold text-gray-900">
+                <span className="text-base sm:text-lg font-medium text-gray-900 dark:text-white">Total</span>
+                <span className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
                   {formatarDinheiro(valorTotal)}
                 </span>
               </div>
             </div>
 
             {/* Formas de Pagamento */}
-            <div className="space-y-4">
+            <div className="space-y-3">
               <button
                 onClick={() => setFormaPagamento("pix")}
-                className={`w-full p-4 rounded-lg border-2 transition-colors ${
+                className={`w-full p-3 sm:p-4 rounded-lg border-2 transition-colors ${
                   formaPagamento === "pix"
-                    ? "border-blue-500 bg-blue-50"
-                    : "border-gray-200 hover:border-blue-200"
+                    ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-400"
+                    : "border-gray-200 dark:border-gray-600 hover:border-blue-200 dark:hover:border-blue-400"
                 }`}
               >
                 <div className="flex items-center">
-                  <QrCode size={24} className="text-blue-500" />
-                  <span className="ml-3 font-medium">PIX</span>
+                  <QrCode className="w-5 h-5 sm:w-6 sm:h-6 text-blue-500 dark:text-blue-400" />
+                  <span className="ml-3 font-medium text-sm sm:text-base text-gray-900 dark:text-white">PIX</span>
                 </div>
               </button>
 
               <button
                 onClick={() => setFormaPagamento("cartao")}
-                className={`w-full p-4 rounded-lg border-2 transition-colors ${
+                className={`w-full p-3 sm:p-4 rounded-lg border-2 transition-colors ${
                   formaPagamento === "cartao"
-                    ? "border-blue-500 bg-blue-50"
-                    : "border-gray-200 hover:border-blue-200"
+                    ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-400"
+                    : "border-gray-200 dark:border-gray-600 hover:border-blue-200 dark:hover:border-blue-400"
                 }`}
               >
                 <div className="flex items-center">
-                  <CreditCard size={24} className="text-blue-500" />
-                  <span className="ml-3 font-medium">Cartão</span>
+                  <CreditCard className="w-5 h-5 sm:w-6 sm:h-6 text-blue-500 dark:text-blue-400" />
+                  <span className="ml-3 font-medium text-sm sm:text-base text-gray-900 dark:text-white">Cartão</span>
                 </div>
               </button>
 
               <button
                 onClick={() => setFormaPagamento("dinheiro")}
-                className={`w-full p-4 rounded-lg border-2 transition-colors ${
+                className={`w-full p-3 sm:p-4 rounded-lg border-2 transition-colors ${
                   formaPagamento === "dinheiro"
-                    ? "border-blue-500 bg-blue-50"
-                    : "border-gray-200 hover:border-blue-200"
+                    ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-400"
+                    : "border-gray-200 dark:border-gray-600 hover:border-blue-200 dark:hover:border-blue-400"
                 }`}
               >
                 <div className="flex items-center">
-                  <Wallet size={24} className="text-blue-500" />
-                  <span className="ml-3 font-medium">Dinheiro</span>
+                  <Wallet className="w-5 h-5 sm:w-6 sm:h-6 text-blue-500 dark:text-blue-400" />
+                  <span className="ml-3 font-medium text-sm sm:text-base text-gray-900 dark:text-white">Dinheiro</span>
                 </div>
               </button>
             </div>
           </div>
 
-          <div className="bg-gray-50 px-6 py-3 flex justify-end space-x-3">
-            <Button variant="ghost" onClick={onClose}>
+          <div className="bg-gray-50 dark:bg-gray-700 px-4 sm:px-6 py-3 flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3 border-t border-gray-200 dark:border-gray-600">
+            <Button
+              variant="ghost"
+              onClick={onClose}
+              fullWidth
+              className="sm:w-auto"
+            >
               Cancelar
             </Button>
             <Button
@@ -361,7 +359,9 @@ const PagamentoModal: React.FC<PagamentoModalProps> = ({
               onClick={handlePagamento}
               isLoading={loading}
               disabled={!formaPagamento}
-              icon={<Receipt size={18} />}
+              icon={<Receipt className="w-4 h-4" />}
+              fullWidth
+              className="sm:w-auto"
             >
               Finalizar Pagamento
             </Button>

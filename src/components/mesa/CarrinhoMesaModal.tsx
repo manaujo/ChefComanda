@@ -179,30 +179,30 @@ const CarrinhoMesaModal: React.FC<CarrinhoMesaModalProps> = ({ isOpen, onClose, 
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm">
-      <div className="flex items-center justify-center min-h-screen p-4">
-        <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-3xl shadow-2xl w-full max-w-7xl max-h-[95vh] overflow-hidden border border-white/20 dark:border-gray-700/50">
+      <div className="flex items-end sm:items-center justify-center min-h-screen p-0 sm:p-4">
+        <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-t-3xl sm:rounded-3xl shadow-2xl w-full max-w-7xl max-h-[95vh] overflow-hidden border-t border-white/20 dark:border-gray-700/50 sm:border flex flex-col">
           {/* Header */}
           <div className="relative overflow-hidden">
-            <div className="bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 p-8">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
-              <div className="relative flex justify-between items-center">
-                <div className="flex items-center">
-                  <div className="p-4 bg-white/20 backdrop-blur-sm rounded-2xl mr-6">
-                    <ChefHat size={32} className="text-white" />
+            <div className="bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 p-4 sm:p-6 md:p-8">
+              <div className="absolute top-0 right-0 w-24 h-24 sm:w-32 sm:h-32 bg-white/10 rounded-full -mr-12 sm:-mr-16 -mt-12 sm:-mt-16"></div>
+              <div className="relative flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                <div className="flex items-center flex-1">
+                  <div className="p-2 sm:p-3 md:p-4 bg-white/20 backdrop-blur-sm rounded-xl sm:rounded-2xl mr-3 sm:mr-4 md:mr-6">
+                    <ChefHat className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 text-white" />
                   </div>
                   <div className="text-white">
-                    <h2 className="text-3xl font-bold">
+                    <h2 className="text-lg sm:text-2xl md:text-3xl font-bold leading-tight">
                       Criar Pedido - Mesa {mesa.numero}
                     </h2>
-                    <p className="text-blue-100 text-lg">
+                    <p className="text-blue-100 text-xs sm:text-sm md:text-base mt-1">
                       Selecione os produtos e envie para a cozinha
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2 sm:space-x-4 self-end sm:self-center">
                   {carrinho.length > 0 && (
-                    <div className="bg-white/20 backdrop-blur-sm px-6 py-3 rounded-2xl">
-                      <span className="text-white font-bold text-lg">
+                    <div className="bg-white/20 backdrop-blur-sm px-3 py-1.5 sm:px-4 sm:py-2 md:px-6 md:py-3 rounded-xl sm:rounded-2xl">
+                      <span className="text-white font-bold text-sm sm:text-base md:text-lg">
                         {carrinho.length} {carrinho.length === 1 ? 'item' : 'itens'}
                       </span>
                     </div>
@@ -212,9 +212,9 @@ const CarrinhoMesaModal: React.FC<CarrinhoMesaModalProps> = ({ isOpen, onClose, 
                       onClose();
                       setCarrinho([]);
                     }}
-                    className="p-3 text-white/70 hover:text-white hover:bg-white/20 rounded-2xl transition-colors"
+                    className="p-2 sm:p-2.5 md:p-3 text-white/70 hover:text-white hover:bg-white/20 rounded-xl sm:rounded-2xl transition-colors"
                   >
-                    <X size={28} />
+                    <X className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7" />
                   </button>
                 </div>
               </div>
@@ -226,33 +226,33 @@ const CarrinhoMesaModal: React.FC<CarrinhoMesaModalProps> = ({ isOpen, onClose, 
             <div className="flex">
               <button
                 onClick={() => setActiveTab('produtos')}
-                className={`flex-1 py-6 px-8 text-center font-bold text-lg transition-all duration-300 ${
+                className={`flex-1 py-3 sm:py-4 md:py-6 px-3 sm:px-6 md:px-8 text-center font-bold text-sm sm:text-base md:text-lg transition-all duration-300 ${
                   activeTab === 'produtos'
                     ? 'bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 border-b-4 border-blue-600 shadow-lg'
                     : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-white/50 dark:hover:bg-gray-700/50'
                 }`}
               >
-                <div className="flex items-center justify-center space-x-3">
-                  <Package className="w-6 h-6" />
-                  <span>Produtos</span>
-                  <span className="text-sm bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200 px-3 py-1 rounded-full">
+                <div className="flex items-center justify-center space-x-1 sm:space-x-2 md:space-x-3">
+                  <Package className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6" />
+                  <span className="hidden sm:inline">Produtos</span>
+                  <span className="text-xs sm:text-sm bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200 px-2 py-0.5 sm:px-3 sm:py-1 rounded-full">
                     {produtosFiltrados.length}
                   </span>
                 </div>
               </button>
               <button
                 onClick={() => setActiveTab('carrinho')}
-                className={`flex-1 py-6 px-8 text-center font-bold text-lg transition-all duration-300 relative ${
+                className={`flex-1 py-3 sm:py-4 md:py-6 px-3 sm:px-6 md:px-8 text-center font-bold text-sm sm:text-base md:text-lg transition-all duration-300 relative ${
                   activeTab === 'carrinho'
                     ? 'bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 border-b-4 border-blue-600 shadow-lg'
                     : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-white/50 dark:hover:bg-gray-700/50'
                 }`}
               >
-                <div className="flex items-center justify-center space-x-3">
-                  <ShoppingCart className="w-6 h-6" />
-                  <span>Carrinho</span>
+                <div className="flex items-center justify-center space-x-1 sm:space-x-2 md:space-x-3">
+                  <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6" />
+                  <span className="hidden sm:inline">Carrinho</span>
                   {carrinho.length > 0 && (
-                    <span className="bg-red-500 text-white text-sm rounded-full w-8 h-8 flex items-center justify-center font-bold shadow-lg animate-pulse">
+                    <span className="bg-red-500 text-white text-xs sm:text-sm rounded-full w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 flex items-center justify-center font-bold shadow-lg animate-pulse">
                       {carrinho.length}
                     </span>
                   )}
@@ -261,7 +261,7 @@ const CarrinhoMesaModal: React.FC<CarrinhoMesaModalProps> = ({ isOpen, onClose, 
             </div>
           </div>
 
-          <div className="p-8 overflow-y-auto max-h-[calc(95vh-280px)]">
+          <div className="p-3 sm:p-4 md:p-6 lg:p-8 overflow-y-auto flex-1">
             {activeTab === 'produtos' ? (
               <div className="space-y-8">
                 {/* Search and filters */}
@@ -523,16 +523,17 @@ const CarrinhoMesaModal: React.FC<CarrinhoMesaModalProps> = ({ isOpen, onClose, 
           </div>
 
           {/* Footer */}
-          <div className="bg-gray-50/90 dark:bg-gray-700/90 backdrop-blur-sm px-8 py-6 border-t border-gray-200/50 dark:border-gray-600/50">
-            <div className="flex justify-between items-center">
-              <div className="flex space-x-4">
+          <div className="bg-gray-50/90 dark:bg-gray-700/90 backdrop-blur-sm px-3 sm:px-4 md:px-6 lg:px-8 py-3 sm:py-4 md:py-6 border-t border-gray-200/50 dark:border-gray-600/50">
+            <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3">
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
                 <Button
                   variant="ghost"
                   onClick={() => {
                     onClose();
                     setCarrinho([]);
                   }}
-                  className="bg-gray-200/80 dark:bg-gray-600/80 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-500 px-8 py-4 rounded-2xl font-semibold text-lg transition-all duration-200"
+                  fullWidth
+                  className="sm:w-auto bg-gray-200/80 dark:bg-gray-600/80 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-500 px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 md:py-4 rounded-xl sm:rounded-2xl font-semibold text-sm sm:text-base md:text-lg transition-all duration-200"
                 >
                   Cancelar
                 </Button>
@@ -540,19 +541,20 @@ const CarrinhoMesaModal: React.FC<CarrinhoMesaModalProps> = ({ isOpen, onClose, 
                   <Button
                     variant="warning"
                     onClick={() => setCarrinho([])}
-                    icon={<Trash2 size={20} />}
-                    className="bg-red-100/80 dark:bg-red-900/30 text-red-700 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-900/50 px-8 py-4 rounded-2xl font-semibold text-lg transition-all duration-200"
+                    icon={<Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />}
+                    fullWidth
+                    className="sm:w-auto bg-red-100/80 dark:bg-red-900/30 text-red-700 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-900/50 px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 md:py-4 rounded-xl sm:rounded-2xl font-semibold text-sm sm:text-base md:text-lg transition-all duration-200"
                   >
                     Limpar Carrinho
                   </Button>
                 )}
               </div>
-              
+
               {carrinho.length > 0 && (
-                <div className="flex items-center space-x-6">
+                <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-6">
                   <div className="text-right">
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Total</p>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                    <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Total</p>
+                    <p className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
                       {formatarDinheiro(calcularTotal())}
                     </p>
                   </div>
@@ -560,10 +562,11 @@ const CarrinhoMesaModal: React.FC<CarrinhoMesaModalProps> = ({ isOpen, onClose, 
                     onClick={enviarParaCozinha}
                     variant="primary"
                     isLoading={loading}
-                    icon={<Send size={20} />}
-                    className="bg-gradient-to-r from-green-600 to-emerald-700 hover:from-green-700 hover:to-emerald-800 text-white px-10 py-4 rounded-2xl font-bold text-lg shadow-xl hover:shadow-2xl transition-all duration-200 transform hover:scale-105"
+                    icon={<Send className="w-4 h-4 sm:w-5 sm:h-5" />}
+                    className="bg-gradient-to-r from-green-600 to-emerald-700 hover:from-green-700 hover:to-emerald-800 text-white px-4 sm:px-6 md:px-10 py-2.5 sm:py-3 md:py-4 rounded-xl sm:rounded-2xl font-bold text-sm sm:text-base md:text-lg shadow-xl hover:shadow-2xl transition-all duration-200 transform hover:scale-105"
                   >
-                    Enviar para Cozinha
+                    <span className="hidden sm:inline">Enviar para Cozinha</span>
+                    <span className="sm:hidden">Enviar</span>
                   </Button>
                 </div>
               )}

@@ -161,32 +161,34 @@ const DashboardLayout: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
       <header className="fixed top-0 left-0 right-0 z-50 bg-white dark:bg-gray-800 shadow-sm">
-        <div className="h-16 px-4 flex items-center justify-between">
+        <div className="h-14 sm:h-16 px-2 sm:px-4 flex items-center justify-between">
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            className="p-1.5 sm:p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
           >
-            <Menu size={24} className="text-gray-600 dark:text-gray-300" />
+            <Menu className="w-5 h-5 sm:w-6 sm:h-6 text-gray-600 dark:text-gray-300" />
           </button>
 
-          <div className="flex items-center space-x-2">
-            <ChefHat size={28} className="text-red-600 dark:text-red-400" />
-            <span className="text-xl font-bold text-gray-800 dark:text-gray-200">
+          <div className="flex items-center space-x-1 sm:space-x-2">
+            <ChefHat className="w-5 h-5 sm:w-7 sm:h-7 text-red-600 dark:text-red-400" />
+            <span className="text-base sm:text-xl font-bold text-gray-800 dark:text-gray-200">
               Chef Comanda
             </span>
           </div>
 
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-1 sm:space-x-3">
             <button
               onClick={toggleTheme}
-              className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"
+              className="p-1.5 sm:p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"
               title="Alternar tema"
             >
-              {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+              {theme === 'dark' ? <Sun className="w-4 h-4 sm:w-5 sm:h-5" /> : <Moon className="w-4 h-4 sm:w-5 sm:h-5" />}
             </button>
 
             {!isEmployee && (
-              <PrinterStatusIndicator onOpenConfig={() => setShowPrinterModal(true)} />
+              <div className="hidden sm:block">
+                <PrinterStatusIndicator onOpenConfig={() => setShowPrinterModal(true)} />
+              </div>
             )}
 
             {!isEmployee && <NotificationDropdown />}
@@ -230,8 +232,8 @@ const DashboardLayout: React.FC = () => {
         ></div>
       )}
 
-      <main className="pt-16 min-h-screen">
-        <div className="p-4 sm:p-6 lg:p-8 w-full">
+      <main className="pt-14 sm:pt-16 min-h-screen">
+        <div className="p-2 sm:p-4 md:p-6 lg:p-8 w-full">
           <Outlet />
           <EmployeeDebugPanel />
         </div>
