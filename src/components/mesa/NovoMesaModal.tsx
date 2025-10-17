@@ -117,20 +117,22 @@ const NovoMesaModal: React.FC<NovoMesaModalProps> = ({ isOpen, onClose }) => {
 
               <div className="mb-4">
                 <label htmlFor="capacidade" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Capacidade
+                  Capacidade (Pessoas)
                 </label>
-                <select
+                <input
+                  type="number"
                   id="capacidade"
                   value={capacidade}
                   onChange={(e) => setCapacidade(e.target.value)}
                   className="block w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md shadow-sm p-2.5 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                >
-                  <option value="2">2 pessoas</option>
-                  <option value="4">4 pessoas</option>
-                  <option value="6">6 pessoas</option>
-                  <option value="8">8 pessoas</option>
-                  <option value="10">10 pessoas</option>
-                </select>
+                  placeholder="Ex: 4"
+                  min="1"
+                  max="50"
+                  required
+                />
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  Defina a quantidade de pessoas que a mesa comporta (1-50)
+                </p>
               </div>
 
               {/* Informação sobre garçom responsável */}
