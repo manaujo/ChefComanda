@@ -24,6 +24,7 @@ const Settings: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'general' | 'printers' | 'security'>(
     (searchParams.get('tab') as 'general' | 'printers' | 'security') || 'general'
   );
+  const [printerSubTab, setPrinterSubTab] = useState<'devices' | 'cozinha' | 'vendas'>('devices');
   const [passwordData, setPasswordData] = useState<PasswordData>({
     currentPassword: "",
     newPassword: "",
@@ -591,6 +592,70 @@ const Settings: React.FC = () => {
           {/* Configurações de Impressoras */}
           {activeTab === 'printers' && (
             <div className="space-y-8">
+              {/* Sub-abas para tipos de impressora */}
+              <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 dark:border-gray-700/50 overflow-hidden">
+                <div className="border-b border-gray-200/50 dark:border-gray-700/50">
+                  <nav className="flex space-x-4 px-6">
+                    <button
+                      onClick={() => setPrinterSubTab('devices')}
+                      className={`py-4 px-6 border-b-2 font-medium text-sm transition-colors ${
+                        printerSubTab === 'devices'
+                          ? 'border-blue-500 text-blue-600 dark:text-blue-400 font-bold bg-blue-50/50 dark:bg-blue-900/20'
+                          : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 font-semibold'
+                      } rounded-t-xl`}
+                    >
+                      <div className="flex items-center space-x-2">
+                        <Usb size={16} />
+                        <span>Dispositivos</span>
+                        <span className={`${
+                          printerSubTab === 'devices' ? 'bg-blue-500' : 'bg-gray-400'
+                        } text-white px-2 py-0.5 rounded-full text-xs font-bold`}>
+                          {connectedDevices.length}
+                        </span>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => setPrinterSubTab('cozinha')}
+                      className={`py-4 px-6 border-b-2 font-medium text-sm transition-colors ${
+                        printerSubTab === 'cozinha'
+                          ? 'border-orange-500 text-orange-600 dark:text-orange-400 font-bold bg-orange-50/50 dark:bg-orange-900/20'
+                          : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 font-semibold'
+                      } rounded-t-xl`}
+                    >
+                      <div className="flex items-center space-x-2">
+                        <Monitor size={16} />
+                        <span>Cozinha</span>
+                        <span className={`${
+                          printerSubTab === 'cozinha' ? 'bg-orange-500' : 'bg-gray-400'
+                        } text-white px-2 py-0.5 rounded-full text-xs font-bold`}>
+                          {printerConfigs.filter(c => c.type === 'cozinha').length}
+                        </span>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => setPrinterSubTab('vendas')}
+                      className={`py-4 px-6 border-b-2 font-medium text-sm transition-colors ${
+                        printerSubTab === 'vendas'
+                          ? 'border-green-500 text-green-600 dark:text-green-400 font-bold bg-green-50/50 dark:bg-green-900/20'
+                          : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 font-semibold'
+                      } rounded-t-xl`}
+                    >
+                      <div className="flex items-center space-x-2">
+                        <Printer size={16} />
+                        <span>Vendas</span>
+                        <span className={`${
+                          printerSubTab === 'vendas' ? 'bg-green-500' : 'bg-gray-400'
+                        } text-white px-2 py-0.5 rounded-full text-xs font-bold`}>
+                          {printerConfigs.filter(c => c.type === 'pagamento').length}
+                        </span>
+                      </div>
+                    </button>
+                  </nav>
+                </div>
+              </div>
+              {/* ABA: DISPOSITIVOS */}
+              {printerSubTab === 'devices' && (
+                <>
               {/* Suporte do Navegador */}
               {!browserSupport.supported && (
                 <div className="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 p-6 rounded-2xl">
@@ -818,167 +883,359 @@ const Settings: React.FC = () => {
                 </div>
               </div>
 
-              {/* Configurações de Impressoras */}
-              <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 dark:border-gray-700/50 overflow-hidden">
-                <div className="bg-gradient-to-r from-orange-500 to-red-600 px-6 py-4">
-                  <div className="flex items-center justify-between text-white">
-                    <div className="flex items-center">
-                      <div className="p-3 bg-white/20 backdrop-blur-sm rounded-2xl mr-4">
-                        <SettingsGear size={24} />
-                      </div>
-                      <div>
-                        <h3 className="text-xl font-semibold">Impressoras Configuradas ({printerConfigs.length})</h3>
-                        <p className="text-orange-100 text-sm">Configure impressoras para cozinha e pagamentos</p>
-                      </div>
-                    </div>
-                    <Button
-                      onClick={() => {
-                        resetForm();
-                        setShowConfigForm(true);
-                      }}
-                      className="bg-white/20 backdrop-blur-sm text-white border-white/30 hover:bg-white/30 rounded-2xl px-6 py-3 font-semibold"
-                      icon={<Plus size={18} />}
-                    >
-                      Nova Configuração
-                    </Button>
-                  </div>
-                </div>
 
-                <div className="p-6">
-                  {printerConfigs.length === 0 ? (
-                    <div className="text-center py-12">
-                      <div className="w-24 h-24 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 rounded-full mx-auto flex items-center justify-center shadow-xl mb-6">
-                        <SettingsGear className="w-12 h-12 text-gray-400 dark:text-gray-500" />
-                      </div>
-                      <h4 className="text-xl font-bold text-gray-900 dark:text-white mb-3">
-                        Nenhuma impressora configurada
-                      </h4>
-                      <p className="text-gray-600 dark:text-gray-400 mb-6">
-                        Configure suas impressoras para cozinha e pagamentos
-                      </p>
-                      <Button
-                        onClick={() => {
-                          resetForm();
-                          setShowConfigForm(true);
-                        }}
-                        className="bg-gradient-to-r from-orange-600 to-red-700 hover:from-orange-700 hover:to-red-800 text-white px-8 py-4 rounded-2xl font-semibold"
-                        icon={<Plus size={20} />}
-                      >
-                        Configurar Primeira Impressora
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                      {printerConfigs.map((config) => (
-                        <div
-                          key={config.id}
-                          className={`rounded-2xl p-6 border-l-4 shadow-lg hover:shadow-xl transition-all duration-300 ${
-                            config.type === 'cozinha'
-                              ? 'border-orange-500 bg-gradient-to-br from-orange-50 to-amber-100 dark:from-orange-900/20 dark:to-amber-900/30'
-                              : 'border-blue-500 bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-900/20 dark:to-indigo-900/30'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between mb-4">
-                            <div className="flex items-center">
-                              <div className={`p-3 rounded-2xl mr-4 ${
-                                config.type === 'cozinha' ? 'bg-orange-500' : 'bg-blue-500'
-                              }`}>
-                                {getTypeIcon(config.type)}
-                              </div>
-                              <div>
-                                <h4 className={`font-bold text-lg ${
-                                  config.type === 'cozinha' 
-                                    ? 'text-orange-800 dark:text-orange-200' 
-                                    : 'text-blue-800 dark:text-blue-200'
-                                }`}>
-                                  {config.name}
-                                </h4>
-                                <p className={`text-sm ${
-                                  config.type === 'cozinha' 
-                                    ? 'text-orange-600 dark:text-orange-300' 
-                                    : 'text-blue-600 dark:text-blue-300'
-                                }`}>
-                                  {config.type === 'cozinha' ? 'Impressora da Cozinha' : 'Impressora de Pagamento'}
-                                </p>
-                              </div>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              {config.enabled ? (
-                                <CheckCircle className="w-5 h-5 text-green-500" />
-                              ) : (
-                                <XCircle className="w-5 h-5 text-red-500" />
-                              )}
-                              {config.autoprint && (
-                                <Volume2 className="w-4 h-4 text-purple-500" />
-                              )}
-                            </div>
+                </>
+              )}
+
+              {/* ABA: COZINHA */}
+              {printerSubTab === 'cozinha' && (
+                <div className="space-y-6">
+                  {/* Impressoras da Cozinha Configuradas */}
+                  <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 dark:border-gray-700/50 overflow-hidden">
+                    <div className="bg-gradient-to-r from-orange-500 to-red-600 px-6 py-4">
+                      <div className="flex items-center justify-between text-white">
+                        <div className="flex items-center">
+                          <div className="p-3 bg-white/20 backdrop-blur-sm rounded-2xl mr-4">
+                            <Monitor size={24} />
                           </div>
-
-                          <div className="space-y-3 mb-6">
-                            <div className="flex justify-between items-center p-3 bg-white/50 dark:bg-gray-700/50 rounded-xl">
-                              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Dispositivo</span>
-                              <span className="font-semibold text-gray-900 dark:text-white text-sm">
-                                {config.deviceName}
-                              </span>
-                            </div>
-                            <div className="flex justify-between items-center p-3 bg-white/50 dark:bg-gray-700/50 rounded-xl">
-                              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Largura</span>
-                              <span className="font-semibold text-gray-900 dark:text-white">
-                                {config.paperWidth} chars ({config.paperWidth === 32 ? '58mm' : '80mm'})
-                              </span>
-                            </div>
-                            <div className="flex justify-between items-center p-3 bg-white/50 dark:bg-gray-700/50 rounded-xl">
-                              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Cópias</span>
-                              <span className="font-semibold text-gray-900 dark:text-white">
-                                {config.copies}x
-                              </span>
-                            </div>
-                            <div className="flex justify-between items-center p-3 bg-white/50 dark:bg-gray-700/50 rounded-xl">
-                              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Auto-impressão</span>
-                              <span className={`font-semibold ${
-                                config.autoprint ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
-                              }`}>
-                                {config.autoprint ? 'Ativada' : 'Desativada'}
-                              </span>
-                            </div>
-                          </div>
-
-                          <div className="flex gap-3">
-                            <Button
-                              onClick={() => handleTestPrinter(config)}
-                              variant="warning"
-                              size="sm"
-                              className="flex-1 rounded-2xl"
-                              icon={<TestTube size={16} />}
-                              disabled={!config.enabled}
-                            >
-                              Testar
-                            </Button>
-                            <Button
-                              onClick={() => handleEditConfig(config)}
-                              variant="primary"
-                              size="sm"
-                              className="flex-1 rounded-2xl"
-                              icon={<Edit size={16} />}
-                            >
-                              Editar
-                            </Button>
-                            <Button
-                              onClick={() => handleDeleteConfig(config.id)}
-                              variant="danger"
-                              size="sm"
-                              className="rounded-2xl"
-                              icon={<Trash2 size={16} />}
-                            >
-                              Excluir
-                            </Button>
+                          <div>
+                            <h3 className="text-xl font-semibold">Impressoras da Cozinha ({printerConfigs.filter(c => c.type === 'cozinha').length})</h3>
+                            <p className="text-orange-100 text-sm">Configure impressoras para comandas</p>
                           </div>
                         </div>
-                      ))}
+                        <Button
+                          onClick={() => {
+                            resetForm();
+                            setFormData({ ...formData, type: 'cozinha' });
+                            setShowConfigForm(true);
+                          }}
+                          className="bg-white/20 backdrop-blur-sm text-white border-white/30 hover:bg-white/30 rounded-2xl px-6 py-3 font-semibold"
+                          icon={<Plus size={18} />}
+                          disabled={connectedDevices.length === 0}
+                        >
+                          Nova Impressora
+                        </Button>
+                      </div>
                     </div>
-                  )}
+
+                    <div className="p-6">
+                      {connectedDevices.length === 0 ? (
+                        <div className="text-center py-12">
+                          <div className="w-24 h-24 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 rounded-full mx-auto flex items-center justify-center shadow-xl mb-6">
+                            <Usb className="w-12 h-12 text-gray-400 dark:text-gray-500" />
+                          </div>
+                          <h4 className="text-xl font-bold text-gray-900 dark:text-white mb-3">
+                            Nenhum dispositivo conectado
+                          </h4>
+                          <p className="text-gray-600 dark:text-gray-400 mb-6">
+                            Vá para a aba "Dispositivos" para conectar suas impressoras
+                          </p>
+                          <Button
+                            onClick={() => setPrinterSubTab('devices')}
+                            className="bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white px-8 py-4 rounded-2xl font-semibold"
+                            icon={<Usb size={20} />}
+                          >
+                            Ir para Dispositivos
+                          </Button>
+                        </div>
+                      ) : printerConfigs.filter(c => c.type === 'cozinha').length === 0 ? (
+                        <div className="text-center py-12">
+                          <div className="w-24 h-24 bg-gradient-to-br from-orange-100 to-orange-200 dark:from-orange-900/30 dark:to-orange-800/30 rounded-full mx-auto flex items-center justify-center shadow-xl mb-6">
+                            <Monitor className="w-12 h-12 text-orange-500 dark:text-orange-400" />
+                          </div>
+                          <h4 className="text-xl font-bold text-gray-900 dark:text-white mb-3">
+                            Nenhuma impressora de cozinha configurada
+                          </h4>
+                          <p className="text-gray-600 dark:text-gray-400 mb-6">
+                            Configure uma impressora para imprimir comandas da cozinha
+                          </p>
+                          <Button
+                            onClick={() => {
+                              resetForm();
+                              setFormData({ ...formData, type: 'cozinha' });
+                              setShowConfigForm(true);
+                            }}
+                            className="bg-gradient-to-r from-orange-600 to-red-700 hover:from-orange-700 hover:to-red-800 text-white px-8 py-4 rounded-2xl font-semibold"
+                            icon={<Plus size={20} />}
+                          >
+                            Configurar Impressora de Cozinha
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                          {printerConfigs.filter(c => c.type === 'cozinha').map((config) => (
+                            <div
+                              key={config.id}
+                              className="rounded-2xl p-6 border-l-4 border-orange-500 bg-gradient-to-br from-orange-50 to-amber-100 dark:from-orange-900/20 dark:to-amber-900/30 shadow-lg hover:shadow-xl transition-all duration-300"
+                            >
+                              <div className="flex items-center justify-between mb-4">
+                                <div className="flex items-center">
+                                  <div className="p-3 bg-orange-500 rounded-2xl mr-4">
+                                    <Monitor className="w-5 h-5 text-white" />
+                                  </div>
+                                  <div>
+                                    <h4 className="font-bold text-lg text-orange-800 dark:text-orange-200">
+                                      {config.name}
+                                    </h4>
+                                    <p className="text-sm text-orange-600 dark:text-orange-300">
+                                      Impressora da Cozinha
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                  {config.enabled ? (
+                                    <CheckCircle className="w-5 h-5 text-green-500" />
+                                  ) : (
+                                    <XCircle className="w-5 h-5 text-red-500" />
+                                  )}
+                                  {config.autoprint && (
+                                    <Volume2 className="w-4 h-4 text-purple-500" />
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="space-y-3 mb-6">
+                                <div className="flex justify-between items-center p-3 bg-white/50 dark:bg-gray-700/50 rounded-xl">
+                                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Dispositivo</span>
+                                  <span className="font-semibold text-gray-900 dark:text-white text-sm">
+                                    {config.deviceName}
+                                  </span>
+                                </div>
+                                <div className="flex justify-between items-center p-3 bg-white/50 dark:bg-gray-700/50 rounded-xl">
+                                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Largura</span>
+                                  <span className="font-semibold text-gray-900 dark:text-white">
+                                    {config.paperWidth} chars ({config.paperWidth === 32 ? '58mm' : '80mm'})
+                                  </span>
+                                </div>
+                                <div className="flex justify-between items-center p-3 bg-white/50 dark:bg-gray-700/50 rounded-xl">
+                                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Cópias</span>
+                                  <span className="font-semibold text-gray-900 dark:text-white">
+                                    {config.copies}x
+                                  </span>
+                                </div>
+                                <div className="flex justify-between items-center p-3 bg-white/50 dark:bg-gray-700/50 rounded-xl">
+                                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Auto-impressão</span>
+                                  <span className={`font-semibold ${
+                                    config.autoprint ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+                                  }`}>
+                                    {config.autoprint ? 'Ativada' : 'Desativada'}
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div className="flex gap-3">
+                                <Button
+                                  onClick={() => handleTestPrinter(config)}
+                                  variant="warning"
+                                  size="sm"
+                                  className="flex-1 rounded-2xl"
+                                  icon={<TestTube size={16} />}
+                                  disabled={!config.enabled}
+                                >
+                                  Testar
+                                </Button>
+                                <Button
+                                  onClick={() => handleEditConfig(config)}
+                                  variant="primary"
+                                  size="sm"
+                                  className="flex-1 rounded-2xl"
+                                  icon={<Edit size={16} />}
+                                >
+                                  Editar
+                                </Button>
+                                <Button
+                                  onClick={() => handleDeleteConfig(config.id)}
+                                  variant="danger"
+                                  size="sm"
+                                  className="rounded-2xl"
+                                  icon={<Trash2 size={16} />}
+                                >
+                                  Excluir
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {/* ABA: VENDAS */}
+              {printerSubTab === 'vendas' && (
+                <div className="space-y-6">
+                  {/* Impressoras de Vendas Configuradas */}
+                  <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 dark:border-gray-700/50 overflow-hidden">
+                    <div className="bg-gradient-to-r from-green-500 to-emerald-600 px-6 py-4">
+                      <div className="flex items-center justify-between text-white">
+                        <div className="flex items-center">
+                          <div className="p-3 bg-white/20 backdrop-blur-sm rounded-2xl mr-4">
+                            <Printer size={24} />
+                          </div>
+                          <div>
+                            <h3 className="text-xl font-semibold">Impressoras de Vendas ({printerConfigs.filter(c => c.type === 'pagamento').length})</h3>
+                            <p className="text-green-100 text-sm">Configure impressoras para cupons fiscais</p>
+                          </div>
+                        </div>
+                        <Button
+                          onClick={() => {
+                            resetForm();
+                            setFormData({ ...formData, type: 'pagamento' });
+                            setShowConfigForm(true);
+                          }}
+                          className="bg-white/20 backdrop-blur-sm text-white border-white/30 hover:bg-white/30 rounded-2xl px-6 py-3 font-semibold"
+                          icon={<Plus size={18} />}
+                          disabled={connectedDevices.length === 0}
+                        >
+                          Nova Impressora
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="p-6">
+                      {connectedDevices.length === 0 ? (
+                        <div className="text-center py-12">
+                          <div className="w-24 h-24 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 rounded-full mx-auto flex items-center justify-center shadow-xl mb-6">
+                            <Usb className="w-12 h-12 text-gray-400 dark:text-gray-500" />
+                          </div>
+                          <h4 className="text-xl font-bold text-gray-900 dark:text-white mb-3">
+                            Nenhum dispositivo conectado
+                          </h4>
+                          <p className="text-gray-600 dark:text-gray-400 mb-6">
+                            Vá para a aba "Dispositivos" para conectar suas impressoras
+                          </p>
+                          <Button
+                            onClick={() => setPrinterSubTab('devices')}
+                            className="bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white px-8 py-4 rounded-2xl font-semibold"
+                            icon={<Usb size={20} />}
+                          >
+                            Ir para Dispositivos
+                          </Button>
+                        </div>
+                      ) : printerConfigs.filter(c => c.type === 'pagamento').length === 0 ? (
+                        <div className="text-center py-12">
+                          <div className="w-24 h-24 bg-gradient-to-br from-green-100 to-emerald-200 dark:from-green-900/30 dark:to-emerald-800/30 rounded-full mx-auto flex items-center justify-center shadow-xl mb-6">
+                            <Printer className="w-12 h-12 text-green-500 dark:text-green-400" />
+                          </div>
+                          <h4 className="text-xl font-bold text-gray-900 dark:text-white mb-3">
+                            Nenhuma impressora de vendas configurada
+                          </h4>
+                          <p className="text-gray-600 dark:text-gray-400 mb-6">
+                            Configure uma impressora para imprimir cupons de vendas
+                          </p>
+                          <Button
+                            onClick={() => {
+                              resetForm();
+                              setFormData({ ...formData, type: 'pagamento' });
+                              setShowConfigForm(true);
+                            }}
+                            className="bg-gradient-to-r from-green-600 to-emerald-700 hover:from-green-700 hover:to-emerald-800 text-white px-8 py-4 rounded-2xl font-semibold"
+                            icon={<Plus size={20} />}
+                          >
+                            Configurar Impressora de Vendas
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                          {printerConfigs.filter(c => c.type === 'pagamento').map((config) => (
+                            <div
+                              key={config.id}
+                              className="rounded-2xl p-6 border-l-4 border-green-500 bg-gradient-to-br from-green-50 to-emerald-100 dark:from-green-900/20 dark:to-emerald-900/30 shadow-lg hover:shadow-xl transition-all duration-300"
+                            >
+                              <div className="flex items-center justify-between mb-4">
+                                <div className="flex items-center">
+                                  <div className="p-3 bg-green-500 rounded-2xl mr-4">
+                                    <Printer className="w-5 h-5 text-white" />
+                                  </div>
+                                  <div>
+                                    <h4 className="font-bold text-lg text-green-800 dark:text-green-200">
+                                      {config.name}
+                                    </h4>
+                                    <p className="text-sm text-green-600 dark:text-green-300">
+                                      Impressora de Vendas
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                  {config.enabled ? (
+                                    <CheckCircle className="w-5 h-5 text-green-500" />
+                                  ) : (
+                                    <XCircle className="w-5 h-5 text-red-500" />
+                                  )}
+                                  {config.autoprint && (
+                                    <Volume2 className="w-4 h-4 text-purple-500" />
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="space-y-3 mb-6">
+                                <div className="flex justify-between items-center p-3 bg-white/50 dark:bg-gray-700/50 rounded-xl">
+                                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Dispositivo</span>
+                                  <span className="font-semibold text-gray-900 dark:text-white text-sm">
+                                    {config.deviceName}
+                                  </span>
+                                </div>
+                                <div className="flex justify-between items-center p-3 bg-white/50 dark:bg-gray-700/50 rounded-xl">
+                                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Largura</span>
+                                  <span className="font-semibold text-gray-900 dark:text-white">
+                                    {config.paperWidth} chars ({config.paperWidth === 32 ? '58mm' : '80mm'})
+                                  </span>
+                                </div>
+                                <div className="flex justify-between items-center p-3 bg-white/50 dark:bg-gray-700/50 rounded-xl">
+                                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Cópias</span>
+                                  <span className="font-semibold text-gray-900 dark:text-white">
+                                    {config.copies}x
+                                  </span>
+                                </div>
+                                <div className="flex justify-between items-center p-3 bg-white/50 dark:bg-gray-700/50 rounded-xl">
+                                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Auto-impressão</span>
+                                  <span className={`font-semibold ${
+                                    config.autoprint ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+                                  }`}>
+                                    {config.autoprint ? 'Ativada' : 'Desativada'}
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div className="flex gap-3">
+                                <Button
+                                  onClick={() => handleTestPrinter(config)}
+                                  variant="warning"
+                                  size="sm"
+                                  className="flex-1 rounded-2xl"
+                                  icon={<TestTube size={16} />}
+                                  disabled={!config.enabled}
+                                >
+                                  Testar
+                                </Button>
+                                <Button
+                                  onClick={() => handleEditConfig(config)}
+                                  variant="primary"
+                                  size="sm"
+                                  className="flex-1 rounded-2xl"
+                                  icon={<Edit size={16} />}
+                                >
+                                  Editar
+                                </Button>
+                                <Button
+                                  onClick={() => handleDeleteConfig(config.id)}
+                                  variant="danger"
+                                  size="sm"
+                                  className="rounded-2xl"
+                                  icon={<Trash2 size={16} />}
+                                >
+                                  Excluir
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Formulário de Configuração */}
               {showConfigForm && (
